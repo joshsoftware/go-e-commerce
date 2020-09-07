@@ -1,4 +1,10 @@
-CREATE TABLE users (
-  name text,
-  age integer
+CREATE TABLE IF NOT EXISTS users (
+  id BIGSERIAL NOT NULL PRIMARY KEY,
+  first_name VARCHAR(255) NOT NULL,
+  last_name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  mobile VARCHAR(20) NOT NULL UNIQUE,
+  address TEXT,
+  password VARCHAR(50),  
+  created_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
