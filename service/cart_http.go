@@ -2,31 +2,33 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"strconv"
 
+	"github.com/gorilla/mux"
 	logger "github.com/sirupsen/logrus"
 )
 
-// @Title listUsers
-// @Description list all User
-// @Router /users [get]
+// @Title listCart
+// @Description list all Product inside cart
+// @Router /user/id/cart [get]
 // @Accept  json
 // @Success 200 {object}
 // @Failure 400 {object}
-func listUsersHandler(deps Dependencies) http.HandlerFunc {
+func getCartHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		users, err := deps.Store.ListUsers(req.Context())
-		fmt.Println(users)
+		params := mux.Vars(req)
+		user_id, err := strconv.Atoi(params["user_id"])
+		cart, err := deps.Store.GetCart(req.Context(), user_id)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching data")
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		respBytes, err := json.Marshal(users)
+		respBytes, err := json.Marshal(cart)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error marshaling users data")
+			logger.WithField("err", err.Error()).Error("Error marshaling cart data")
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
