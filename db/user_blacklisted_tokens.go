@@ -20,29 +20,30 @@ const (
 	insertBlacklistedToken = `INSERT INTO user_blacklisted_tokens
 (user_id, token, expiration_date)
 VALUES ($1, $2, $3)`
-
-	selectBlacklistedToken = `SELECT * FROM user_blacklisted_tokens
-WHERE token=$1`
 )
 
+//CreateBlacklistedToken function to insert the blacklisted token in database
 func (s *pgStore) CreateBlacklistedToken(ctx context.Context, token BlacklistedToken) (err error) {
 	_, err = s.db.Exec(insertBlacklistedToken, token.UserID, token.Token, token.ExpirationDate)
 
 	if err != nil {
-		errMsg := fmt.Sprintf("Error inserting the blacklisted token for user with id %d", token.UserID)
+		errMsg := fmt.Sprintf("Error inserting the blacklisted token for user with id %v", token.UserID)
 		logger.WithField("err", err.Error()).Error(errMsg)
 		return
 	}
 	return
 }
 
-func (s *pgStore) CheckBlacklistedToken(ctx context.Context, token string) bool {
-	query := fmt.Sprintf("SELECT * FROM user_blacklisted_tokens WHERE token=%s", token)
-	result, err := s.db.Exec(query)
-	fmt.Println(result)
+//CheckBlacklistedToken function to check if token is blacklisted earlier
+func (s *pgStore) CheckBlacklistedToken(ctx context.Context, token string) (bool, int) {
+
+	var userID int
+	query1 := fmt.Sprintf("SELECT user_id FROM user_blacklisted_tokens WHERE token='%s'", token)
+	err := s.db.QueryRow(query1).Scan(&userID)
+
 	if err != nil {
-		logger.WithField("err", err.Error()).Error("Query Failed")
-		return false
+		logger.WithField("err", err.Error()).Error("Either Query Failed or No Rows Found")
+		return false, -1
 	}
-	return true
+	return true, userID
 }
