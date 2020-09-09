@@ -80,6 +80,7 @@ func ReadEnvBool(key string) bool {
 	return viper.GetBool(key)
 }
 
+//CheckIfSet checks if all the necessary keys are set
 func checkIfSet(key string) {
 	if !viper.IsSet(key) {
 		err := fmt.Errorf("Key %s is not set", key)
