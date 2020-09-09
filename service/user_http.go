@@ -46,7 +46,7 @@ func getUserHandler(deps Dependencies) http.HandlerFunc {
 		var idParam = mux.Vars(req)["id"]
 		id, err := strconv.Atoi(idParam)
 		if err != nil {
-			logger.Error("COnversion Failed")
+			logger.Error("Conversion Failed")
 		}
 		user, err := deps.Store.GetUser(req.Context(), id)
 		if err != nil {
