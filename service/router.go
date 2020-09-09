@@ -30,7 +30,7 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	//Router for Get User from ID
 	router.Handle("/user/{id}", jwtMiddleWare(getUserHandler(deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 
-	//Router for Get User from ID
+	//Router for User Logout
 	router.Handle("/user/{id}/logout", jwtMiddleWare(userLogoutHandler(deps), deps)).Methods(http.MethodDelete).Headers(versionHeader, v1)
 
 	//Router for Get All Users
@@ -46,57 +46,61 @@ func jwtMiddleWare(endpoint http.Handler, deps Dependencies) http.Handler {
 
 		//Fetching userID from RequestURL
 		var idParam = mux.Vars(req)["id"]
-
-		validID, ok := strconv.Atoi(idParam)
-		if ok != nil {
-			logger.Error(ok.Error())
+		validID, err := strconv.Atoi(idParam)
+		if err != nil {
+			logger.Error(err.Error())
 		}
 
 		authToken := req.Header["Token"]
-		if authToken != nil {
-			token, err := jwt.Parse(authToken[0], func(token *jwt.Token) (interface{}, error) {
-				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-					return nil, fmt.Errorf("There was an error")
-				}
-				return mySigningKey, nil
-			})
-			if err != nil {
-				if err == jwt.ErrSignatureInvalid {
-					rw.WriteHeader(http.StatusUnauthorized)
-					return
-				}
-				rw.WriteHeader(http.StatusBadRequest)
-				return
-			}
-			claims, ok := token.Claims.(jwt.MapClaims)
 
-			//Fetching Status of Token Being Blacklisted or Not
-			isBlacklisted, _ := deps.Store.CheckBlacklistedToken(req.Context(), authToken[0])
-
-			//Unauthorized User if Token BlackListed
-			if isBlacklisted {
-				rw.WriteHeader(http.StatusUnauthorized)
-				rw.Write([]byte("Unauthorized"))
-				return
-			}
-
-			//Unauthorized User if Token Invalid
-			if !ok && !token.Valid {
-				rw.WriteHeader(http.StatusUnauthorized)
-				rw.Write([]byte("Unauthorized"))
-				return
-			}
-
-			userID := claims["id"]
-
-			//Unauthorized User if userID in Token Doesn't Match userID in RequestURL
-			if float64(validID) != userID {
-				rw.WriteHeader(http.StatusUnauthorized)
-				rw.Write([]byte("Unauthorized"))
-				return
-			}
-
-			endpoint.ServeHTTP(rw, req)
+		//Checking if token not present in header
+		if authToken == nil {
+			rw.WriteHeader(http.StatusUnauthorized)
+			rw.Write([]byte("Unauthorized"))
+			return
 		}
+
+		token, err := jwt.Parse(authToken[0], func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("There was an error")
+			}
+			return mySigningKey, nil
+		})
+		if err != nil {
+			if err == jwt.ErrSignatureInvalid {
+				rw.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+
+		//Fetching Status of Token Being Blacklisted or Not
+		// Unauthorized User if Token BlackListed
+		if isBlacklisted, _ := deps.Store.CheckBlacklistedToken(req.Context(), authToken[0]); isBlacklisted {
+			rw.WriteHeader(http.StatusUnauthorized)
+			rw.Write([]byte("Unauthorized"))
+			return
+		}
+
+		//Unauthorized User if Token Invalid
+		if !ok && !token.Valid {
+			rw.WriteHeader(http.StatusUnauthorized)
+			rw.Write([]byte("Unauthorized"))
+			return
+		}
+
+		userID := claims["id"]
+
+		//Unauthorized User if userID in Token Doesn't Match userID in RequestURL
+		if float64(validID) != userID {
+			rw.WriteHeader(http.StatusUnauthorized)
+			rw.Write([]byte("Unauthorized"))
+			return
+		}
+
+		endpoint.ServeHTTP(rw, req)
 	})
 }
