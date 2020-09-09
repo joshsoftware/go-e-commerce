@@ -49,43 +49,43 @@ func makeHTTPCall(method, path, body string, handlerFunc http.HandlerFunc) (reco
 
 func (suite *UsersHandlerTestSuite) TestRegisterUserSuccess() {
 	suite.dbMock.On("CreateNewUser", mock.Anything, mock.Anything).Return(nil)
-	suite.dbMock.On("CheckUserByEmail", mock.Anything, mock.Anything).Return(false, sql.ErrNoRows)
+	suite.dbMock.On("CheckUserByEmail", mock.Anything, mock.Anything, mock.Anything).Return(false, sql.ErrNoRows)
 	body :=
 		`{
-		"first_name" : "test1",
-		"last_name" : "test2",
-		"email" : "test@gmail.com",
-		"password": "password",
-		"mobile_number": "8421987845",
-		"country": "India",
-		"state": "Maharashtra",
-		"city": "Nashik",
-		"address": "abc"
-	}`
+			"first_name" : "test1",
+			"last_name" : "test2",
+			"email" : "test@gmail.com",
+			"mobile": "8421987856",
+			"country": "India",
+			"state": "Maharashtra",
+			"city": "Nashik",
+			"address": "abc",
+			"password": "password"
+		}`
 	recorder := makeHTTPCall(http.MethodPost,
 		"/register",
 		body,
 		registerUserHandler(Dependencies{Store: suite.dbMock}),
 	)
-	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
+	assert.Equal(suite.T(), http.StatusCreated, recorder.Code)
 	suite.dbMock.AssertExpectations(suite.T())
 
 }
 
 func (suite *UsersHandlerTestSuite) TestRegisterUserFailure() {
 	suite.dbMock.On("CreateNewUser", mock.Anything, mock.Anything).Return(nil)
-	suite.dbMock.On("CheckUserByEmail", mock.Anything, mock.Anything).Return(true, sql.ErrNoRows)
+	suite.dbMock.On("CheckUserByEmail", mock.Anything, mock.Anything, mock.Anything).Return(true, sql.ErrNoRows)
 	body :=
 		`{
 		"first_name" : "test1",
 		"last_name" : "test2",
 		"email" : "test@gmail.com",
-		"password": "password",
-		"mobile_number": "8421987845",
+		"mobile": "8421987856",
 		"country": "India",
 		"state": "Maharashtra",
 		"city": "Nashik",
-		"address": "abc"
+		"address": "abc",
+		"password": "password"
 	}`
 	recorder := makeHTTPCall(http.MethodPost,
 		"/register",
@@ -93,9 +93,9 @@ func (suite *UsersHandlerTestSuite) TestRegisterUserFailure() {
 		registerUserHandler(Dependencies{Store: suite.dbMock}),
 	)
 
-	assert.Equal(suite.T(), `{"error":"user already registered"}`, recorder.Body.String())
+	assert.Equal(suite.T(), `{"error":"user's email or mobile already registered"}`, recorder.Body.String())
 	assert.Equal(suite.T(), http.StatusBadRequest, recorder.Code)
 	suite.dbMock.AssertNotCalled(suite.T(), "CreateNewUser", mock.Anything, mock.Anything)
-	suite.dbMock.AssertCalled(suite.T(), "CheckUserByEmail", mock.Anything, mock.Anything)
+	suite.dbMock.AssertCalled(suite.T(), "CheckUserByEmail", mock.Anything, mock.Anything, mock.Anything)
 
 }

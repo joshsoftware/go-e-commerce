@@ -22,7 +22,7 @@ func (m *DBMockStore) CreateNewUser(ctx context.Context, u User) (err error) {
 }
 
 // CheckUserByEmail - test mock
-func (m *DBMockStore) CheckUserByEmail(ctx context.Context, email string) (check bool, err error) {
-	args := m.Called(ctx, email)
+func (m *DBMockStore) CheckUserByEmail(ctx context.Context, email string, mobile string) (check bool, err error) {
+	args := m.Called(ctx, email, mobile)
 	return args.Get(0).(bool), args.Get(1).(error)
 }

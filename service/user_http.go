@@ -15,7 +15,7 @@ type errorResponse struct {
 	Error string `json:"error"`
 }
 type successResponse struct {
-	Error string `json:"error"`
+	Message string `json:"message"`
 }
 
 // @Title listUsers
@@ -49,7 +49,7 @@ func listUsersHandler(deps Dependencies) http.HandlerFunc {
 // @Description registers new user
 // @Router /register [post]
 // @Accept  json
-// @Success 200 {object}
+// @Success 201 {object}
 // @Failure 400 {object}
 func registerUserHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -70,16 +70,16 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		// For checking if user already registered
-		check, err := deps.Store.CheckUserByEmail(req.Context(), user.Email)
+		check, err := deps.Store.CheckUserByEmail(req.Context(), user.Email, user.Mobile)
 
 		// If check true then user is already registered
 		if check {
 			e := errorResponse{
-				Error: "user already registered",
+				Error: "user's email or mobile already registered",
 			}
 			respBytes, err := json.Marshal(e)
 			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while marshalling error ")
+				logger.WithField("err", err.Error()).Error("Error while marshalling error msg ")
 				rw.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -113,7 +113,18 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		rw.WriteHeader(http.StatusOK)
+		msg := successResponse{
+			Message: "user successfully registered",
+		}
+		respBytes, err := json.Marshal(msg)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while marshalling success msg ")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		rw.Header().Add("Content-Type", "application/json")
+		rw.WriteHeader(http.StatusCreated)
+		rw.Write(respBytes)
 		return
 
 	})

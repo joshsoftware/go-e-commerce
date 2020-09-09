@@ -8,24 +8,25 @@ import (
 )
 
 const (
-	insertUserQuery = `INSERT INTO users (first_name, last_name, email, password, mobile_number, country, state, city, address) 
-	VALUES (:first_name, :last_name, :email, :password, :mobile_number, :country, :state, :city, :address)`
+	insertUserQuery = `INSERT INTO users (first_name, last_name, email, mobile, country, state, city, address, password) 
+	VALUES (:first_name, :last_name, :email, :mobile, :country, :state, :city, :address, :password)`
 
-	getUserByEmailQuery = `SELECT * FROM users WHERE email=$1 LIMIT 1`
+	getUserByEmailQuery = `SELECT * FROM users WHERE email=$1 OR mobile=$2 LIMIT 1`
 )
 
 // User - struct representing a user
 type User struct {
-	UserID       int    `db:"userid" json:"user_id"`
-	FirstName    string `db:"first_name" json:"first_name"`
-	LastName     string `db:"last_name" json:"last_name"`
-	Email        string `db:"email" json:"email"`
-	Password     string `db:"password" json:"password"`
-	MobileNumber string `db:"mobile_number" json:"mobile_number"`
-	Country      string `db:"country" json:"country"`
-	State        string `db:"state" json:"state"`
-	City         string `db:"city" json:"city"`
-	Address      string `db:"address" json:"address"`
+	ID        int    `db:"id" json:"id"`
+	FirstName string `db:"first_name" json:"first_name"`
+	LastName  string `db:"last_name" json:"last_name"`
+	Email     string `db:"email" json:"email"`
+	Mobile    string `db:"mobile" json:"mobile"`
+	Country   string `db:"country" json:"country"`
+	State     string `db:"state" json:"state"`
+	City      string `db:"city" json:"city"`
+	Address   string `db:"address" json:"address"`
+	Password  string `db:"password" json:"password"`
+	CreatedAt string `db:"created_at" json:"created_at"`
 }
 
 func (s *pgStore) ListUsers(ctx context.Context) (users []User, err error) {
@@ -58,9 +59,9 @@ func (s *pgStore) CreateNewUser(ctx context.Context, u User) (err error) {
 	return
 }
 
-func (s *pgStore) CheckUserByEmail(ctx context.Context, email string) (check bool, err error) {
+func (s *pgStore) CheckUserByEmail(ctx context.Context, email string, mobile string) (check bool, err error) {
 	user := User{}
-	err = s.db.Get(&user, getUserByEmailQuery, email)
+	err = s.db.Get(&user, getUserByEmailQuery, email, mobile)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, err
