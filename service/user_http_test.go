@@ -53,7 +53,7 @@ func (suite *UsersHandlerTestSuite) TestListUsersSuccess() {
 	}
 
 	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
-	assert.NotNil(suite.T(), users[0].UserID)
+	assert.NotNil(suite.T(), users[0].ID)
 	suite.dbMock.AssertExpectations(suite.T())
 }
 
@@ -79,16 +79,16 @@ func (suite *UsersHandlerTestSuite) TestGetUserSuccess() {
 
 	suite.dbMock.On("GetUser", mock.Anything, mock.Anything).Return(
 		db.User{
-			UserID:       1,
-			FirstName:    "TestUser",
-			LastName:     "TestUser",
-			Email:        "TestEmail",
-			MobileNumber: "TestMobile",
-			Password:     "TestPass",
-			Country:      "TestCountry",
-			State:        "TestState",
-			City:         "TestCity",
-			Address:      "Testaddress",
+			ID:        1,
+			FirstName: "TestUser",
+			LastName:  "TestUser",
+			Email:     "TestEmail",
+			Mobile:    "TestMobile",
+			Address:   "Testaddress",
+			Password:  "TestPass",
+			Country:   "TestCountry",
+			State:     "TestState",
+			City:      "TestCity",
 		}, nil,
 	)
 
@@ -105,12 +105,13 @@ func (suite *UsersHandlerTestSuite) TestGetUserSuccess() {
         "first_name": "TestUser",
         "last_name": "TestUser",
         "email": "TestEmail",
-        "mobile_number": "TestMobile",
+		"mobile": "TestMobile",
+		"address": "Testaddress",
         "password": "TestPass",
         "country": "TestCountry",
         "state": "TestState",
-        "city": "TestCity",
-        "address": "Testaddress"
+        "city": "TestCity"
+       
     }}`, recorder.Body.String())
 
 	suite.dbMock.AssertExpectations(suite.T())
@@ -119,16 +120,16 @@ func (suite *UsersHandlerTestSuite) TestGetUserSuccess() {
 func (suite *UsersHandlerTestSuite) TestUpdateUserSuccess() {
 
 	suite.dbMock.On("UpdateUser", mock.Anything, mock.Anything, mock.Anything).Return(db.User{
-		UserID:       1,
-		FirstName:    "UpdateUser",
-		LastName:     "TestUser",
-		Email:        "TestEmail",
-		MobileNumber: "TestMobile",
-		Password:     "TestPass",
-		Country:      "TestCountry",
-		State:        "TestState",
-		City:         "TestCity",
-		Address:      "Testaddress",
+		ID:        1,
+		FirstName: "UpdateUser",
+		LastName:  "TestUser",
+		Email:     "TestEmail",
+		Mobile:    "TestMobile",
+		Password:  "TestPass",
+		Country:   "TestCountry",
+		State:     "TestState",
+		City:      "TestCity",
+		Address:   "Testaddress",
 	}, nil)
 
 	body := ` "id": 1,
@@ -155,12 +156,13 @@ func (suite *UsersHandlerTestSuite) TestUpdateUserSuccess() {
         "first_name": "UpdatedtUser",
         "last_name": "TestUser",
         "email": "TestEmail",
-        "mobile_number": "TestMobile",
+		"mobile": "TestMobile",
+		"address": "Testaddress",
         "password": "TestPass",
         "country": "TestCountry",
         "state": "TestState",
-        "city": "TestCity",
-        "address": "Testaddress"
+		"city": "TestCity"
+        
     }}`, recorder.Body.String())
 	suite.dbMock.AssertExpectations(suite.T())
 }
@@ -172,12 +174,13 @@ func (suite *UsersHandlerTestSuite) TestUpdateUserDbFailure() {
 	"first_name": "UpdatedUser",
 	"last_name": "TestUser",
 	"email": "TestEmail",
-	"mobile_number": "TestMobile",
+	"mobile": "TestMobile",
+	"address": "Testaddress",
 	"password": "TestPass",
 	"country": "TestCountry",
 	"state": "TestState",
-	"city": "TestCity",
-	"address": "Testaddress"`
+	"city": "TestCity"
+	`
 
 	recorder := makeHTTPCall(http.MethodPut,
 		"/users/{id:[0-9]+}",

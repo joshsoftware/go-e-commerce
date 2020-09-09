@@ -9,33 +9,35 @@ import (
 
 //User is a structure of the user
 type User struct {
-	UserID       int    `db:"userid" json:"id"`
-	FirstName    string `db:"first_name" json:"first_name"`
-	LastName     string `db:"last_name" json:"last_name"`
-	Email        string `db:"email" json:"email"`
-	MobileNumber string `db:"mobile_number" json:"mobile_number"`
-	Password     string `db:"password" json:"password"`
-	Country      string `db:"country" json:"country"`
-	State        string `db:"state" json:"state"`
-	City         string `db:"city" json:"city"`
-	Address      string `db:"address" json:"address"`
-}
+	ID int `db:"id" json:"id"`
+	FirstName string `db:"first_name" json:"first_name"`
+	LastName string `db:"last_name" json:"last_name"`
+	Email string `db:"email" json:"email"`
+	Mobile string `db:"mobile" json:"mobile"`
+	Address string `db:"address" json:"address"`
+	Password string `db:"password" json:"password"`
+	Country string `db:"country" json:"country"`
+	State string `db:"state" json:"state"`
+	City string `db:"city" json:"city"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	}
 
 const (
 	updateUserQuery = `UPDATE users SET (
 	first_name,
 	last_name,
 	email,
-	mobile_number,
+	mobile,
+	address,
 	password,
 	country,
 	state,
-	city,
-	address
+	city
+	
 	) = 
-	($1, $2, $3, $4, $5,$6,$7,$8,$9) where userid = $10 `
+	($1, $2, $3, $4, $5,$6,$7,$8,$9) where id = $10 `
 
-	getUserQuery = `SELECT * from users where userid=$1`
+	getUserQuery = `SELECT * from users where id=$1`
 )
 
 func (s *pgStore) ListUsers(ctx context.Context) (users []User, err error) {
@@ -87,12 +89,13 @@ func (s *pgStore) UpdateUser(ctx context.Context, userProfile User, userID int) 
 		userProfile.FirstName,
 		userProfile.LastName,
 		userProfile.Email,
-		userProfile.MobileNumber,
+		userProfile.Mobile,
+		userProfile.Address,
 		userProfile.Password,
 		userProfile.Country,
 		userProfile.State,
 		userProfile.City,
-		userProfile.Address,
+		
 		userID,
 	)
 	if err != nil {
