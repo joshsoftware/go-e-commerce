@@ -9,18 +9,18 @@ import (
 
 //User is a structure of the user
 type User struct {
-	ID int `db:"id" json:"id"`
+	ID        int    `db:"id" json:"id"`
 	FirstName string `db:"first_name" json:"first_name"`
-	LastName string `db:"last_name" json:"last_name"`
-	Email string `db:"email" json:"email"`
-	Mobile string `db:"mobile" json:"mobile"`
-	Address string `db:"address" json:"address"`
-	Password string `db:"password" json:"password"`
-	Country string `db:"country" json:"country"`
-	State string `db:"state" json:"state"`
-	City string `db:"city" json:"city"`
+	LastName  string `db:"last_name" json:"last_name"`
+	Email     string `db:"email" json:"email"`
+	Mobile    string `db:"mobile" json:"mobile"`
+	Address   string `db:"address" json:"address"`
+	Password  string `db:"password" json:"password"`
+	Country   string `db:"country" json:"country"`
+	State     string `db:"state" json:"state"`
+	City      string `db:"city" json:"city"`
 	CreatedAt string `db:"created_at" json:"created_at"`
-	}
+}
 
 const (
 	updateUserQuery = `UPDATE users SET (
@@ -72,7 +72,6 @@ func (s *pgStore) UpdateUser(ctx context.Context, userProfile User, userID int) 
 			return
 		}
 
-		tx.Commit()
 	}()
 
 	var dbUser User
@@ -84,7 +83,7 @@ func (s *pgStore) UpdateUser(ctx context.Context, userProfile User, userID int) 
 		return
 	}
 
-	_, err = s.db.Exec(
+	_, err = tx.ExecContext(ctx,
 		updateUserQuery,
 		userProfile.FirstName,
 		userProfile.LastName,
@@ -95,14 +94,14 @@ func (s *pgStore) UpdateUser(ctx context.Context, userProfile User, userID int) 
 		userProfile.Country,
 		userProfile.State,
 		userProfile.City,
-		
+
 		userID,
 	)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error updating user profile")
 		return
 	}
-
+	tx.Commit()
 	updatedUser, err = s.GetUser(ctx, userID)
 
 	if err != nil {
