@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -9,12 +8,15 @@ import (
 )
 
 var (
-	appName string
-	appPort int
+	appName                string
+	appPort                int
+	jwtKey                 string
+	jwtExpiryDurationHours int
 )
 
+// Load - loads all the environment variables and/or params in application.yml
 func Load() {
-	viper.SetDefault("APP_NAME", "app")
+	viper.SetDefault("APP_NAME", "e-commerce")
 	viper.SetDefault("APP_PORT", "8002")
 
 	viper.SetConfigName("application")
@@ -24,8 +26,13 @@ func Load() {
 	viper.AddConfigPath("./../..")
 	viper.ReadInConfig()
 	viper.AutomaticEnv()
+
+	// Check for the presence of JWT_KEY and JWT_EXPIRY_DURATION_HOURS
+	JWTKey()
+	JWTExpiryDurationHours()
 }
 
+// AppName - returns the app name
 func AppName() string {
 	if appName == "" {
 		appName = ReadEnvString("APP_NAME")
@@ -33,6 +40,7 @@ func AppName() string {
 	return appName
 }
 
+// AppPort - returns application http port
 func AppPort() int {
 	if appPort == 0 {
 		appPort = ReadEnvInt("APP_PORT")
@@ -40,6 +48,17 @@ func AppPort() int {
 	return appPort
 }
 
+// JWTKey - returns the JSON Web Token key
+func JWTKey() []byte {
+	return []byte(ReadEnvString("JWT_SECRET"))
+}
+
+// JWTExpiryDurationHours - returns duration for jwt expiry in int
+func JWTExpiryDurationHours() int {
+	return int(ReadEnvInt("JWT_EXPIRY_DURATION_HOURS"))
+}
+
+// ReadEnvInt - reads an environment variable as an integer
 func ReadEnvInt(key string) int {
 	checkIfSet(key)
 	v, err := strconv.Atoi(viper.GetString(key))
@@ -49,11 +68,13 @@ func ReadEnvInt(key string) int {
 	return v
 }
 
+// ReadEnvString - reads an environment variable as a string
 func ReadEnvString(key string) string {
 	checkIfSet(key)
 	return viper.GetString(key)
 }
 
+// ReadEnvBool - reads environment variable as a boolean
 func ReadEnvBool(key string) bool {
 	checkIfSet(key)
 	return viper.GetBool(key)
@@ -61,7 +82,7 @@ func ReadEnvBool(key string) bool {
 
 func checkIfSet(key string) {
 	if !viper.IsSet(key) {
-		err := errors.New(fmt.Sprintf("Key %s is not set", key))
+		err := fmt.Errorf("Key %s is not set", key)
 		panic(err)
 	}
 }
