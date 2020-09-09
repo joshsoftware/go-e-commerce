@@ -1,21 +1,3 @@
-/*
-========================================================================
-Error Definitions
-	This file, part of the "apperrors" package, defines all the error
-	variables by name that'll be used throughout the entire application.
-Rules
-	Every error variable MUST start with "Err" - with a capital E so
-	we can export it for use in other packages.
-	Additionally, please place a comment (one or more lines) on the line
-	before the declaration of the error variable that explains what that
-	variable is intended to be used for, or the error concept it's meant
-	to represent.
-Notes
-	There are also additional helper functions in this file pertaining to
-	miscellaneous error handling.
-========================================================================
-*/
-
 package apperrors
 
 import (
@@ -25,11 +7,11 @@ import (
 	"net/http"
 )
 
-// ErrorStruct - a generic struct you can use to create error messages/logs to be converted
-// to JSON or other types of messages/data as you need it
+// ErrorStruct - struct used to convert error messages into required JSON format
+
 type ErrorStruct struct {
-	Message string `json:"message,omitempty"` // Your message to the end user or developer
-	Status  int    `json:"status,omitempty"`  // HTTP status code that should go with the message/log (if any)
+	Message string `json:"message,omitempty"` //Error Message
+	Status  int    `json:"status,omitempty"`  //HTTP Response status code
 }
 
 // Error - prints out an error
@@ -45,7 +27,7 @@ func Warn(appError error, msg string, triggeringError error) {
 // JSONError - This function writes out an error response with the status
 // header passed in
 func JSONError(rw http.ResponseWriter, status int, err error) {
-	// Create the ErrorStruct object for later use
+
 	errObj := ErrorStruct{
 		Message: err.Error(),
 		Status:  status,
