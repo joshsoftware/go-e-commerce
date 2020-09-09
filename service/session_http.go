@@ -3,14 +3,26 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
-	logger "github.com/sirupsen/logrus"
+	"io/ioutil"
 	ae "joshsoftware/go-e-commerce/apperrors"
 	"joshsoftware/go-e-commerce/config"
 	"joshsoftware/go-e-commerce/db"
 	"net/http"
+	"strings"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
+	logger "github.com/sirupsen/logrus"
 )
+
+type OAuthToken struct {
+	AccessToken string `json:"access_token"`
+}
+
+type OAuthUser struct {
+	Email string `json:"email"`
+	Name  string `json: "name"`
+}
 
 //generateJWT function generates and return a new JWT token
 func generateJwt(userID int) (tokenString string, err error) {
@@ -140,5 +152,62 @@ func userLogoutHandler(deps Dependencies) http.Handler {
 		}
 		rw.Header().Add("Content-Type", "application/json")
 		return
+	})
+}
+
+func handleAuth(deps Dependencies) http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		// mySigningKey := config.JWTKey()
+		oauthToken := OAuthToken{}
+		// authToken := req.Header["Token"]
+		reqBody, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error in reading request body")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		err = json.Unmarshal(reqBody, &oauthToken)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while Unmarshalling request json")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		client := &http.Client{}
+		req, err = http.NewRequest("GET", "https://www.googleapis.com/oauth2/v2/userinfo", nil)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Fail to create oauth request")
+			ae.JSONError(rw, http.StatusInternalServerError, err)
+			return
+		}
+
+		req.Header.Set("Authorization", "Bearer "+oauthToken.AccessToken)
+		resp, err := client.Do(req)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Failure executing HTTP request to https://www.googleapis.com/oauth2/v2/userinfo", err)
+			ae.JSONError(rw, http.StatusInternalServerError, err)
+			return
+		}
+
+		u := OAuthUser{}
+		payload, err := ioutil.ReadAll(resp.Body)
+		fmt.Println("Payload :", string(payload))
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error reading response body: "+string(payload), err)
+			ae.JSONError(rw, http.StatusInternalServerError, err)
+			return
+		}
+
+		err = json.Unmarshal(payload, &u)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Failure parsing JSON in Unmarshalling OAuthUser"+string(payload), err)
+			ae.JSONError(rw, http.StatusInternalServerError, err)
+		}
+		user := db.User{}
+		user.Email = u.Email
+		user.FirstName = strings.Split(u.Name, " ")[0]
+		user.LastName = strings.Split(u.Name, " ")[1]
+		fmt.Println("User Details : ", user)
+
 	})
 }

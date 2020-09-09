@@ -2,13 +2,14 @@ package service
 
 import (
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/gorilla/mux"
-	logger "github.com/sirupsen/logrus"
 	ae "joshsoftware/go-e-commerce/apperrors"
 	"joshsoftware/go-e-commerce/config"
 	"net/http"
 	"strconv"
+
+	"github.com/dgrijalva/jwt-go"
+	"github.com/gorilla/mux"
+	logger "github.com/sirupsen/logrus"
 )
 
 const (
@@ -36,6 +37,9 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 
 	//Router for Get All Users
 	router.HandleFunc("/users", listUsersHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
+
+	//Route for google Oauth
+	router.HandleFunc("/auth/google", handleAuth(deps)).Methods(http.MethodPost).Headers(versionHeader, v1)
 	return
 }
 
