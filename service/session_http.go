@@ -61,8 +61,8 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 		// and return the token in request header
 		token, err := generateJwt(user.ID)
 		if err != nil {
-			ae.Error(ae.ErrMissingAuthHeader, "Authentication Token in Header Missing", err)
-			ae.JSONError(rw, http.StatusUnauthorized, err)
+			rw.WriteHeader(http.StatusInternalServerError)
+			rw.Write([]byte("Token Generation Failure"))
 			return
 		}
 
