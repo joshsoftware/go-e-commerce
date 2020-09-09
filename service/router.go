@@ -5,6 +5,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	logger "github.com/sirupsen/logrus"
+	ae "joshsoftware/go-e-commerce/apperrors"
 	"joshsoftware/go-e-commerce/config"
 	"net/http"
 	"strconv"
@@ -55,8 +56,8 @@ func jwtMiddleWare(endpoint http.Handler, deps Dependencies) http.Handler {
 
 		//Checking if token not present in header
 		if authToken == nil {
-			rw.WriteHeader(http.StatusUnauthorized)
-			rw.Write([]byte("Unauthorized"))
+			ae.Error(ae.ErrUnknown, "Unknown/unexpected error while creating JWT", err)
+			ae.JSONError(rw, http.StatusInternalServerError, err)
 			return
 		}
 
