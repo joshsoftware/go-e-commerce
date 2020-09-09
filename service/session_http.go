@@ -12,6 +12,7 @@ import (
 	"time"
 )
 
+//generateJWT function generates and return a new JWT token
 func generateJwt(userID int) (tokenString string, err error) {
 	mySigningKey := config.JWTKey()
 	if mySigningKey == nil {
@@ -32,15 +33,14 @@ func generateJwt(userID int) (tokenString string, err error) {
 	return
 }
 
-// @Title userLogin
-// @Description Logging User in
-// @Router /login [post]
-// @Accept  json
-// @Success 200 {object}
-// @Failure 400 {object}
+//userLoginHandler function take credentials in json
+// and check if the credentials are correct
+// also generate and returns a JWT token in the case of correct crendential
 func userLoginHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		user := db.User{}
+
+		//fetching the json object to get crendentials of users
 		err := json.NewDecoder(req.Body).Decode(&user)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("JSON Decoding Failed")
@@ -48,6 +48,8 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
+		//checking if the user is authenticate or not
+		// by passing the credentials to the AuthenticateUser function
 		user, err1 := deps.Store.AuthenticateUser(req.Context(), user)
 		if err1 != nil {
 			logger.WithField("err", err1.Error()).Error("Invalid Credentials")
@@ -55,6 +57,8 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
+		//Generate new JWT token if the user is authenticated
+		// and return the token in request header
 		token, err := generateJwt(user.ID)
 		if err != nil {
 			ae.Error(ae.ErrUnknown, "Unknown/unexpected error while creating JWT", err)
@@ -70,58 +74,68 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 	})
 }
 
+//userLogoutHandler function logs the user off
+// and add the valid JWT token in BlacklistedToken
 func userLogoutHandler(deps Dependencies) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
 		mySigningKey := config.JWTKey()
 
+		//fetching the token from header
 		authToken := req.Header["Token"]
-		if authToken != nil {
-			token, err := jwt.Parse(authToken[0], func(token *jwt.Token) (interface{}, error) {
-				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-					return nil, fmt.Errorf("There was an error")
-				}
-				return mySigningKey, nil
-			})
-			if err != nil {
-				if err == jwt.ErrSignatureInvalid {
-					rw.WriteHeader(http.StatusUnauthorized)
-					return
-				}
-				rw.WriteHeader(http.StatusBadRequest)
-				return
-			}
-			claims, ok := token.Claims.(jwt.MapClaims)
 
-			if !ok && !token.Valid {
-				rw.WriteHeader(http.StatusUnauthorized)
-				rw.Write([]byte("Unauthorized"))
-				return
-			}
-
-			userID := claims["id"].(float64)
-
-			if err != nil {
-				logger.WithField("err", err.Error()).Error("Conversion Failed")
-			}
-			expirationTimeStamp := int64(claims["exp"].(float64))
-			expirationDate := time.Unix(expirationTimeStamp, 0)
-
-			userBlackListedToken := db.BlacklistedToken{
-				UserID:         userID,
-				ExpirationDate: expirationDate,
-				Token:          authToken[0],
-			}
-
-			err = deps.Store.CreateBlacklistedToken(req.Context(), userBlackListedToken)
-			if err != nil {
-				ae.Error(ae.ErrFailedToCreate, "Error creating blaclisted token record", err)
-				rw.Header().Add("Content-Type", "application/json")
-				ae.JSONError(rw, http.StatusInternalServerError, err)
-				return
-			}
-			rw.Header().Add("Content-Type", "application/json")
+		//Checking if token not present in header
+		if authToken == nil {
+			rw.WriteHeader(http.StatusUnauthorized)
+			rw.Write([]byte("Unauthorized"))
 			return
 		}
+
+		token, err := jwt.Parse(authToken[0], func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("There was an error")
+			}
+			return mySigningKey, nil
+		})
+		if err != nil {
+			if err == jwt.ErrSignatureInvalid {
+				rw.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+
+		//Checking if token not valid
+		if !ok && !token.Valid {
+			rw.WriteHeader(http.StatusUnauthorized)
+			rw.Write([]byte("Unauthorized"))
+			return
+		}
+
+		//fetching details from the token
+		userID := claims["id"].(float64)
+		expirationTimeStamp := int64(claims["exp"].(float64))
+		expirationDate := time.Unix(expirationTimeStamp, 0)
+
+		//create a BlacklistedToken to add in database
+		// To blacklist a user valid token
+		userBlackListedToken := db.BlacklistedToken{
+			UserID:         userID,
+			ExpirationDate: expirationDate,
+			Token:          authToken[0],
+		}
+
+		err = deps.Store.CreateBlacklistedToken(req.Context(), userBlackListedToken)
+		if err != nil {
+			ae.Error(ae.ErrFailedToCreate, "Error creating blaclisted token record", err)
+			rw.Header().Add("Content-Type", "application/json")
+			ae.JSONError(rw, http.StatusInternalServerError, err)
+			return
+		}
+		rw.Header().Add("Content-Type", "application/json")
+		return
 	})
 }
