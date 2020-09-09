@@ -8,7 +8,6 @@ import (
 )
 
 // ErrorStruct - struct used to convert error messages into required JSON format
-
 type ErrorStruct struct {
 	Message string `json:"message,omitempty"` //Error Message
 	Status  int    `json:"status,omitempty"`  //HTTP Response status code
