@@ -23,6 +23,7 @@ type User struct {
 	CreatedAt string `db:"created_at" json:"created_at"`
 }
 
+//ListUsers function to fetch all Users From Database
 func (s *pgStore) ListUsers(ctx context.Context) (users []User, err error) {
 	err = s.db.Select(&users, "SELECT * FROM users ORDER BY first_name ASC")
 	if err != nil {
@@ -33,6 +34,7 @@ func (s *pgStore) ListUsers(ctx context.Context) (users []User, err error) {
 	return
 }
 
+//GetUser function is used to Get a Particular User
 func (s *pgStore) GetUser(ctx context.Context, id int) (user User, err error) {
 
 	err = s.db.Get(&user, "SELECT * FROM users WHERE id=$1", id)
@@ -47,7 +49,8 @@ func (s *pgStore) GetUser(ctx context.Context, id int) (user User, err error) {
 	return
 }
 
-// GetUserByMobile - Given a mobile number, return that user.
+//AuthenticateUser Function checks if User has Registered before Login
+// and Has Entered Correct Credentials
 func (s *pgStore) AuthenticateUser(ctx context.Context, u User) (user User, err error) {
 
 	err = s.db.Get(&user, "SELECT * FROM users where email = $1", u.Email)
@@ -60,6 +63,5 @@ func (s *pgStore) AuthenticateUser(ctx context.Context, u User) (user User, err 
 		// If the two passwords don't match, return a 401 status
 		logger.WithField("Error", err.Error())
 	}
-
 	return
 }
