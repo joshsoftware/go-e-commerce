@@ -37,9 +37,13 @@ func getUserHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		//fetch usedId from request
 		var idParam = mux.Vars(req)["id"]
+
 		id, err := strconv.Atoi(idParam)
+
 		if err != nil {
-			logger.Error("Conversion Failed")
+			logger.WithField("err", err.Error()).Error("Invalid User ID")
+			rw.WriteHeader(http.StatusBadRequest)
+			return
 		}
 
 		user, err := deps.Store.GetUser(req.Context(), id)
