@@ -38,17 +38,20 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	return
 }
 
+//jwtMiddleWare function is used to authenticate and authorize the incoming request
 func jwtMiddleWare(endpoint http.Handler, deps Dependencies) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
 		mySigningKey := config.JWTKey()
 
+		//Fetching userID from RequestURL
 		var idParam = mux.Vars(req)["id"]
-		validID, ok := strconv.Atoi(idParam)
 
+		validID, ok := strconv.Atoi(idParam)
 		if ok != nil {
 			logger.Error(ok.Error())
 		}
+
 		authToken := req.Header["Token"]
 		if authToken != nil {
 			token, err := jwt.Parse(authToken[0], func(token *jwt.Token) (interface{}, error) {
@@ -67,10 +70,18 @@ func jwtMiddleWare(endpoint http.Handler, deps Dependencies) http.Handler {
 			}
 			claims, ok := token.Claims.(jwt.MapClaims)
 
-			disdis := deps.Store.CheckBlacklistedToken(req.Context(), authToken[0])
+			//Fetching Status of Token Being Blacklisted or Not
+			isBlacklisted, _ := deps.Store.CheckBlacklistedToken(req.Context(), authToken[0])
 
-			fmt.Println("DIsDis : ", disdis)
-			if !ok && !token.Valid && !disdis {
+			//Unauthorized User if Token BlackListed
+			if isBlacklisted {
+				rw.WriteHeader(http.StatusUnauthorized)
+				rw.Write([]byte("Unauthorized"))
+				return
+			}
+
+			//Unauthorized User if Token Invalid
+			if !ok && !token.Valid {
 				rw.WriteHeader(http.StatusUnauthorized)
 				rw.Write([]byte("Unauthorized"))
 				return
@@ -78,6 +89,7 @@ func jwtMiddleWare(endpoint http.Handler, deps Dependencies) http.Handler {
 
 			userID := claims["id"]
 
+			//Unauthorized User if userID in Token Doesn't Match userID in RequestURL
 			if float64(validID) != userID {
 				rw.WriteHeader(http.StatusUnauthorized)
 				rw.Write([]byte("Unauthorized"))
