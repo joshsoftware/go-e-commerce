@@ -8,12 +8,8 @@ import (
 	"strconv"
 )
 
-// @Title listUsers
-// @Description list all User
-// @Router /users [get]
-// @Accept  json
-// @Success 200 {object}
-// @Failure 400 {object}
+//listUsersHandler function fetch all users from database
+// and return as json object
 func listUsersHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		users, err := deps.Store.ListUsers(req.Context())
@@ -35,19 +31,17 @@ func listUsersHandler(deps Dependencies) http.HandlerFunc {
 	})
 }
 
-// @Title getUser
-// @Description Show User User
-// @Router /user/{id} [get]
-// @Accept  json
-// @Success 200 {object}
-// @Failure 400 {object}
+//listUsersHandler function fetch specific user from database
+// and return as json object
 func getUserHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		//fetch usedId from request
 		var idParam = mux.Vars(req)["id"]
 		id, err := strconv.Atoi(idParam)
 		if err != nil {
 			logger.Error("Conversion Failed")
 		}
+
 		user, err := deps.Store.GetUser(req.Context(), id)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching data")
