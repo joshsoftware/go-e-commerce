@@ -2,7 +2,6 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
 	"joshsoftware/go-e-commerce/db"
 	"net/http"
 	"strconv"
@@ -100,7 +99,6 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 		var user db.User
 
 		err = json.NewDecoder(req.Body).Decode(&user)
-		fmt.Println(user)
 		if err != nil {
 			rw.WriteHeader(http.StatusBadRequest)
 			logger.WithField("err", err.Error()).Error("Error while decoding user")
