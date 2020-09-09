@@ -48,12 +48,12 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		//checking if the user is authenticate or not
+		//checking if the user is authenticated or not
 		// by passing the credentials to the AuthenticateUser function
 		user, err1 := deps.Store.AuthenticateUser(req.Context(), user)
 		if err1 != nil {
 			logger.WithField("err", err1.Error()).Error("Invalid Credentials")
-			rw.WriteHeader(http.StatusInternalServerError)
+			rw.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
@@ -61,14 +61,17 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 		// and return the token in request header
 		token, err := generateJwt(user.ID)
 		if err != nil {
-			ae.Error(ae.ErrUnknown, "Unknown/unexpected error while creating JWT", err)
-			ae.JSONError(rw, http.StatusInternalServerError, err)
+			ae.Error(ae.ErrMissingAuthHeader, "Authentication Token in Header Missing", err)
+			ae.JSONError(rw, http.StatusUnauthorized, err)
 			return
 		}
 
 		respBytes, err := json.Marshal(user)
+		if err != nil {
+			ae.Error(ae.ErrJSONParseFail, "JSON Parsing Failed", err)
+		}
 
-		rw.Header().Add("Authorization", token)
+		rw.Header().Add("Token", token)
 		rw.Header().Add("Content-Type", "application/json")
 		rw.Write(respBytes)
 	})
@@ -110,8 +113,8 @@ func userLogoutHandler(deps Dependencies) http.Handler {
 
 		//Checking if token not valid
 		if !ok && !token.Valid {
-			rw.WriteHeader(http.StatusUnauthorized)
-			rw.Write([]byte("Unauthorized"))
+			ae.Error(ae.ErrInvalidToken, "Authentication Token Invalid", err)
+			ae.JSONError(rw, http.StatusUnauthorized, err)
 			return
 		}
 
