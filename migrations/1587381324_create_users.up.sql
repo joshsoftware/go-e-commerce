@@ -8,6 +8,6 @@ CREATE TABLE IF NOT EXISTS users (
   state VARCHAR(100),
   city VARCHAR(100),
   address TEXT,
-  password VARCHAR(50),  
+  password TEXT,  
   created_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
