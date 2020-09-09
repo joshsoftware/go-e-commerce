@@ -21,7 +21,6 @@ package apperrors
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	l "github.com/sirupsen/logrus"
 	"net/http"
 )
@@ -62,11 +61,6 @@ func JSONError(rw http.ResponseWriter, status int, err error) {
 	return
 }
 
-// ErrKeyNotSet - Returns error object specific to the key value passed in
-func ErrKeyNotSet(key string) (err error) {
-	return fmt.Errorf("Key not set: %s", key)
-}
-
 // ErrRecordNotFound - for when a database record isn't found
 var ErrRecordNotFound = errors.New("Database record not found")
 
@@ -80,26 +74,14 @@ var ErrSignedString = errors.New("Failed to sign token string")
 // ErrMissingAuthHeader - When the HTTP request doesn't contain an 'Authorization' header
 var ErrMissingAuthHeader = errors.New("Missing Auth header")
 
-// ErrJSONParseFail - for some reason, the call to json.Unmarshal or json.Marshal returned an error
+// ErrJSONParseFail - If json.Unmarshal or json.Marshal returns an error
 var ErrJSONParseFail = errors.New("Failed to parse JSON response (likely not valid JSON)")
-
-// ErrReadingResponseBody - If for some reason the app can't read the HTTP response body
-// issued by another server (used when we try to read user information via oauth during
-// login process)
-var ErrReadingResponseBody = errors.New("Could not read HTTP response body")
-
-// ErrHTTPRequestFailed - The HTTP request we issued failed for some reason
-var ErrHTTPRequestFailed = errors.New("HTTP Request Failed")
 
 // ErrNoSigningKey - there isn't a signing key defined in the app configuration
 var ErrNoSigningKey = errors.New("no JWT signing key specified; cannot authenticate users. Define JWT_SECRET in application.yml and restart")
 
-// ErrFailedToCreate - Failed to create record in database
+// ErrFailedToCreate - Record Creation Failed
 var ErrFailedToCreate = errors.New("Failed to create database record")
 
-// -----
-// Let's make the more "generic" errors dead last in our file
-// -----
-
-// ErrUnknown - Used when an unknown/unexpected error has ocurred. Try to avoid over-using this.
+// ErrUnknown - Generic Error For Unknown Errors
 var ErrUnknown = errors.New("unknown/unexpected error has occurred")
