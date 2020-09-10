@@ -7,6 +7,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
+//PingResponse Struct
 type PingResponse struct {
 	Message string `json:"message"`
 }
