@@ -92,10 +92,10 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 		// For checking error occured while looking already registered user
 		if err != nil && err != sql.ErrNoRows {
 			logger.WithField("err", err.Error()).Error("Error while looking existing user")
+
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-
 		// creating hash of the password
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 8)
 		if err != nil {
@@ -126,6 +126,34 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 		rw.WriteHeader(http.StatusCreated)
 		rw.Write(respBytes)
 		return
+	})
+}
 
+func getUserHandler(deps Dependencies) http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		//fetch usedId from request
+		authToken := req.Header["Token"]
+		userID, _, err := getDataFromToken(authToken[0])
+		if err != nil {
+			rw.WriteHeader(http.StatusUnauthorized)
+			rw.Write([]byte("Unauthorized"))
+			return
+		}
+
+		user, err1 := deps.Store.GetUser(req.Context(), int(userID))
+		if err1 != nil {
+			logger.WithField("err", err.Error()).Error("Error fetching data")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		respBytes, err := json.Marshal(user)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error marshaling users data")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		rw.Header().Add("Content-Type", "application/json")
+		rw.Write(respBytes)
 	})
 }
