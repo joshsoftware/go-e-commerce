@@ -3,6 +3,8 @@ package db
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"strings"
 
 	logger "github.com/sirupsen/logrus"
 )
@@ -23,20 +25,6 @@ type User struct {
 }
 
 const (
-	updateUserQuery = `UPDATE users SET (
-	first_name,
-	last_name,
-	email,
-	mobile,
-	address,
-	password,
-	country,
-	state,
-	city
-	
-	) = 
-	($1, $2, $3, $4, $5,$6,$7,$8,$9) where id = $10 `
-
 	getUserQuery = `SELECT * from users where id=$1`
 )
 
@@ -82,18 +70,18 @@ func (s *pgStore) UpdateUser(ctx context.Context, userProfile User, userID int) 
 		logger.WithField("err", err.Error()).Error("User Not found ")
 		return
 	}
+	colName, colValue := PrepareParameters(dbUser, userProfile)
+	var updateQuery string
+	if len(colName) > 1 {
+		updateQuery = `UPDATE users SET (` + strings.Join(colName, ",") + `)=('` + strings.Join(colValue, "','") + "') where id=$1"
+
+	}
+	if len(colName) == 1 {
+		updateQuery = `UPDATE users SET ` + colName[0] + `='` + colValue[0] + "' where id=$1"
+	}
 
 	_, err = tx.ExecContext(ctx,
-		updateUserQuery,
-		userProfile.FirstName,
-		userProfile.LastName,
-		userProfile.Email,
-		userProfile.Mobile,
-		userProfile.Address,
-		userProfile.Password,
-		userProfile.Country,
-		userProfile.State,
-		userProfile.City,
+		updateQuery,
 
 		userID,
 	)
@@ -109,6 +97,31 @@ func (s *pgStore) UpdateUser(ctx context.Context, userProfile User, userID int) 
 		return
 	}
 
+	return
+
+}
+
+func PrepareParameters(userDb User, userProfile User) (colNames []string, colValues []string) {
+	user := User{}
+	elem := reflect.ValueOf(&userProfile).Elem()
+	returnElem := reflect.ValueOf(&user).Elem()
+	DbElem := reflect.ValueOf(&userDb).Elem()
+	values := make([]interface{}, 0)
+	for i := 0; i < elem.NumField(); i++ {
+		if elem.Field(i).Interface() != returnElem.Field(i).Interface() {
+			varname := DbElem.Type().Field(i).Tag.Get("db")
+			colNames = append(colNames, varname)
+			varValue := elem.Field(i).Interface()
+			values = append(values, varValue)
+
+		}
+
+	}
+
+	colValues = make([]string, len(values))
+	for i, v := range values {
+		colValues[i] = fmt.Sprintf("%s", v)
+	}
 	return
 
 }

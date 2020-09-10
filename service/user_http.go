@@ -62,10 +62,10 @@ func getUserHandler(deps Dependencies) http.HandlerFunc {
 		user, err := deps.Store.GetUser(req.Context(), id)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while fetching User")
-			rw.WriteHeader(http.StatusInternalServerError)
-			repsonse(rw, http.StatusInternalServerError, errorResponse{
+			rw.WriteHeader(http.StatusNotFound)
+			repsonse(rw, http.StatusNotFound, errorResponse{
 				Error: messageObject{
-					Message: "Internal server error",
+					Message: "Id Not Found",
 				},
 			})
 			return
@@ -99,6 +99,7 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 		var user db.User
 
 		err = json.NewDecoder(req.Body).Decode(&user)
+
 		if err != nil {
 			rw.WriteHeader(http.StatusBadRequest)
 			logger.WithField("err", err.Error()).Error("Error while decoding user")

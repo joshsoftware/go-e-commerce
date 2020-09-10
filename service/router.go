@@ -24,7 +24,7 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	v1 := fmt.Sprintf("application/vnd.%s.v1", config.AppName())
 
 	router.HandleFunc("/users", listUsersHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
-	router.HandleFunc("/users/{id:[0-9]+}", getUserHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
-	router.HandleFunc("/users/{id:[0-9]+}", updateUserHandler(deps)).Methods(http.MethodPut).Headers(versionHeader, v1)
+	router.HandleFunc("/user/{id:[0-9]+}", getUserHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
+	router.HandleFunc("/user/{id:[0-9]+}", updateUserHandler(deps)).Methods(http.MethodPatch).Headers(versionHeader, v1)
 	return
 }
