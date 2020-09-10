@@ -12,13 +12,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type errorResponse struct {
-	Error string `json:"error"`
-}
-type successResponse struct {
-	Message string `json:"message"`
-}
-
 // @Title listUsers
 // @Description list all User
 // @Router /users [get]
@@ -44,6 +37,58 @@ func listUsersHandler(deps Dependencies) http.HandlerFunc {
 		rw.Header().Add("Content-Type", "application/json")
 		rw.Write(respBytes)
 	})
+
+}
+
+// @Title UpdateUser
+// @Description update User by id
+// @Router /users/id [put]
+// @Accept  json
+// @Success 200 {object}
+// @Failure 400 {object}
+func updateUserHandler(deps Dependencies) http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		authToken := req.Header["Token"]
+		userID, _, err := getDataFromToken(authToken[0])
+		if err != nil {
+			rw.WriteHeader(http.StatusUnauthorized)
+			rw.Write([]byte("Unauthorized"))
+			return
+		}
+
+		var user db.User
+
+		err = json.NewDecoder(req.Body).Decode(&user)
+
+		if err != nil {
+			rw.WriteHeader(http.StatusBadRequest)
+			logger.WithField("err", err.Error()).Error("Error while decoding user")
+			repsonse(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Invalid json body",
+				},
+			})
+			return
+		}
+
+		var updatedUser db.User
+		updatedUser, err = deps.Store.UpdateUser(req.Context(), user, int(userID))
+		if err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			repsonse(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal server error",
+				},
+			})
+			logger.WithField("err", err.Error()).Error("Error while updating user's profile")
+			return
+		}
+		repsonse(rw, http.StatusOK, successResponse{Data: updatedUser})
+
+		return
+
+	})
+
 }
 
 // @Title registerUser
@@ -115,7 +160,7 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		msg := successResponse{
-			Message: "user successfully registered",
+			Data: "user successfully registered",
 		}
 		respBytes, err := json.Marshal(msg)
 		if err != nil {
@@ -130,6 +175,12 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 	})
 }
 
+// @Title getUser
+// @Description get User by id
+// @Router /users/{id} [get]
+// @Accept  json
+// @Success 200 {object}
+// @Failure 400 {object}
 func getUserHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		//fetch usedId from request

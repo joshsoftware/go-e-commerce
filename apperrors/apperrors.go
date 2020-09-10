@@ -3,8 +3,9 @@ package apperrors
 import (
 	"encoding/json"
 	"errors"
-	l "github.com/sirupsen/logrus"
 	"net/http"
+
+	l "github.com/sirupsen/logrus"
 )
 
 // ErrorStruct - struct used to convert error messages into required JSON format

@@ -8,6 +8,7 @@ import (
 type Storer interface {
 	ListUsers(context.Context) ([]User, error)
 	CreateNewUser(context.Context, User) (User, error)
+	UpdateUser(context.Context, User, int) (User, error)
 	CheckUserByEmail(context.Context, string) (bool, User, error)
 	AuthenticateUser(context.Context, User) (User, error)
 	GetUser(context.Context, int) (User, error)
