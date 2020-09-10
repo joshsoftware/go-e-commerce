@@ -2,13 +2,14 @@ package service
 
 import (
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/gorilla/mux"
-	logger "github.com/sirupsen/logrus"
 	ae "joshsoftware/go-e-commerce/apperrors"
 	"joshsoftware/go-e-commerce/config"
 	"net/http"
 	"strconv"
+
+	"github.com/dgrijalva/jwt-go"
+	"github.com/gorilla/mux"
+	logger "github.com/sirupsen/logrus"
 )
 
 const (
@@ -29,7 +30,7 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	router.HandleFunc("/login", userLoginHandler(deps)).Methods(http.MethodPost).Headers(versionHeader, v1)
 
 	//Router for Get User from ID
-	router.Handle("/user/{id:[0-9]+}", jwtMiddleWare(getUserHandler(deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
+	router.Handle("/user/{id}", jwtMiddleWare(getUserHandler(deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 
 	//Router for User Logout
 	router.Handle("/user/{id:[0-9]+}/logout", jwtMiddleWare(userLogoutHandler(deps), deps)).Methods(http.MethodDelete).Headers(versionHeader, v1)
@@ -49,15 +50,17 @@ func jwtMiddleWare(endpoint http.Handler, deps Dependencies) http.Handler {
 		var idParam = mux.Vars(req)["id"]
 		validID, err := strconv.Atoi(idParam)
 		if err != nil {
-			logger.Error(err.Error())
+			logger.WithField("err", err.Error()).Error("Invalid User ID")
+			rw.WriteHeader(http.StatusBadRequest)
+			return
 		}
 
 		authToken := req.Header["Token"]
 
 		//Checking if token not present in header
-		if authToken == nil {
-			ae.Error(ae.ErrUnknown, "Unknown/unexpected error while creating JWT", err)
-			ae.JSONError(rw, http.StatusInternalServerError, err)
+		if len(authToken[0]) < 1 {
+			ae.Error(ae.ErrMissingAuthHeader, "Missing Authentication Token From Header", err)
+			rw.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
