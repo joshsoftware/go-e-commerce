@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"strings"
 
+	"golang.org/x/crypto/bcrypt"
+
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -82,7 +84,6 @@ func (s *pgStore) UpdateUser(ctx context.Context, userProfile User, userID int) 
 
 	_, err = tx.ExecContext(ctx,
 		updateQuery,
-
 		userID,
 	)
 	if err != nil {
@@ -99,6 +100,21 @@ func (s *pgStore) UpdateUser(ctx context.Context, userProfile User, userID int) 
 
 	return
 
+}
+
+func (s *pgStore) AuthenticateUser(ctx context.Context, u User) (user User, err error) {
+
+	err = s.db.Get(&user, "SELECT * FROM users where email = $1", u.Email)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("No such User Available")
+		return
+	}
+
+	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(u.Password)); err != nil {
+		// If the two passwords don't match, return a 401 status
+		logger.WithField("Error", err.Error())
+	}
+	return
 }
 
 func PrepareParameters(userDb User, userProfile User) (colNames []string, colValues []string) {

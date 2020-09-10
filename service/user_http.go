@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"joshsoftware/go-e-commerce/db"
 	"net/http"
-	"strconv"
 
-	"github.com/gorilla/mux"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -46,20 +44,15 @@ func listUsersHandler(deps Dependencies) http.HandlerFunc {
 // @Failure 400 {object}
 func getUserHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		vars := mux.Vars(req)
-		id, err := strconv.Atoi(vars["id"])
+		authToken := req.Header["Token"]
+		userID, _, err := getDataFromToken(authToken[0])
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error id is missing")
-			rw.WriteHeader(http.StatusBadRequest)
-			repsonse(rw, http.StatusBadRequest, errorResponse{
-				Error: messageObject{
-					Message: "Error id is missing",
-				},
-			})
+			rw.WriteHeader(http.StatusUnauthorized)
+			rw.Write([]byte("Unauthorized"))
 			return
 		}
 
-		user, err := deps.Store.GetUser(req.Context(), id)
+		user, err := deps.Store.GetUser(req.Context(), int(userID))
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while fetching User")
 			rw.WriteHeader(http.StatusNotFound)
@@ -83,16 +76,11 @@ func getUserHandler(deps Dependencies) http.HandlerFunc {
 // @Failure 400 {object}
 func updateUserHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		vars := mux.Vars(req)
-		id, err := strconv.Atoi(vars["id"])
+		authToken := req.Header["Token"]
+		userID, _, err := getDataFromToken(authToken[0])
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error id is missing")
-			rw.WriteHeader(http.StatusBadRequest)
-			repsonse(rw, http.StatusBadRequest, errorResponse{
-				Error: messageObject{
-					Message: "Error id is missing",
-				},
-			})
+			rw.WriteHeader(http.StatusUnauthorized)
+			rw.Write([]byte("Unauthorized"))
 			return
 		}
 
@@ -112,7 +100,7 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		var updatedUser db.User
-		updatedUser, err = deps.Store.UpdateUser(req.Context(), user, id)
+		updatedUser, err = deps.Store.UpdateUser(req.Context(), user, int(userID))
 		if err != nil {
 			rw.WriteHeader(http.StatusInternalServerError)
 			repsonse(rw, http.StatusInternalServerError, errorResponse{
