@@ -30,7 +30,7 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	router.HandleFunc("/login", userLoginHandler(deps)).Methods(http.MethodPost).Headers(versionHeader, v1)
 
 	//Router for Get User from ID
-	router.Handle("/user/{id}", jwtMiddleWare(getUserHandler(deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
+	// router.Handle("/user/{id}", jwtMiddleWare(getUserHandler(deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 
 	//Router for User Logout
 	router.Handle("/user/{id}/logout", jwtMiddleWare(userLogoutHandler(deps), deps)).Methods(http.MethodDelete).Headers(versionHeader, v1)
@@ -40,6 +40,7 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 
 	//Route for google Oauth
 	router.HandleFunc("/auth/google", handleAuth(deps)).Methods(http.MethodPost).Headers(versionHeader, v1)
+	router.HandleFunc("/register", registerUserHandler(deps)).Methods(http.MethodPost).Headers(versionHeader, v1)
 	return
 }
 
