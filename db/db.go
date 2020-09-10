@@ -14,4 +14,10 @@ type Storer interface {
 	GetUser(context.Context, int) (User, error)
 	CreateBlacklistedToken(context.Context, BlacklistedToken) error
 	CheckBlacklistedToken(context.Context, string) (bool, int)
+	ListProducts(context.Context) ([]Product, error)
+	GetProductsByCategoryID(context.Context, int) ([]Product, error)
+	CreateNewProduct(context.Context, Product) (Product, error)
+	DeleteProductById(context.Context, int) error
+	GetProductImagesByID(context.Context, int) ([]ProductImage, error)
+	GetProductByID(context.Context, int) (Product, error)
 }

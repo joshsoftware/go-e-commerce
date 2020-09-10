@@ -63,7 +63,7 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 		if err != nil {
 			rw.WriteHeader(http.StatusBadRequest)
 			logger.WithField("err", err.Error()).Error("Error while decoding user")
-			repsonse(rw, http.StatusBadRequest, errorResponse{
+			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
 					Message: "Invalid json body",
 				},
@@ -75,7 +75,7 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 		updatedUser, err = deps.Store.UpdateUser(req.Context(), user, int(userID))
 		if err != nil {
 			rw.WriteHeader(http.StatusInternalServerError)
-			repsonse(rw, http.StatusInternalServerError, errorResponse{
+			responses(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
 					Message: "Internal server error",
 				},
@@ -83,7 +83,7 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 			logger.WithField("err", err.Error()).Error("Error while updating user's profile")
 			return
 		}
-		repsonse(rw, http.StatusOK, successResponse{Data: updatedUser})
+		responses(rw, http.StatusOK, successResponse{Data: updatedUser})
 
 		return
 

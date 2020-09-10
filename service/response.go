@@ -25,7 +25,7 @@ type errorObject struct {
 	Fields map[string]string `json:"fields"`
 }
 
-func repsonse(rw http.ResponseWriter, status int, responseBody interface{}) {
+func responses(rw http.ResponseWriter, status int, responseBody interface{}) {
 	respBytes, err := json.Marshal(responseBody)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error while marshaling core values data")
