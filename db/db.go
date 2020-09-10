@@ -5,8 +5,10 @@ import (
 )
 
 type Storer interface {
-	ListUsers(context.Context) ([]User, error)
 	ListProducts(context.Context) ([]Product, error)
+	GetProductsByCategoryID(context.Context, int) ([]Product, error)
+	CreateNewProduct(context.Context, Product) (Product, error)
+	DeleteProductById(context.Context, int) error
 	GetProductImagesByID(context.Context, int) ([]ProductImage, error)
 	GetProductByID(context.Context, int) (Product, error)
 }
