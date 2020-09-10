@@ -2,10 +2,8 @@ package service
 
 import (
 	"encoding/json"
-	"github.com/gorilla/mux"
 	logger "github.com/sirupsen/logrus"
 	"net/http"
-	"strconv"
 )
 
 //listUsersHandler function fetch all users from database
@@ -36,18 +34,16 @@ func listUsersHandler(deps Dependencies) http.HandlerFunc {
 func getUserHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		//fetch usedId from request
-		var idParam = mux.Vars(req)["id"]
-
-		id, err := strconv.Atoi(idParam)
-
+		authToken := req.Header["Token"]
+		userID, _, err := getDataFromToken(authToken[0])
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Invalid User ID")
-			rw.WriteHeader(http.StatusBadRequest)
+			rw.WriteHeader(http.StatusUnauthorized)
+			rw.Write([]byte("Unauthorized"))
 			return
 		}
 
-		user, err := deps.Store.GetUser(req.Context(), id)
-		if err != nil {
+		user, err1 := deps.Store.GetUser(req.Context(), int(userID))
+		if err1 != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching data")
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
