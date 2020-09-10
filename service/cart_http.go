@@ -17,16 +17,16 @@ import (
 // @Failure 400 {object}
 func getCartHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		params := mux.Vars(req)
-		user_id, err := strconv.Atoi(params["user_id"])
-		cart, err := deps.Store.GetCart(req.Context(), user_id)
+		request_params := mux.Vars(req)
+		user_id, err := strconv.Atoi(request_params["user_id"])
+		products, err := deps.Store.GetCart(req.Context(), user_id)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching data")
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		respBytes, err := json.Marshal(cart)
+		respBytes, err := json.Marshal(products)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error marshaling cart data")
 			rw.WriteHeader(http.StatusInternalServerError)
