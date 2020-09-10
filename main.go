@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/rs/cors"
 	"joshsoftware/go-e-commerce/config"
 	"joshsoftware/go-e-commerce/db"
 	"joshsoftware/go-e-commerce/service"
@@ -70,6 +71,13 @@ func startApp() (err error) {
 		return
 	}
 
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"POST", "GET", "DELETE", "PUT", "PATCH", "OPTIONS"},
+		AllowCredentials: true,
+		Debug:            true,
+	})
+
 	deps := service.Dependencies{
 		Store: store,
 	}
@@ -79,6 +87,7 @@ func startApp() (err error) {
 
 	// init web server
 	server := negroni.Classic()
+	server.Use(c)
 	server.UseHandler(router)
 
 	port := config.AppPort() // This can be changed to the service port number via environment variable.
