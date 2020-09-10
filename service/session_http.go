@@ -93,45 +93,16 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 func userLogoutHandler(deps Dependencies) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
-		mySigningKey := config.JWTKey()
-
 		//fetching the token from header
 		authToken := req.Header["Token"]
 
-		//Checking if token not present in header
-		if authToken == nil {
+		//fetching details from the token
+		userID, expirationTimeStamp, err := getDataFromToken(authToken[0])
+		if err != nil {
 			rw.WriteHeader(http.StatusUnauthorized)
 			rw.Write([]byte("Unauthorized"))
 			return
 		}
-
-		token, err := jwt.Parse(authToken[0], func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("There was an error")
-			}
-			return mySigningKey, nil
-		})
-		if err != nil {
-			if err == jwt.ErrSignatureInvalid {
-				rw.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-			rw.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		claims, ok := token.Claims.(jwt.MapClaims)
-
-		//Checking if token not valid
-		if !ok && !token.Valid {
-			ae.Error(ae.ErrInvalidToken, "Authentication Token Invalid", err)
-			ae.JSONError(rw, http.StatusUnauthorized, err)
-			return
-		}
-
-		//fetching details from the token
-		userID := claims["id"].(float64)
-		expirationTimeStamp := int64(claims["exp"].(float64))
 		expirationDate := time.Unix(expirationTimeStamp, 0)
 
 		//create a BlacklistedToken to add in database
@@ -149,7 +120,41 @@ func userLogoutHandler(deps Dependencies) http.Handler {
 			ae.JSONError(rw, http.StatusInternalServerError, err)
 			return
 		}
+
+		rw.Write([]byte("Logged Out Successfully"))
 		rw.WriteHeader(http.StatusOK)
 		return
 	})
+}
+
+func getDataFromToken(Token string) (userID float64, expirationTime int64, err error) {
+	mySigningKey := config.JWTKey()
+
+	//Checking if token not present in header
+	if len(Token) < 1 {
+		ae.Error(ae.ErrMissingAuthHeader, "Missing Authentication Token From Header", err)
+		return
+	}
+
+	token, err := jwt.Parse(Token, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("There was an error")
+		}
+		return mySigningKey, nil
+	})
+	if err != nil {
+		ae.Error(ae.ErrInvalidToken, "Invalid Token", err)
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+
+	if !ok && !token.Valid {
+		ae.Error(ae.ErrInvalidToken, "Invalid Token", err)
+		return
+	}
+
+	userID = claims["id"].(float64)
+	expirationTime = int64(claims["exp"].(float64))
+	return
 }
