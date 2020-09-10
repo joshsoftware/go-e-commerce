@@ -3,14 +3,21 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
-	logger "github.com/sirupsen/logrus"
 	ae "joshsoftware/go-e-commerce/apperrors"
 	"joshsoftware/go-e-commerce/config"
 	"joshsoftware/go-e-commerce/db"
 	"net/http"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
+	logger "github.com/sirupsen/logrus"
 )
+
+//AuthBody stores responce body for login
+type AuthBody struct {
+	Message string `json:"meassage"`
+	Token   string `json:"token"`
+}
 
 //generateJWT function generates and return a new JWT token
 func generateJwt(userID int) (tokenString string, err error) {
@@ -48,6 +55,7 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
+		//TODO change no need to return user object from Authentication
 		//checking if the user is authenticated or not
 		// by passing the credentials to the AuthenticateUser function
 		user, err1 := deps.Store.AuthenticateUser(req.Context(), user)
@@ -65,13 +73,16 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 			rw.Write([]byte("Token Generation Failure"))
 			return
 		}
+		authbody := AuthBody{
+			Message: "Login Successfull",
+			Token:   token,
+		}
 
-		respBytes, err := json.Marshal(user)
+		respBytes, err := json.Marshal(authbody)
 		if err != nil {
 			ae.Error(ae.ErrJSONParseFail, "JSON Parsing Failed", err)
 		}
 
-		rw.Header().Add("Token", token)
 		rw.Header().Add("Content-Type", "application/json")
 		rw.Write(respBytes)
 	})
@@ -138,7 +149,7 @@ func userLogoutHandler(deps Dependencies) http.Handler {
 			ae.JSONError(rw, http.StatusInternalServerError, err)
 			return
 		}
-		rw.Header().Add("Content-Type", "application/json")
+		rw.WriteHeader(http.StatusOK)
 		return
 	})
 }
