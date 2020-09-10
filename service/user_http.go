@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	logger "github.com/sirupsen/logrus"
+
 	"golang.org/x/crypto/bcrypt"
 )
 

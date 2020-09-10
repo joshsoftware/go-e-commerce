@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	ae "joshsoftware/go-e-commerce/apperrors"
 	"joshsoftware/go-e-commerce/config"
 	"joshsoftware/go-e-commerce/db"
@@ -13,9 +14,17 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-//AuthBody stores responce body for login
-type AuthBody struct {
-	Message string `json:"meassage"`
+type OAuthToken struct {
+	AccessToken string `json:"access_token"`
+}
+
+type OAuthUser struct {
+	Email string `json:"email"`
+	Name  string `json: "name"`
+}
+
+type authBody struct {
+	Message string `json:"message"`
 	Token   string `json:"token"`
 }
 
@@ -73,7 +82,7 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 			rw.Write([]byte("Token Generation Failure"))
 			return
 		}
-		authbody := AuthBody{
+		authbody := authBody{
 			Message: "Login Successfull",
 			Token:   token,
 		}
@@ -157,4 +166,108 @@ func getDataFromToken(Token string) (userID float64, expirationTime int64, err e
 	userID = claims["id"].(float64)
 	expirationTime = int64(claims["exp"].(float64))
 	return
+}
+
+func handleAuth(deps Dependencies) http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+
+		oauthToken := OAuthToken{}
+
+		// Getting google access token from body
+		reqBody, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error in reading request body")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// Unmarshalling access token in oauthToken
+		err = json.Unmarshal(reqBody, &oauthToken)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while Unmarshalling request json")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// Now getting user profile from google api using access token
+		client := &http.Client{}
+		req, err = http.NewRequest("GET", "https://www.googleapis.com/oauth2/v2/userinfo", nil)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Fail to create oauth request")
+			ae.JSONError(rw, http.StatusInternalServerError, err)
+			return
+		}
+
+		req.Header.Set("Authorization", "Bearer "+oauthToken.AccessToken)
+		resp, err := client.Do(req)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Failure executing HTTP request to https://www.googleapis.com/oauth2/v2/userinfo", err)
+			ae.JSONError(rw, http.StatusInternalServerError, err)
+			return
+		}
+
+		u := OAuthUser{}
+		payload, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error reading response body: "+string(payload), err)
+			ae.JSONError(rw, http.StatusInternalServerError, err)
+			return
+		}
+
+		err = json.Unmarshal(payload, &u)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Failure parsing JSON in Unmarshalling OAuthUser"+string(payload), err)
+			ae.JSONError(rw, http.StatusInternalServerError, err)
+		}
+
+		// Checking if user is already registered if registered then generate JWT token for him
+		check, existingUser, err := deps.Store.CheckUserByEmail(req.Context(), u.Email)
+		if check {
+			token, err := generateJwt(existingUser.ID)
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Unknown/unexpected error while creating JWT for " + existingUser.Email)
+				ae.JSONError(rw, http.StatusInternalServerError, err)
+				return
+			}
+			respBody, err := json.Marshal(authBody{Message: "Authentication Successful", Token: token})
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error parsing JSON for token response, token: " + token)
+				ae.JSONError(rw, http.StatusInternalServerError, err)
+				return
+			}
+			rw.Header().Add("Content-type", "application/json")
+			rw.WriteHeader(http.StatusOK)
+			rw.Write(respBody)
+			return
+		}
+
+		// At this point it is known that user is not registered. Now register the user and generate JWT token for him
+		user := db.User{}
+		user.Email = u.Email
+		user.FirstName = u.Name
+		newUser, err := deps.Store.CreateNewUser(req.Context(), user)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error in inserting user in database")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// Generating Jwt token
+		token, err := generateJwt(newUser.ID)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Unknown/unexpected error while creating JWT for " + newUser.Email)
+			ae.JSONError(rw, http.StatusInternalServerError, err)
+			return
+		}
+		respBody, err := json.Marshal(authBody{Message: "Authentication Successful", Token: token})
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error parsing JSON for token response, token: " + token)
+			ae.JSONError(rw, http.StatusInternalServerError, err)
+			return
+		}
+		rw.Header().Add("Content-type", "application/json")
+		rw.WriteHeader(http.StatusOK)
+		rw.Write(respBody)
+		return
+	})
 }
