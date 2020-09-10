@@ -39,17 +39,6 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 func jwtMiddleWare(endpoint http.Handler, deps Dependencies) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
-		// mySigningKey := config.JWTKey()
-
-		// //Fetching userID from RequestURL
-		// var idParam = mux.Vars(req)["id"]
-		// validID, err := strconv.Atoi(idParam)
-		// if err != nil {
-		// 	logger.WithField("err", err.Error()).Error("Invalid User ID")
-		// 	rw.WriteHeader(http.StatusBadRequest)
-		// 	return
-		// }
-
 		authToken := req.Header["Token"]
 
 		_, _, err := getDataFromToken(authToken[0])
@@ -59,30 +48,6 @@ func jwtMiddleWare(endpoint http.Handler, deps Dependencies) http.Handler {
 			return
 		}
 
-		// //Checking if token not present in header
-		// if len(authToken[0]) < 1 {
-		// 	ae.Error(ae.ErrMissingAuthHeader, "Missing Authentication Token From Header", err)
-		// 	rw.WriteHeader(http.StatusUnauthorized)
-		// 	return
-		// }
-
-		// token, err := jwt.Parse(authToken[0], func(token *jwt.Token) (interface{}, error) {
-		// 	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-		// 		return nil, fmt.Errorf("There was an error")
-		// 	}
-		// 	return mySigningKey, nil
-		// })
-		// if err != nil {
-		// 	if err == jwt.ErrSignatureInvalid {
-		// 		rw.WriteHeader(http.StatusUnauthorized)
-		// 		return
-		// 	}
-		// 	rw.WriteHeader(http.StatusBadRequest)
-		// 	return
-		// }
-
-		// claims, ok := token.Claims.(jwt.MapClaims)
-
 		//Fetching Status of Token Being Blacklisted or Not
 		// Unauthorized User if Token BlackListed
 		if isBlacklisted, _ := deps.Store.CheckBlacklistedToken(req.Context(), authToken[0]); isBlacklisted {
@@ -90,23 +55,6 @@ func jwtMiddleWare(endpoint http.Handler, deps Dependencies) http.Handler {
 			rw.Write([]byte("Unauthorized"))
 			return
 		}
-
-		// //Unauthorized User if Token Invalid
-		// if !ok && !token.Valid {
-		// 	rw.WriteHeader(http.StatusUnauthorized)
-		// 	rw.Write([]byte("Unauthorized"))
-		// 	return
-		// }
-
-		// userID := claims["id"]
-
-		// //Unauthorized User if userID in Token Doesn't Match userID in RequestURL
-		// if float64(validID) != userID {
-		// 	rw.WriteHeader(http.StatusUnauthorized)
-		// 	rw.Write([]byte("Unauthorized"))
-		// 	return
-		// }
-
 		endpoint.ServeHTTP(rw, req)
 	})
 }
