@@ -48,8 +48,8 @@ func makeHTTPCall(method, path, body string, handlerFunc http.HandlerFunc) (reco
 }
 
 func (suite *UsersHandlerTestSuite) TestRegisterUserSuccess() {
-	suite.dbMock.On("CreateNewUser", mock.Anything, mock.Anything).Return(nil)
-	suite.dbMock.On("CheckUserByEmail", mock.Anything, mock.Anything, mock.Anything).Return(false, sql.ErrNoRows)
+	suite.dbMock.On("CreateNewUser", mock.Anything, mock.Anything).Return(db.User{}, nil)
+	suite.dbMock.On("CheckUserByEmail", mock.Anything, mock.Anything).Return(false, db.User{}, sql.ErrNoRows)
 	body :=
 		`{
 			"first_name" : "test1",
@@ -73,8 +73,8 @@ func (suite *UsersHandlerTestSuite) TestRegisterUserSuccess() {
 }
 
 func (suite *UsersHandlerTestSuite) TestRegisterUserFailure() {
-	suite.dbMock.On("CreateNewUser", mock.Anything, mock.Anything).Return(nil)
-	suite.dbMock.On("CheckUserByEmail", mock.Anything, mock.Anything, mock.Anything).Return(true, sql.ErrNoRows)
+	suite.dbMock.On("CreateNewUser", mock.Anything, mock.Anything).Return(db.User{}, nil)
+	suite.dbMock.On("CheckUserByEmail", mock.Anything, mock.Anything).Return(true, db.User{}, sql.ErrNoRows)
 	body :=
 		`{
 		"first_name" : "test1",
@@ -93,9 +93,9 @@ func (suite *UsersHandlerTestSuite) TestRegisterUserFailure() {
 		registerUserHandler(Dependencies{Store: suite.dbMock}),
 	)
 
-	assert.Equal(suite.T(), `{"error":"user's email or mobile already registered"}`, recorder.Body.String())
+	assert.Equal(suite.T(), `{"error":"user already registered"}`, recorder.Body.String())
 	assert.Equal(suite.T(), http.StatusBadRequest, recorder.Code)
 	suite.dbMock.AssertNotCalled(suite.T(), "CreateNewUser", mock.Anything, mock.Anything)
-	suite.dbMock.AssertCalled(suite.T(), "CheckUserByEmail", mock.Anything, mock.Anything, mock.Anything)
+	suite.dbMock.AssertCalled(suite.T(), "CheckUserByEmail", mock.Anything, mock.Anything)
 
 }

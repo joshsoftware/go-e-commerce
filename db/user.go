@@ -11,7 +11,7 @@ const (
 	insertUserQuery = `INSERT INTO users (first_name, last_name, email, mobile, country, state, city, address, password) 
 	VALUES (:first_name, :last_name, :email, :mobile, :country, :state, :city, :address, :password)`
 
-	getUserByEmailQuery = `SELECT * FROM users WHERE email=$1 OR mobile=$2 LIMIT 1`
+	getUserByEmailQuery = `SELECT * FROM users WHERE email=$1 LIMIT 1`
 )
 
 // User - struct representing a user
@@ -40,7 +40,7 @@ func (s *pgStore) ListUsers(ctx context.Context) (users []User, err error) {
 }
 
 // CreateNewUser = creates a new user in database
-func (s *pgStore) CreateNewUser(ctx context.Context, u User) (err error) {
+func (s *pgStore) CreateNewUser(ctx context.Context, u User) (newUser User, err error) {
 	tx, err := s.db.Beginx()
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error in beginning user insert transaction")
@@ -56,18 +56,22 @@ func (s *pgStore) CreateNewUser(ctx context.Context, u User) (err error) {
 		logger.WithField("err", err.Error()).Error("Error while commiting transaction inserting user")
 		return
 	}
+	_, newUser, err = s.CheckUserByEmail(ctx, u.Email)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("Error selecting user from database with email: " + u.Email)
+		return
+	}
 	return
 }
 
-func (s *pgStore) CheckUserByEmail(ctx context.Context, email string, mobile string) (check bool, err error) {
-	user := User{}
-	err = s.db.Get(&user, getUserByEmailQuery, email, mobile)
+func (s *pgStore) CheckUserByEmail(ctx context.Context, email string) (check bool, user User, err error) {
+	err = s.db.Get(&user, getUserByEmailQuery, email)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return false, err
+			return false, user, err
 		}
 		logger.WithField("err", err.Error()).Error("Error while selecting user from database by email" + email)
 		return
 	}
-	return true, err
+	return true, user, err
 }

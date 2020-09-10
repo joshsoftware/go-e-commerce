@@ -70,12 +70,12 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		// For checking if user already registered
-		check, err := deps.Store.CheckUserByEmail(req.Context(), user.Email, user.Mobile)
+		check, _, err := deps.Store.CheckUserByEmail(req.Context(), user.Email)
 
 		// If check true then user is already registered
 		if check {
 			e := errorResponse{
-				Error: "user's email or mobile already registered",
+				Error: "user already registered",
 			}
 			respBytes, err := json.Marshal(e)
 			if err != nil {
@@ -106,7 +106,7 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 		user.Password = string(hashedPassword)
 
 		// Storing new user's data in database
-		err = deps.Store.CreateNewUser(req.Context(), user)
+		_, err = deps.Store.CreateNewUser(req.Context(), user)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error in inserting user in database")
 			rw.WriteHeader(http.StatusInternalServerError)
