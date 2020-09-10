@@ -1,3 +1,4 @@
+-- use Serial id for auto increment
 CREATE TABLE IF NOT EXISTS products (
 	id INT NOT NULL PRIMARY KEY,
 	name varchar(50)   NOT NULL,
