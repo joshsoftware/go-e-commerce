@@ -4,7 +4,6 @@ import (
 	"strconv"
 	"encoding/json"
 	"net/http"
-	"github.com/gorilla/mux"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -30,13 +29,14 @@ func response(rw http.ResponseWriter, status int, responseData interface{}){
 
 func addToCartHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		cartId, err := strconv.Atoi(mux.Vars(req)["id"])
+		authToken := req.Header["Token"]
+		cartId, _, err := getDataFromToken(authToken[0])
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("cart_id is missing")
+			logger.WithField("err", err.Error()).Error("Unauthorized user")
 			error := errorResponse {
-				Error : "cart_id missing", 
+				Error : "Unauthorized user",
 			}
-			response(rw, http.StatusBadRequest, error)
+			response(rw, http.StatusUnauthorized, error)
 			return
 		}
 
@@ -50,7 +50,7 @@ func addToCartHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		rowsAffected, err := deps.Store.AddToCart(req.Context(), cartId, productId)
+		rowsAffected, err := deps.Store.AddToCart(req.Context(), int(cartId), productId)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("error while adding to cart")
 			error := errorResponse {
@@ -77,13 +77,14 @@ func addToCartHandler(deps Dependencies) http.HandlerFunc {
 
 func removeFromCartHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		cartId, err := strconv.Atoi(mux.Vars(req)["id"])
+		authToken := req.Header["Token"]
+		cartId, _, err := getDataFromToken(authToken[0])
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("cart_id is missing")
+			logger.WithField("err", err.Error()).Error("Unauthorized user")
 			error := errorResponse {
-				Error : "cart_id missing",
+				Error : "Unauthorized user",
 			}
-			response(rw, http.StatusBadRequest, error)
+			response(rw, http.StatusUnauthorized, error)
 			return
 		}
 
@@ -98,7 +99,7 @@ func removeFromCartHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		rowsAffected, err := deps.Store.RemoveFromCart(req.Context(), cartId, productId)
+		rowsAffected, err := deps.Store.RemoveFromCart(req.Context(), int(cartId), productId)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while removing from cart")
 			error := errorResponse {
@@ -125,14 +126,15 @@ func removeFromCartHandler(deps Dependencies) http.HandlerFunc {
 
 func updateIntoCartHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		cartId, err := strconv.Atoi(mux.Vars(req)["id"])
+		authToken := req.Header["Token"]
+		cartId, _, err := getDataFromToken(authToken[0])
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("cart_id is missing")
+			logger.WithField("err", err.Error()).Error("Unauthorized user")
 			error := errorResponse {
-				Error : "cart_id missing",
+				Error : "Unauthorized user",
 			}
-			response(rw, http.StatusBadRequest, error)
-			return			
+			response(rw, http.StatusUnauthorized, error)
+			return
 		}
 		
 		productId, err := strconv.Atoi(req.URL.Query()["productId"][0])
@@ -155,7 +157,7 @@ func updateIntoCartHandler(deps Dependencies) http.HandlerFunc {
 			return 
 		}
 		
-		rowsAffected, err := deps.Store.UpdateIntoCart(req.Context(), quantity, cartId, productId)
+		rowsAffected, err := deps.Store.UpdateIntoCart(req.Context(), quantity, int(cartId), productId)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while updating to cart")
 			error := errorResponse {
