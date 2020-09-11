@@ -99,6 +99,18 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
+		if user.Email != "" {
+
+			rw.WriteHeader(http.StatusBadRequest)
+			logger.WithField("err", "CAnnot update Email")
+			repsonse(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "cannot update email id !!",
+				},
+			})
+			return
+		}
+
 		var updatedUser db.User
 		updatedUser, err = deps.Store.UpdateUser(req.Context(), user, int(userID))
 		if err != nil {
