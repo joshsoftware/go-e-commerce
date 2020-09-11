@@ -43,16 +43,22 @@ func jwtMiddleWare(endpoint http.Handler, deps Dependencies) http.Handler {
 
 		_, _, err := getDataFromToken(authToken[0])
 		if err != nil {
-			rw.WriteHeader(http.StatusUnauthorized)
-			rw.Write([]byte("Unauthorized"))
+			responses(rw, http.StatusUnauthorized, errorResponse{
+				Error: messageObject{
+					Message: "Unauthorized User",
+				},
+			})
 			return
 		}
 
 		//Fetching Status of Token Being Blacklisted or Not
 		// Unauthorized User if Token BlackListed
 		if isBlacklisted, _ := deps.Store.CheckBlacklistedToken(req.Context(), authToken[0]); isBlacklisted {
-			rw.WriteHeader(http.StatusUnauthorized)
-			rw.Write([]byte("Unauthorized"))
+			responses(rw, http.StatusUnauthorized, errorResponse{
+				Error: messageObject{
+					Message: "Unauthorized User",
+				},
+			})
 			return
 		}
 		endpoint.ServeHTTP(rw, req)

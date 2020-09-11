@@ -14,7 +14,7 @@ import (
 )
 
 //AuthBody stores responce body for login
-type AuthBody struct {
+type authBody struct {
 	Message string `json:"meassage"`
 	Token   string `json:"token"`
 }
@@ -51,7 +51,12 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 		err := json.NewDecoder(req.Body).Decode(&user)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("JSON Decoding Failed")
-			rw.WriteHeader(http.StatusBadRequest)
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "JSON Decoding Failed",
+				},
+			})
+
 			return
 		}
 
@@ -61,7 +66,11 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 		user, err1 := deps.Store.AuthenticateUser(req.Context(), user)
 		if err1 != nil {
 			logger.WithField("err", err1.Error()).Error("Invalid Credentials")
-			rw.WriteHeader(http.StatusUnauthorized)
+			responses(rw, http.StatusUnauthorized, errorResponse{
+				Error: messageObject{
+					Message: "Invalid Credentials",
+				},
+			})
 			return
 		}
 
@@ -69,22 +78,20 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 		// and return the token in request header
 		token, err := generateJwt(user.ID)
 		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			rw.Write([]byte("Token Generation Failure"))
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Token Generation Failure",
+				},
+			})
 			return
 		}
-		authbody := AuthBody{
-			Message: "Login Successfull",
-			Token:   token,
-		}
 
-		respBytes, err := json.Marshal(authbody)
-		if err != nil {
-			ae.Error(ae.ErrJSONParseFail, "JSON Parsing Failed", err)
-		}
-
-		rw.Header().Add("Content-Type", "application/json")
-		rw.Write(respBytes)
+		responses(rw, http.StatusOK, successResponse{
+			Data: authBody{
+				Message: "Login Successfull",
+				Token:   token,
+			},
+		})
 	})
 }
 
@@ -99,8 +106,11 @@ func userLogoutHandler(deps Dependencies) http.Handler {
 		//fetching details from the token
 		userID, expirationTimeStamp, err := getDataFromToken(authToken[0])
 		if err != nil {
-			rw.WriteHeader(http.StatusUnauthorized)
-			rw.Write([]byte("Unauthorized"))
+			responses(rw, http.StatusUnauthorized, errorResponse{
+				Error: messageObject{
+					Message: "Unauthorized User",
+				},
+			})
 			return
 		}
 		expirationDate := time.Unix(expirationTimeStamp, 0)
@@ -116,13 +126,18 @@ func userLogoutHandler(deps Dependencies) http.Handler {
 		err = deps.Store.CreateBlacklistedToken(req.Context(), userBlackListedToken)
 		if err != nil {
 			ae.Error(ae.ErrFailedToCreate, "Error creating blaclisted token record", err)
-			rw.Header().Add("Content-Type", "application/json")
-			ae.JSONError(rw, http.StatusInternalServerError, err)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal Server Error",
+				},
+			})
 			return
 		}
-
-		rw.Write([]byte("Logged Out Successfully"))
-		rw.WriteHeader(http.StatusOK)
+		responses(rw, http.StatusOK, successResponse{
+			Data: messageObject{
+				Message: "Logged Out Successfully",
+			},
+		})
 		return
 	})
 }
