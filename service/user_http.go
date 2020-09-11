@@ -32,8 +32,8 @@ func listUsersHandler(deps Dependencies) http.HandlerFunc {
 func getUserHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		//fetch usedId from request
-		authToken := req.Header["Token"]
-		userID, _, err := getDataFromToken(authToken[0])
+		authToken := req.Header.Get("Token")
+		userID, _, err := getDataFromToken(authToken)
 		if err != nil {
 			responses(rw, http.StatusUnauthorized, errorResponse{
 				Error: messageObject{

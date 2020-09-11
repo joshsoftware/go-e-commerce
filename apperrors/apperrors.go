@@ -37,7 +37,7 @@ func JSONError(rw http.ResponseWriter, status int, err error) {
 		Warn(err, "Error in AppErrors marshalling JSON", err)
 	}
 	rw.WriteHeader(status)
-	rw.Header().Add("Content-Type", "application/json")
+	rw.Header().Set("Content-Type", "application/json")
 	rw.Write(errJSON)
 	return
 }

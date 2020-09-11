@@ -101,10 +101,10 @@ func userLogoutHandler(deps Dependencies) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
 		//fetching the token from header
-		authToken := req.Header["Token"]
+		authToken := req.Header.Get("Token")
 
 		//fetching details from the token
-		userID, expirationTimeStamp, err := getDataFromToken(authToken[0])
+		userID, expirationTimeStamp, err := getDataFromToken(authToken)
 		if err != nil {
 			responses(rw, http.StatusUnauthorized, errorResponse{
 				Error: messageObject{
@@ -120,7 +120,7 @@ func userLogoutHandler(deps Dependencies) http.Handler {
 		userBlackListedToken := db.BlacklistedToken{
 			UserID:         userID,
 			ExpirationDate: expirationDate,
-			Token:          authToken[0],
+			Token:          authToken,
 		}
 
 		err = deps.Store.CreateBlacklistedToken(req.Context(), userBlackListedToken)
