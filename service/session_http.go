@@ -56,7 +56,6 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 					Message: "JSON Decoding Failed",
 				},
 			})
-
 			return
 		}
 
@@ -145,15 +144,9 @@ func userLogoutHandler(deps Dependencies) http.Handler {
 func getDataFromToken(Token string) (userID float64, expirationTime int64, err error) {
 	mySigningKey := config.JWTKey()
 
-	//Checking if token not present in header
-	if len(Token) < 1 {
-		ae.Error(ae.ErrMissingAuthHeader, "Missing Authentication Token From Header", err)
-		return
-	}
-
 	token, err := jwt.Parse(Token, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("There was an error")
+			return nil, fmt.Errorf("There was an error while parsing the token")
 		}
 		return mySigningKey, nil
 	})

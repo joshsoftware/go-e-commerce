@@ -41,6 +41,16 @@ func jwtMiddleWare(endpoint http.Handler, deps Dependencies) http.Handler {
 
 		authToken := req.Header.Get("Token")
 
+		//Checking if token not present in header
+		if len(authToken) < 1 {
+			responses(rw, http.StatusUnauthorized, errorResponse{
+				Error: messageObject{
+					Message: "Missing Authorization Token",
+				},
+			})
+			return
+		}
+
 		_, _, err := getDataFromToken(authToken)
 		if err != nil {
 			responses(rw, http.StatusUnauthorized, errorResponse{
