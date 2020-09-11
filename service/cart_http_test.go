@@ -2,9 +2,14 @@ package service
 
 import (
 	"encoding/json"
+	"joshsoftware/go-e-commerce/config"
 	"joshsoftware/go-e-commerce/db"
 	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
 
+	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -70,6 +75,25 @@ func (suite *CartHandlerTestSuite) TestGetCartSuccess() {
 
 	suite.dbMock.AssertExpectations(suite.T())
 
+}
+
+func TestExampleTestSuite(t *testing.T) {
+	config.Load()
+	suite.Run(t, new(CartHandlerTestSuite))
+}
+
+func makeHTTPCall(method, path, requestURL, body string, handlerFunc http.HandlerFunc) (recorder *httptest.ResponseRecorder) {
+	// create a http request using the given parameters
+	req, _ := http.NewRequest(method, requestURL, strings.NewReader(body))
+	// test recorder created for capturing api responses
+	recorder = httptest.NewRecorder()
+	// create a router to serve the handler in test with the prepared request
+	router := mux.NewRouter()
+	router.HandleFunc(path, handlerFunc).Methods(method)
+
+	// serve the request and write the response to recorder
+	router.ServeHTTP(recorder, req)
+	return
 }
 
 // func (suite *CartHandlerTestSuite) TestGetCartDbFailure() {

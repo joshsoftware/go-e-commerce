@@ -18,16 +18,15 @@ func getCartHandler(deps Dependencies) http.HandlerFunc {
 		// request_params := mux.Vars(req)
 		// user_id, err := strconv.Atoi(request_params["user_id"])
 
-		// authToken := req.Header["Token"]
-		// userID, _, err := getDataFromToken(authToken[0])
-		// if err != nil {
-		// rw.WriteHeader(http.StatusUnauthorized)
-		// rw.Write([]byte("Unauthorized"))
-		// return
-		// }
+		authToken := req.Header["Token"]
+		userID, _, err := getDataFromToken(authToken[0])
+		if err != nil {
+			rw.WriteHeader(http.StatusUnauthorized)
+			rw.Write([]byte("Unauthorized"))
+			return
+		}
 
-		user_id := 1
-		products, err := deps.Store.GetCart(req.Context(), int(user_id))
+		products, err := deps.Store.GetCart(req.Context(), userID)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching data")
 			rw.WriteHeader(http.StatusInternalServerError)

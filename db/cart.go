@@ -14,8 +14,13 @@ type Cart struct {
 }
 
 type Product struct {
-	Id   int    `db:"id" json:"id"`
-	Name string `db:"name" json:"name"`
+	Id         int     `db:"id" json:"id"`
+	Name       string  `db:"name" json:"name"`
+	Decription string  `db:"description" json:"description"`
+	Price      float64 `db:"price" json:"price"`
+	Discount   float64 `db:"discount" json:"discount"`
+	Quantity   int     `db:"quantity" json:"quantity"`
+	CategoryId int     `db:"category_id" json:"category_id"`
 }
 
 const (

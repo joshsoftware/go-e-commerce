@@ -1,5 +1,8 @@
-CREATE TABLE cart (
+CREATE TABLE IF NOT EXISTS cart (
   id integer NOT NULL ,
-  product_id integer REFERENCES products(id),
-  quantity integer
+  product_id BIGINT NOT NULL,
+  quantity integer,
+  FOREIGN KEY(product_id) 
+  REFERENCES products(id) ON DELETE CASCADE,
+  PRIMARY KEY(id, product_id)
 );
