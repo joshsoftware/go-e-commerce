@@ -17,7 +17,7 @@ const (
 	getProductsByCategoryIDQuery = `SELECT id FROM products WHERE category_id = $1`
 
 	insertProductQuery = `INSERT INTO products (
-		id, name, description, price, discount, quantity, category_id) VALUES ( :id, :name, :description, :price, :discount, :quantity, :category_id)`
+		 name, description, price, discount, quantity, category_id) VALUES (  :name, :description, :price, :discount, :quantity, :category_id)`
 	deleteProductIdQuery = `DELETE FROM products WHERE id = $1`
 )
 

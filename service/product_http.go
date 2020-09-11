@@ -10,7 +10,6 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-// @Author RohitNale
 // @Title listProducts
 // @Description list all Products
 // @Router /products [GET]
@@ -39,7 +38,6 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 	})
 }
 
-// @Author RohitNale
 // @ Title getProductById
 // @ Description get single product by its id
 // @ Router /product/product_id [get]
@@ -91,7 +89,6 @@ func getProductByIdHandler(deps Dependencies) http.HandlerFunc {
 	})
 }
 
-// @Author SantoshKavhar
 // @Title listProductsByCategory
 // @Description list all Products of that Particular Category
 // @Router /products/category/category_id [GET]
@@ -143,7 +140,6 @@ func listProductsByCategoryHandler(deps Dependencies) http.HandlerFunc {
 	})
 }
 
-// @Author SantoshKavhar
 // @Title createProduct
 // @Description create a Product, insert into DB
 // @Router /createProduct [POST]
@@ -200,7 +196,6 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 	})
 }
 
-// @Author SantoshKavhar
 // @ Title deleteProductById
 // @ Description delete product by its id
 // @ Router /product/product_id [delete]

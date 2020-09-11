@@ -50,6 +50,7 @@ func (s *pgStore) GetCart(ctx context.Context, user_id int) (cart_products []Car
 
 	err = s.db.Select(&pids, getCartQuery, user_id)
 	err = s.db.Select(&quantities, getCartQuantityQuery, user_id)
+	// fmt.printf("pids : %v  quantities :%v", pids, quantities)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching data from cart")
 		return

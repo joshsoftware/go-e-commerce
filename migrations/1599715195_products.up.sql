@@ -1,6 +1,6 @@
 -- use Serial id for auto increment
 CREATE TABLE IF NOT EXISTS products (
-	id INT NOT NULL PRIMARY KEY,
+	id SERIAL PRIMARY KEY,
 	name varchar(50)   NOT NULL,
 	description  varchar(200)   NOT NULL,
 	price	float NOT NULL,
