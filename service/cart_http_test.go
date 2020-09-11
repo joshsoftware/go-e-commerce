@@ -56,8 +56,8 @@ func (suite *CartHandlerTestSuite) TestGetCartSuccess() {
 	)
 
 	recorder := makeHTTPCall(http.MethodGet,
-		"/user/{user_id:[0-9]+}/cart",
-		"/user/1/cart",
+		"/cart",
+		"/cart",
 		"",
 		getCartHandler(Dependencies{Store: suite.dbMock}),
 	)
