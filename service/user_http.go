@@ -2,6 +2,7 @@ package service
 
 import (
 	logger "github.com/sirupsen/logrus"
+	"joshsoftware/go-e-commerce/db"
 	"net/http"
 )
 
@@ -42,8 +43,9 @@ func getUserHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		user, err1 := deps.Store.GetUser(req.Context(), int(userID))
-		if err1 != nil {
+		user := db.User{}
+		user, err = deps.Store.GetUser(req.Context(), int(userID))
+		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching data")
 			responses(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
