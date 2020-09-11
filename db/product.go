@@ -11,7 +11,8 @@ import (
 const (
 	getProductIDQuery = `SELECT id FROM products`
 	// id is PRIMARY KEY, so no need to limit
-	getProductByIDQuery = `SELECT * FROM products WHERE id=$1`
+	getProductByIDQuery   = `SELECT * FROM products WHERE id=$1`
+	getProductByNameQuery = `SELECT * FROM products WHERE name=$1`
 
 	getCategoryByID              = `SELECT name FROM category WHERE id = $1`
 	getProductsByCategoryIDQuery = `SELECT id FROM products WHERE category_id = $1`
@@ -19,6 +20,10 @@ const (
 	insertProductQuery = `INSERT INTO products (
 		 name, description, price, discount, quantity, category_id) VALUES (  :name, :description, :price, :discount, :quantity, :category_id)`
 	deleteProductIdQuery = `DELETE FROM products WHERE id = $1`
+
+	newInsertRecord = `SELECT MAX(id) from products`
+
+	insertProductURLsQuery = `INSERT INTO productimages (product_id, url) values ($1, $2)`
 )
 
 type Product struct {
@@ -36,9 +41,9 @@ type Product struct {
 func (product *Product) Validate() (errorResponse map[string]ErrorResponse, valid bool) {
 	fieldErrors := make(map[string]string)
 
-	if product.Id == 0 {
+	/* if product.Id == 0 {
 		fieldErrors["product_id"] = "Can't be blank"
-	}
+	} */
 	if product.Name == "" {
 		fieldErrors["product_name"] = "Can't be blank"
 	}
@@ -178,7 +183,7 @@ func (s *pgStore) GetProductsByCategoryID(ctx context.Context, CategoryId int) (
 // CreateNewProduct
 func (s *pgStore) CreateNewProduct(ctx context.Context, p Product) (createdProduct Product, err error) {
 	// First, make sure Product isn't already in db, if Product is present, just return the it
-	err = s.db.Get(&createdProduct, getProductByIDQuery, p.Id)
+	err = s.db.Get(&createdProduct, getProductByNameQuery, p.Name)
 	if err == nil {
 		// If there's already a product, err wil be nil, so no new Product is populated.
 		err = fmt.Errorf("Product Already exists!")
@@ -206,8 +211,27 @@ func (s *pgStore) CreateNewProduct(ctx context.Context, p Product) (createdProdu
 		return
 	}
 
+	//length of url
+	urls := len(p.URLs)
+	var number int
+	//new insert record get id number
+	result, err := s.db.Query(newInsertRecord)
+	for result.Next() {
+		err = result.Scan(&number)
+	}
+
+	for i := 0; i < urls; i++ {
+		//insert urls of given records
+		_, err = s.db.Exec(insertProductURLsQuery, number, p.URLs[i])
+		if err != nil {
+			// FAIL : Could not run insert Query
+			logger.WithField("err", err.Error()).Error("Error inserting urls to database: ")
+			return
+		}
+	}
+
 	// Re-select Product and return it
-	createdProduct, err = s.GetProductByID(ctx, p.Id)
+	createdProduct, err = s.GetProductByID(ctx, number)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error selecting from database with id: " + string(p.Id))
 		return
