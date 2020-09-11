@@ -75,6 +75,7 @@ func startApp() (err error) {
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"POST", "GET", "DELETE", "PUT", "PATCH", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Origin", "Token", "Content-Type"},
 		AllowCredentials: true,
 		Debug:            true,
 	})
