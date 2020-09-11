@@ -75,7 +75,7 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 
 			rw.WriteHeader(http.StatusBadRequest)
 			logger.WithField("err", "CAnnot update Email")
-			repsonse(rw, http.StatusBadRequest, errorResponse{
+			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
 					Message: "cannot update email id !!",
 				},
