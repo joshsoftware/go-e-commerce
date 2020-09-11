@@ -18,7 +18,7 @@ INSERT INTO products (name, description, price, discount, quantity, category_id)
 INSERT INTO products (name, description, price, discount, quantity, category_id) VALUES('Apple iPhone XR (64GB)', '6.1-inch (15.5 cm) Liquid Retina HD LCD display', 50000, 6, 20, 3 );
 INSERT INTO products (name, description, price, discount, quantity, category_id) VALUES ('Relax Watch','by wearing it you are bound to feel realaxed',2100, 10, 10, 4 );
 INSERT INTO products (name, description, price, discount, quantity, category_id) VALUES ('Titan Watch','by wearing it you are bound to feel realaxed',2000, 15, 8, 4 );
-INSERT INTO products (name, description, price, discount, quantity, category_id) VALUES ('SonataWatch','by wearing it you are bound to feel realaxed',3010, 20, 12, 4 );
+INSERT INTO products (name, description, price, discount, quantity, category_id) VALUES ('Sonata Watch','by wearing it you are bound to feel realaxed',3010, 20, 12, 4 );
 INSERT INTO products (name, description, price, discount, quantity, category_id) VALUES ('Wings of Fire','autobiography by visionary scientist',332, 10, 5, 5 );
 INSERT INTO products (name, description, price, discount, quantity, category_id) VALUES ('Thoughts to Inspire','famous quotes by Swami Vivekananda', 150, 15, 10, 5 );
 INSERT INTO products (name, description, price, discount, quantity, category_id) VALUES ('Lancer','Mens Running Shoes', 150, 15, 10, 6 );
@@ -28,31 +28,68 @@ INSERT INTO products (name, description, price, discount, quantity, category_id)
 
 
 
-INSERT INTO productimages VALUES(1,'jacket1.jpg' );
-INSERT INTO productimages VALUES(1,'jacket2.jpg');
-INSERT INTO productimages VALUES(1,'jacket3.jpg');
-INSERT INTO productimages VALUES(1,'jacket1.jpg');
-INSERT INTO productimages VALUES(1,'poloshirt1.jpg');
+INSERT INTO productimages VALUES(1,'Polo Shirt1.jpg' );
+INSERT INTO productimages VALUES(1,'Polo Shirt2.jpg');
+INSERT INTO productimages VALUES(1,'Polo Shirt3.jpg');
 
-INSERT INTO productimages VALUES(2,'camera.jpg');
-INSERT INTO productimages VALUES(2,'Tv.jpg');
-INSERT INTO productimages VALUES(2,'charger.jpg');
+INSERT INTO productimages VALUES(2,'Wrangler1.jpg');
+INSERT INTO productimages VALUES(2,'Wrangler2.jpg');
+INSERT INTO productimages VALUES(2,'Wrangler3.jpg');
 
+INSERT INTO productimages VALUES(3,'Dragon Jacket1.jpg');
+INSERT INTO productimages VALUES(3,'Dragon Jacket2.jpg');
+INSERT INTO productimages VALUES(3,'Dragon Jacket3.jpg');
 
-INSERT INTO productimages VALUES(3,'vivo.jpg');
-INSERT INTO productimages VALUES(3,'apple.jpg');
-INSERT INTO productimages VALUES(3,'mi.jpg');
+INSERT INTO productimages VALUES(4,'Android LED TV1.jpg');
+INSERT INTO productimages VALUES(4,'Android LED TV2.jpg');
+INSERT INTO productimages VALUES(4,'Android LED TV3.jpg');
 
-
-INSERT INTO productimages VALUES(4,'watch1.jpg');
-INSERT INTO productimages VALUES(4,'watch2.jpg');
-INSERT INTO productimages VALUES(4,'watch3.jpg');
-
-
-INSERT INTO productimages VALUES(5,'book1.jpg');
-INSERT INTO productimages VALUES(5,'book2.jpg');
+INSERT INTO productimages VALUES(5,'Sony DSC1.jpg');
+INSERT INTO productimages VALUES(5,'Sony DSC2.jpg');
+INSERT INTO productimages VALUES(5,'Sony DSC3.jpg');
 
 
-INSERT INTO productimages VALUES(6,'sport1.jpg');
-INSERT INTO productimages VALUES(6,'sport2.jpg');
-INSERT INTO productimages VALUES(6,'sport3.jpg');
+INSERT INTO productimages VALUES(6,'Charger1.jpg');
+INSERT INTO productimages VALUES(6,'Charger2.jpg');
+INSERT INTO productimages VALUES(6,'Charger3.jpg');
+
+INSERT INTO productimages VALUES(7,'Apple iPhone 11 Pro1.jpg');
+INSERT INTO productimages VALUES(7,'Apple iPhone 11 Pro2.jpg');
+INSERT INTO productimages VALUES(7,'Apple iPhone 11 Pro3.jpg');
+
+INSERT INTO productimages VALUES(8,'Apple iPhone 11 Promax1.jpg');
+INSERT INTO productimages VALUES(8,'Apple iPhone 11 Promax2.jpg');
+INSERT INTO productimages VALUES(8,'Apple iPhone 11 Promax3.jpg');
+
+INSERT INTO productimages VALUES(9,'Apple iPhone XR1.jpg');
+INSERT INTO productimages VALUES(9,'Apple iPhone XR2.jpg');
+INSERT INTO productimages VALUES(9,'Apple iPhone XR3.jpg');
+
+INSERT INTO productimages VALUES(10,'Relax Watch1.jpg');
+INSERT INTO productimages VALUES(10,'Relax Watch2.jpg');
+INSERT INTO productimages VALUES(10,'Relax Watch3.jpg');
+
+INSERT INTO productimages VALUES(11,'Titan Watch1.jpg');
+INSERT INTO productimages VALUES(11,'Titan Watch2.jpg');
+INSERT INTO productimages VALUES(11,'Titan Watch3.jpg');
+
+INSERT INTO productimages VALUES(12,'Sonata Watch1.jpg');
+INSERT INTO productimages VALUES(12,'Sonata Watch2.jpg');
+INSERT INTO productimages VALUES(12,'Sonata Watch3.jpg');
+
+INSERT INTO productimages VALUES(13,'Wings of Fire1.jpg');
+INSERT INTO productimages VALUES(13,'Wings of Fire2.jpg');
+
+INSERT INTO productimages VALUES(14,'Thoughts to Inspire1.jpg');
+INSERT INTO productimages VALUES(14,'Thoughts to Inspire2.jpg');
+
+INSERT INTO productimages VALUES(15,'Lancer1.jpg');
+INSERT INTO productimages VALUES(15,'Lancer2.jpg');
+INSERT INTO productimages VALUES(15,'Lancer3.jpg');
+
+INSERT INTO productimages VALUES(16,'Football1.jpg');
+INSERT INTO productimages VALUES(16,'Football2.jpg');
+INSERT INTO productimages VALUES(16,'Football3.jpg');
+INSERT INTO productimages VALUES(16,'Football4.jpg');
+INSERT INTO productimages VALUES(16,'Football5.jpg');
+
