@@ -47,6 +47,11 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 
 	router.Handle("/cart", jwtMiddleWare(getCartHandler(deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 
+	router.HandleFunc("/users", listUsersHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
+	//routes for cart operations
+	router.Handle("/cart", jwtMiddleWare(addToCartHandler(deps), deps)).Methods(http.MethodPost).Headers(versionHeader, v1)
+	router.Handle("/cart", jwtMiddleWare(removeFromCartHandler(deps), deps)).Methods(http.MethodDelete).Headers(versionHeader, v1)
+	router.Handle("/cart", jwtMiddleWare(updateIntoCartHandler(deps), deps)).Methods(http.MethodPut).Headers(versionHeader, v1)
 	return
 }
 
