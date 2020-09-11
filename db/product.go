@@ -18,7 +18,7 @@ const (
 	getProductsByCategoryIDQuery = `SELECT id FROM products WHERE category_id = $1`
 
 	insertProductQuery = `INSERT INTO products (
-		 name, description, price, discount, quantity, category_id) VALUES (  :name, :description, :price, :discount, :quantity, :category_id)`
+		 name, description, price, discount, quantity, category_id, brand, color, size) VALUES (  :name, :description, :price, :discount, :quantity, :category_id, :brand, :color, :size)`
 	deleteProductIdQuery = `DELETE FROM products WHERE id = $1`
 
 	newInsertRecord = `SELECT MAX(id) from products`
@@ -34,7 +34,10 @@ type Product struct {
 	Discount     float32  `db:"discount" json:"discount"`
 	Quantity     int      `db:"quantity" json:"stock"`
 	CategoryId   int      `db:"category_id" json:"category_id"`
-	CategoryName string   `json:"category,omitempty"`
+	CategoryName string   `json:"category"`
+	Brand        string   `db:"brand" json:"brand"`
+	Color        string   `db:"color" json:"color"`
+	Size         string   `db:"size" json:"size"`
 	URLs         []string `json:"image_url,omitempty"`
 }
 
@@ -197,7 +200,7 @@ func (s *pgStore) CreateNewProduct(ctx context.Context, p Product) (createdProdu
 	}
 
 	_, err = tx.NamedExec(insertProductQuery, p)
-	// p.Id, p.Name, p.Description, p.Price, p.Discount, p.Quantity, p.CategoryId
+	//  p.Name, p.Description, p.Price, p.Discount, p.Quantity, p.CategoryId, p.Brand, p.Color, p.Size
 
 	if err != nil {
 		// FAIL : Could not run insert Query
