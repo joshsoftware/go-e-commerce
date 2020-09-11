@@ -12,7 +12,7 @@ const (
 
 type ProductImage struct {
 	ProductId   int    `db:"product_id" json:"product_id"`
-	URL         string `db:"url" json:"url"`
+	URL         string `db:"url" json:"image_url"`
 	Description string `db:"description" json:"image_description"`
 }
 

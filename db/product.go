@@ -17,20 +17,20 @@ const (
 	getProductsByCategoryIDQuery = `SELECT id FROM products WHERE category_id = $1`
 
 	insertProductQuery = `INSERT INTO products (
-		id, name, description, price, discount, quantity, category_id) VALUES ( :id, :name, :description, :price, :discount, :quantity, :category_id)`
+		 name, description, price, discount, quantity, category_id) VALUES (  :name, :description, :price, :discount, :quantity, :category_id)`
 	deleteProductIdQuery = `DELETE FROM products WHERE id = $1`
 )
 
 type Product struct {
-	Id           int      `db:"id" json:"product_id"`
-	Name         string   `db:"name" json:"product_name"`
-	Description  string   `db:"description" json:"product_description"`
-	Price        float32  `db:"price" json:"price"`
+	Id           int      `db:"id" json:"id"`
+	Name         string   `db:"name" json:"product_title"`
+	Description  string   `db:"description" json:"description"`
+	Price        float32  `db:"price" json:"product_price"`
 	Discount     float32  `db:"discount" json:"discount"`
-	Quantity     int      `db:"quantity" json:"available_quantity"`
+	Quantity     int      `db:"quantity" json:"stock"`
 	CategoryId   int      `db:"category_id" json:"category_id"`
-	CategoryName string   `json:"category_name,omitempty"`
-	URLs         []string `json:"productimage_urls,omitempty"`
+	CategoryName string   `json:"category,omitempty"`
+	URLs         []string `json:"image_url,omitempty"`
 }
 
 func (product *Product) Validate() (errorResponse map[string]ErrorResponse, valid bool) {
