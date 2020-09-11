@@ -45,11 +45,12 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	router.HandleFunc("/createProduct", createProductHandler(deps)).Methods(http.MethodPost).Headers(versionHeader, v1)
 	router.HandleFunc("/product/{product_id:[0-9]+}", deleteProductByIdHandler(deps)).Methods(http.MethodDelete).Headers(versionHeader, v1)
 
+	router.Handle("/cart", jwtMiddleWare(getCartHandler(deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
+
 	return
 }
 
 //jwtMiddleWare function is used to authenticate and authorize the incoming request
-
 func jwtMiddleWare(endpoint http.Handler, deps Dependencies) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 

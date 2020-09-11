@@ -159,7 +159,6 @@ func (s *pgStore) UpdateUser(ctx context.Context, userProfile User, userID int) 
 	}
 
 	return
-
 }
 
 func prepareParameters(userDb User, userProfile User) (colNames []string, colValues []string) {

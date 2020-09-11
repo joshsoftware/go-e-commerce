@@ -10,4 +10,4 @@ CREATE TABLE IF NOT EXISTS users (
   address TEXT,
   password TEXT,  
   created_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'UTC')
-);
+); 

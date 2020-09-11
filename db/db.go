@@ -20,4 +20,5 @@ type Storer interface {
 	DeleteProductById(context.Context, int) error
 	GetProductImagesByID(context.Context, int) ([]ProductImage, error)
 	GetProductByID(context.Context, int) (Product, error)
+	GetCart(context.Context, int) ([]CartProduct, error)
 }
