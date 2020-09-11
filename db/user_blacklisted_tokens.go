@@ -11,7 +11,7 @@ import (
 //BlacklistedToken - struct representing a token to be blacklisted (logout)
 type BlacklistedToken struct {
 	ID             int       `db:"id" json:"id"`
-	UserID         int       `db:"user_id" json:"user_id"`
+	UserID         float64   `db:"user_id" json:"user_id"`
 	Token          string    `db:"token" json:"token"`
 	ExpirationDate time.Time `db:"expiration_date" json:"expiration_date"`
 }

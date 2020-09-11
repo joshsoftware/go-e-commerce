@@ -127,7 +127,7 @@ func userLogoutHandler(deps Dependencies) http.Handler {
 	})
 }
 
-func getDataFromToken(Token string) (userID int, expirationTime int64, err error) {
+func getDataFromToken(Token string) (userID float64, expirationTime int64, err error) {
 	mySigningKey := config.JWTKey()
 
 	//Checking if token not present in header
@@ -154,7 +154,7 @@ func getDataFromToken(Token string) (userID int, expirationTime int64, err error
 		return
 	}
 
-	userID = int(claims["id"].(float64))
+	userID = claims["id"].(float64)
 	expirationTime = int64(claims["exp"].(float64))
 	return
 }

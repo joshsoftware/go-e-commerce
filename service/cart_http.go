@@ -26,14 +26,14 @@ func getCartHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		products, err := deps.Store.GetCart(req.Context(), userID)
+		cart_products, err := deps.Store.GetCart(req.Context(), int(userID))
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching data")
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		respBytes, err := json.Marshal(products)
+		respBytes, err := json.Marshal(cart_products)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error marshaling cart data")
 			rw.WriteHeader(http.StatusInternalServerError)
