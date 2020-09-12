@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"joshsoftware/go-e-commerce/db"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -13,15 +14,21 @@ import (
 // @Description list all Products with specified filters
 // @Router /products/filters [GET]
 // @Params /products/filters?categoryid=id?price=asc?brand=name?size=name?color=name
+//  price can be asc or desc, it will stored as a string
+//  categoryid will be an integer value, but for convinience it will be stored as string
+//  brand, size, color will be case-sensitive string
 // @Accept	json
 // @Success 200 {object}
-// @Failure 400 {object}
+// @Failure 404 {object}
+// @Features This API can replace ListProducts API, but time Complexity will be a bit high
 func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
 		var filter db.Filter
 
 		// filter.Price will either be "asc" or "desc"
+		// All these object's are used as string itself
+		// Using String really made some things easy in dynamic query writing
 		filter.CategoryId = req.URL.Query().Get("categoryid")
 		filter.Price = req.URL.Query().Get("price")
 		filter.Brand = req.URL.Query().Get("brand")
@@ -31,15 +38,16 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 		page := req.URL.Query().Get("page")
 		limit := req.URL.Query().Get("limit")
 
+		// Setting default limit as 5
 		if limit == "" {
 			limit = "5"
 		}
 
+		// Setting default page as 1
 		if page == "" {
 			page = "1"
 		}
 
-		// Handle errors
 		ls, err := strconv.Atoi(limit)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while converting limit to int")
@@ -54,6 +62,7 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
+		// Checking for flags, true means we need to filter by that field
 		if filter.CategoryId != "" {
 			filter.CategoryFlag = true
 		}
@@ -81,27 +90,31 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		if count <= (ls * (int(ps) - 1)) {
-			rw.WriteHeader(http.StatusOK)
-			response(rw, http.StatusOK, successResponse{
-				Data: messageObject{
+		// TODO Handle that last page getting as null
+		if count < (ls * (int(ps) - 1)) {
+			rw.WriteHeader(http.StatusBadRequest)
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
 					Message: "Page Not Found..!",
 				},
 			})
 			return
 		}
 
+		var pagination db.Pagination
+		pagination.TotalPages = int(math.Ceil(float64(count) / float64(ls)))
+
 		products, err := deps.Store.FilteredRecords(req.Context(), filter, limit, page)
-		//products, err := deps.Store.ListProducts(req.Context(), limit, page)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error fetching data")
+			logger.WithField("err", err.Error()).Error("Error fetching data filtered products")
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		pagination.Products = products
 
-		respBytes, err := json.Marshal(products)
+		respBytes, err := json.Marshal(pagination)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error mashaling products data")
+			logger.WithField("err", err.Error()).Error("Error mashaling pagination and product data")
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}

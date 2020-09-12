@@ -31,17 +31,31 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 			page = "1"
 		}
 
-		count := deps.Store.TotalRecords(req.Context())
+		count, err := deps.Store.TotalRecords(req.Context())
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while getting TotalRecords Count")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
-		// Handle errors
 		ls, err := strconv.Atoi(limit)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while converting limit to int")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
 		ps, err := strconv.Atoi(page)
-
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while converting page to int")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		// TODO Handle that last page getting as null
 		if count < (ls * (int(ps) - 1)) {
-			rw.WriteHeader(http.StatusOK)
-			response(rw, http.StatusOK, successResponse{
-				Data: messageObject{
+			rw.WriteHeader(http.StatusBadRequest)
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
 					Message: "Page Not Found..!",
 				},
 			})
@@ -50,7 +64,6 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 
 		var pagination db.Pagination
 		pagination.TotalPages = int(math.Ceil(float64(count) / float64(ls)))
-		//fmt.Println(tp.TotalPages)
 
 		products, err := deps.Store.ListProducts(req.Context(), limit, page)
 		if err != nil {
@@ -60,13 +73,7 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		pagination.Products = products
-		/*
-			totalPages, err := json.Marshal(tp)
-			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error mashaling Total Pages data")
-				rw.WriteHeader(http.StatusInternalServerError)
-				return
-			}*/
+
 		respBytes, err := json.Marshal(pagination)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error mashaling pagination data")
@@ -77,7 +84,6 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 		rw.Header().Add("Content-Type", "application/json")
 
 		rw.Write(respBytes)
-		//rw.Write(totalPages)
 	})
 }
 
@@ -128,57 +134,6 @@ func getProductByIdHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 		response(rw, http.StatusOK, product)
-		return
-	})
-}
-
-// @Title listProductsByCategory
-// @Description list all Products of that Particular Category
-// @Router /products/category/category_id [GET]
-// @Accept	json
-// @Success 200 {object}
-// @Failure 400 {object}
-
-func listProductsByCategoryHandler(deps Dependencies) http.HandlerFunc {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-
-		vars := mux.Vars(req)
-		id, err := strconv.Atoi(vars["category_id"])
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error id key is missing")
-			rw.WriteHeader(http.StatusBadRequest)
-			response(rw, http.StatusBadRequest, errorResponse{
-				Error: messageObject{
-					Message: "Error category_id is invalid",
-				},
-			})
-			return
-		}
-
-		products, err := deps.Store.GetProductsByCategoryID(req.Context(), id)
-		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			logger.WithField("err", err.Error()).Error("Error fetching data")
-			response(rw, http.StatusBadRequest, errorResponse{
-				Error: messageObject{
-					Message: "Error feching data No Row Found",
-				},
-			})
-			return
-		}
-
-		_, err = json.Marshal(products)
-		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			logger.WithField("err", err.Error()).Error("Error marshaling products data")
-			response(rw, http.StatusBadRequest, errorResponse{
-				Error: messageObject{
-					Message: "Internal server error",
-				},
-			})
-			return
-		}
-		response(rw, http.StatusOK, products)
 		return
 	})
 }
@@ -323,17 +278,25 @@ func updateProductStockByIdHandler(deps Dependencies) http.HandlerFunc {
 		product, err = deps.Store.GetProductByID(req.Context(), productId)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while fetching product with stated id ")
+			rw.WriteHeader(http.StatusBadRequest)
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Error Product is wasn't found in database.",
+				},
+			})
 			return
 		}
 
+		// Decrement available Quantity
 		product.Quantity -= count
 
+		// Validate if Quantity is less than 0
 		errRes, valid := product.Validate()
 		if !valid {
 			_, err := json.Marshal(errRes)
 			if err != nil {
 				logger.WithField("err", err.Error()).Error("Error marshalling Product's data")
-				response(rw, http.StatusBadRequest, errorResponse{
+				response(rw, http.StatusInternalServerError, errorResponse{
 					Error: messageObject{
 						Message: "Invalid json body",
 					},
@@ -345,7 +308,7 @@ func updateProductStockByIdHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		var updatedProduct db.Product
-		updatedProduct, err = deps.Store.UpdateProductById(req.Context(), product, productId)
+		updatedProduct, err = deps.Store.UpdateProductStockById(req.Context(), product, productId)
 		if err != nil {
 			rw.WriteHeader(http.StatusInternalServerError)
 			response(rw, http.StatusInternalServerError, errorResponse{
