@@ -28,10 +28,31 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		count := deps.Store.TotalRecords(req.Context())
-		ls, _ := strconv.Atoi(limit)
-		ps, _ := strconv.Atoi(page)
+		ls, err := strconv.Atoi(limit)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("limit can not convert into integer")
+			rw.WriteHeader(http.StatusBadRequest)
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "limit can not convert into integer",
+				},
+			})
+			return
+		}
 
-		if count < (ls * (int(ps) - 1)) {
+		ps, err := strconv.Atoi(page)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("limit can not convert into integer")
+			rw.WriteHeader(http.StatusBadRequest)
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "page can not convert into integer",
+				},
+			})
+			return
+		}
+
+		if (count - 1) < (ls * (int(ps) - 1)) {
 			rw.WriteHeader(http.StatusOK)
 			response(rw, http.StatusOK, successResponse{
 				Data: messageObject{
