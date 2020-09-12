@@ -22,15 +22,15 @@ const (
 )
 
 type Product struct {
-	ID           int      `db:"id" json:"product_id"`
-	Name         string   `db:"name" json:"product_name"`
-	Description  string   `db:"description" json:"product_description"`
-	Price        float32  `db:"price" json:"price"`
+	ID           int      `db:"id" json:"id"`
+	Name         string   `db:"name" json:"product_title"`
+	Description  string   `db:"description" json:"description"`
+	Price        float32  `db:"price" json:"product_price"`
 	Discount     float32  `db:"discount" json:"discount"`
-	Quantity     int      `db:"quantity" json:"available_quantity"`
+	Quantity     int      `db:"quantity" json:"stock"`
 	CategoryID   int      `db:"category_id" json:"category_id"`
-	CategoryName string   `json:"category_name,omitempty"`
-	URLs         []string `json:"productimage_urls,omitempty"`
+	CategoryName string   `json:"category,omitempty"`
+	URLs         []string `json:"image_url,omitempty"`
 }
 
 func (product *Product) Validate() (errorResponse map[string]ErrorResponse, valid bool) {

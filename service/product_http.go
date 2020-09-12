@@ -63,7 +63,6 @@ func getProductByIdHandler(deps Dependencies) http.HandlerFunc {
 
 		product, err := deps.Store.GetProductByID(req.Context(), id)
 		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
 			logger.WithField("err", err.Error()).Error("Error fetching data")
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
