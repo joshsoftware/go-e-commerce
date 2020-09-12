@@ -15,6 +15,7 @@ var (
 )
 
 func Load() {
+
 	viper.SetDefault("APP_NAME", "e-commerce")
 	viper.SetDefault("APP_PORT", "8002")
 
