@@ -6,21 +6,22 @@ import (
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	ae "joshsoftware/go-e-commerce/apperrors"
+	"time"
 )
 
 //User Struct for declaring attributes of User
 type User struct {
-	ID        int    `db:"id" json:"id"`
-	FirstName string `db:"first_name" json:"first_name"`
-	LastName  string `db:"last_name" json:"last_name"`
-	Email     string `db:"email" json:"email"`
-	Mobile    string `db:"mobile" json:"mobile"`
-	Address   string `db:"address" json:"address"`
-	Password  string `db:"password" json:"password"`
-	Country   string `db:"country" json:"country"`
-	State     string `db:"state" json:"state"`
-	City      string `db:"city" json:"city"`
-	CreatedAt string `db:"created_at" json:"created_at"`
+	ID        int       `db:"id" json:"id"`
+	FirstName string    `db:"first_name" json:"first_name"`
+	LastName  string    `db:"last_name" json:"last_name"`
+	Email     string    `db:"email" json:"email"`
+	Mobile    string    `db:"mobile" json:"mobile"`
+	Address   string    `db:"address" json:"address"`
+	Password  string    `db:"password" json:"password"`
+	Country   string    `db:"country" json:"country"`
+	State     string    `db:"state" json:"state"`
+	City      string    `db:"city" json:"city"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
 }
 
 //ListUsers function to fetch all Users From Database

@@ -42,7 +42,6 @@ func (s *pgStore) CheckBlacklistedToken(ctx context.Context, token string) (bool
 	err := s.db.QueryRow(query1).Scan(&userID)
 
 	if err != nil {
-		logger.WithField("err", err.Error()).Error("Either Query Failed or No Rows Found")
 		return false, -1
 	}
 	return true, userID

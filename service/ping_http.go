@@ -21,6 +21,6 @@ func pingHandler(rw http.ResponseWriter, req *http.Request) {
 		rw.WriteHeader(http.StatusInternalServerError)
 	}
 
-	rw.Header().Add("Content-Type", "application/json")
+	rw.Header().Set("Content-Type", "application/json")
 	rw.Write(respBytes)
 }

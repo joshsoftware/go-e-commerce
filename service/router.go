@@ -43,20 +43,36 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 func jwtMiddleWare(endpoint http.Handler, deps Dependencies) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
-		authToken := req.Header["Token"]
+		authToken := req.Header.Get("Token")
 
-		_, _, err := getDataFromToken(authToken[0])
+		//Checking if token not present in header
+		if len(authToken) < 1 {
+			responses(rw, http.StatusUnauthorized, errorResponse{
+				Error: messageObject{
+					Message: "Missing Authorization Token",
+				},
+			})
+			return
+		}
+
+		_, _, err := getDataFromToken(authToken)
 		if err != nil {
-			rw.WriteHeader(http.StatusUnauthorized)
-			rw.Write([]byte("Unauthorized"))
+			responses(rw, http.StatusUnauthorized, errorResponse{
+				Error: messageObject{
+					Message: "Unauthorized User",
+				},
+			})
 			return
 		}
 
 		//Fetching Status of Token Being Blacklisted or Not
 		// Unauthorized User if Token BlackListed
-		if isBlacklisted, _ := deps.Store.CheckBlacklistedToken(req.Context(), authToken[0]); isBlacklisted {
-			rw.WriteHeader(http.StatusUnauthorized)
-			rw.Write([]byte("Unauthorized"))
+		if isBlacklisted, _ := deps.Store.CheckBlacklistedToken(req.Context(), authToken); isBlacklisted {
+			responses(rw, http.StatusUnauthorized, errorResponse{
+				Error: messageObject{
+					Message: "Unauthorized User",
+				},
+			})
 			return
 		}
 		endpoint.ServeHTTP(rw, req)

@@ -1,8 +1,8 @@
 package service
 
 import (
-	"encoding/json"
 	logger "github.com/sirupsen/logrus"
+	"joshsoftware/go-e-commerce/db"
 	"net/http"
 )
 
@@ -13,19 +13,17 @@ func listUsersHandler(deps Dependencies) http.HandlerFunc {
 		users, err := deps.Store.ListUsers(req.Context())
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching data")
-			rw.WriteHeader(http.StatusInternalServerError)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal Server Error",
+				},
+			})
 			return
 		}
 
-		respBytes, err := json.Marshal(users)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error marshaling users data")
-			rw.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		rw.Header().Add("Content-Type", "application/json")
-		rw.Write(respBytes)
+		responses(rw, http.StatusOK, successResponse{
+			Data: users,
+		})
 	})
 }
 
@@ -34,29 +32,31 @@ func listUsersHandler(deps Dependencies) http.HandlerFunc {
 func getUserHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		//fetch usedId from request
-		authToken := req.Header["Token"]
-		userID, _, err := getDataFromToken(authToken[0])
+		authToken := req.Header.Get("Token")
+		userID, _, err := getDataFromToken(authToken)
 		if err != nil {
-			rw.WriteHeader(http.StatusUnauthorized)
-			rw.Write([]byte("Unauthorized"))
+			responses(rw, http.StatusUnauthorized, errorResponse{
+				Error: messageObject{
+					Message: "Unauthorized User",
+				},
+			})
 			return
 		}
 
-		user, err1 := deps.Store.GetUser(req.Context(), int(userID))
-		if err1 != nil {
+		user := db.User{}
+		user, err = deps.Store.GetUser(req.Context(), int(userID))
+		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching data")
-			rw.WriteHeader(http.StatusInternalServerError)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal Server Error",
+				},
+			})
 			return
 		}
 
-		respBytes, err := json.Marshal(user)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error marshaling users data")
-			rw.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		rw.Header().Add("Content-Type", "application/json")
-		rw.Write(respBytes)
+		responses(rw, http.StatusOK, successResponse{
+			Data: user,
+		})
 	})
 }
