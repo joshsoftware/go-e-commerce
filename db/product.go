@@ -112,12 +112,33 @@ func (s *pgStore) GetProductByID(ctx context.Context, Id int) (product Product, 
 
 }
 
-func (s *pgStore) ListProducts(ctx context.Context) (products []Product, err error) {
+func (s *pgStore) TotalRecords(ctx context.Context) (total int) {
+
+	getTotalRecord := "SELECT count(id) from Products ;"
+	result, err := s.db.Query(getTotalRecord)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
+		return
+	}
+	var number int
+	for result.Next() {
+		err = result.Scan(&number)
+	}
+	fmt.Println(number)
+	return number
+}
+
+func (s *pgStore) ListProducts(ctx context.Context, limit string, page string) (products []Product, err error) {
 
 	// idArr stores id's of all products
 	var idArr []int
 
-	result, err := s.db.Query(getProductIDQuery)
+	getProductQuery := `SELECT id FROM products`
+	getProductQuery += " LIMIT " + string(limit) + "  OFFSET  (" + string(page) + " -1) * " + string(limit) + ""
+	getProductQuery += " ;"
+
+	fmt.Println(getProductQuery)
+	result, err := s.db.Query(getProductQuery)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
 		return

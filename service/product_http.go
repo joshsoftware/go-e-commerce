@@ -19,7 +19,24 @@ import (
 func listProductsHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
-		products, err := deps.Store.ListProducts(req.Context())
+		limit := req.URL.Query().Get("limit")
+		page := req.URL.Query().Get("page")
+
+		count := deps.Store.TotalRecords(req.Context())
+		ls, _ := strconv.Atoi(limit)
+		ps, _ := strconv.Atoi(page)
+
+		if count < (ls * (int(ps) - 1)) {
+			rw.WriteHeader(http.StatusOK)
+			response(rw, http.StatusOK, successResponse{
+				Data: messageObject{
+					Message: "Page Not Found..!",
+				},
+			})
+			return
+		}
+
+		products, err := deps.Store.ListProducts(req.Context(), limit, page)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching data")
 			rw.WriteHeader(http.StatusInternalServerError)
@@ -236,3 +253,62 @@ func deleteProductByIdHandler(deps Dependencies) http.HandlerFunc {
 		return
 	})
 }
+
+// @ Title updateProductById
+// @ Description update product by its id
+// @ Router /product/product_id [put]
+// @ Accept json
+// @ Success 200 {object}
+// @ Failure 400 {object}
+
+/* func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+
+		vars := mux.Vars(req)
+		id, err := strconv.Atoi(vars["product_id"])
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error id key is missing")
+			rw.WriteHeader(http.StatusBadRequest)
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Error id is missing/invalid",
+				},
+			})
+			return
+		}
+
+		var product db.Product
+		err = json.NewDecoder(req.Body).Decode(&product)
+		if err != nil {
+			rw.WriteHeader(http.StatusBadRequest)
+			logger.WithField("err", err.Error()).Error("Error while decoding product")
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Invalid json body",
+				},
+			})
+			return
+		}
+
+		errRes, valid := product.Validate()
+		if !valid {
+			_, err := json.Marshal(errRes)
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error marshalling Product's data")
+				response(rw, http.StatusBadRequest, errorResponse{
+					Error: messageObject{
+						Message: "Invalid json body",
+					},
+				})
+				return
+			}
+			response(rw, http.StatusBadRequest, errRes)
+			return
+		}
+
+
+		return
+	})
+
+}
+*/
