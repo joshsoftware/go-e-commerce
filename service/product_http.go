@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"joshsoftware/go-e-commerce/db"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -22,14 +23,20 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 		limit := req.URL.Query().Get("limit")
 		page := req.URL.Query().Get("page")
 
-		if limit == "" && page == "" {
+		if limit == "" {
 			limit = "5"
+		}
+
+		if page == "" {
 			page = "1"
 		}
 
 		count := deps.Store.TotalRecords(req.Context())
-		ls, _ := strconv.Atoi(limit)
-		ps, _ := strconv.Atoi(page)
+
+		// Handle errors
+		ls, err := strconv.Atoi(limit)
+
+		ps, err := strconv.Atoi(page)
 
 		if count < (ls * (int(ps) - 1)) {
 			rw.WriteHeader(http.StatusOK)
@@ -41,6 +48,10 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
+		var pagination db.Pagination
+		pagination.TotalPages = int(math.Ceil(float64(count) / float64(ls)))
+		//fmt.Println(tp.TotalPages)
+
 		products, err := deps.Store.ListProducts(req.Context(), limit, page)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching data")
@@ -48,15 +59,25 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		respBytes, err := json.Marshal(products)
+		pagination.Products = products
+		/*
+			totalPages, err := json.Marshal(tp)
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error mashaling Total Pages data")
+				rw.WriteHeader(http.StatusInternalServerError)
+				return
+			}*/
+		respBytes, err := json.Marshal(pagination)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error mashaling products data")
+			logger.WithField("err", err.Error()).Error("Error mashaling pagination data")
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		rw.Header().Add("Content-Type", "application/json")
+
 		rw.Write(respBytes)
+		//rw.Write(totalPages)
 	})
 }
 
@@ -259,14 +280,98 @@ func deleteProductByIdHandler(deps Dependencies) http.HandlerFunc {
 	})
 }
 
+// @ Title updateProductStockById
+// @ Description update product by its id
+// @ Router /product/product_id [put]
+// @ Accept json
+// @ Success 200 {object}
+// @ Failure 400 {object}
+func updateProductStockByIdHandler(deps Dependencies) http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		Id := req.URL.Query().Get("product_id")
+		Count := req.URL.Query().Get("stock")
+		var err error
+
+		// Handle errors
+		productId, err := strconv.Atoi(Id)
+
+		if Id == "" || err != nil {
+			logger.WithField("err", err.Error()).Error("Error product_id parameter is missing or corrupt")
+			rw.WriteHeader(http.StatusBadRequest)
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Error id is missing/invalid",
+				},
+			})
+			return
+		}
+
+		count, err := strconv.Atoi(Count)
+
+		if Count == "" || err != nil {
+			logger.WithField("err", err.Error()).Error("Error stock parameter is missing or corrupt")
+			rw.WriteHeader(http.StatusBadRequest)
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Error id is missing/invalid",
+				},
+			})
+			return
+		}
+
+		var product db.Product
+		product, err = deps.Store.GetProductByID(req.Context(), productId)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while fetching product with stated id ")
+			return
+		}
+
+		product.Quantity -= count
+
+		errRes, valid := product.Validate()
+		if !valid {
+			_, err := json.Marshal(errRes)
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error marshalling Product's data")
+				response(rw, http.StatusBadRequest, errorResponse{
+					Error: messageObject{
+						Message: "Invalid json body",
+					},
+				})
+				return
+			}
+			response(rw, http.StatusBadRequest, errRes)
+			return
+		}
+
+		var updatedProduct db.Product
+		updatedProduct, err = deps.Store.UpdateProductById(req.Context(), product, productId)
+		if err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			response(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal server error",
+				},
+			})
+			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
+			return
+		}
+
+		response(rw, http.StatusOK, successResponse{Data: updatedProduct})
+
+		return
+	})
+
+}
+
 // @ Title updateProductById
 // @ Description update product by its id
 // @ Router /product/product_id [put]
 // @ Accept json
 // @ Success 200 {object}
 // @ Failure 400 {object}
-
-/* func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
+/*
+func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
 		vars := mux.Vars(req)
@@ -286,10 +391,10 @@ func deleteProductByIdHandler(deps Dependencies) http.HandlerFunc {
 		err = json.NewDecoder(req.Body).Decode(&product)
 		if err != nil {
 			rw.WriteHeader(http.StatusBadRequest)
-			logger.WithField("err", err.Error()).Error("Error while decoding product")
+			logger.WithField("err", err.Error()).Error("Error while decoding user")
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Invalid json body",
+					Message: "Internal server error",
 				},
 			})
 			return
@@ -297,23 +402,39 @@ func deleteProductByIdHandler(deps Dependencies) http.HandlerFunc {
 
 		errRes, valid := product.Validate()
 		if !valid {
-			_, err := json.Marshal(errRes)
+			respBytes, err := json.Marshal(errRes)
 			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error marshalling Product's data")
+				logger.WithField("err", err.Error()).Error("Error marshaling product data")
 				response(rw, http.StatusBadRequest, errorResponse{
 					Error: messageObject{
 						Message: "Invalid json body",
 					},
 				})
+				rw.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			response(rw, http.StatusBadRequest, errRes)
+			rw.Header().Add("Content-Type", "application/json")
+			rw.WriteHeader(http.StatusBadRequest)
+			rw.Write(respBytes)
 			return
 		}
 
+		var updatedProduct db.Product
+		updatedProduct, err = deps.Store.UpdateProductById(req.Context(), product, id)
+		if err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			response(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal server error",
+				},
+			})
+			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
+			return
+		}
+
+		response(rw, http.StatusOK, successResponse{Data: updatedProduct})
 
 		return
 	})
-
 }
 */
