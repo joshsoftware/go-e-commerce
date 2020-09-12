@@ -22,6 +22,11 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 		limit := req.URL.Query().Get("limit")
 		page := req.URL.Query().Get("page")
 
+		if limit == "" && page == "" {
+			limit = "5"
+			page = "1"
+		}
+
 		count := deps.Store.TotalRecords(req.Context())
 		ls, _ := strconv.Atoi(limit)
 		ps, _ := strconv.Atoi(page)
