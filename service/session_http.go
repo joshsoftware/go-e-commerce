@@ -62,9 +62,9 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 		//TODO change no need to return user object from Authentication
 		//checking if the user is authenticated or not
 		// by passing the credentials to the AuthenticateUser function
-		user, err1 := deps.Store.AuthenticateUser(req.Context(), user)
-		if err1 != nil {
-			logger.WithField("err", err1.Error()).Error("Invalid Credentials")
+		user, err = deps.Store.AuthenticateUser(req.Context(), user)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Invalid Credentials")
 			responses(rw, http.StatusUnauthorized, errorResponse{
 				Error: messageObject{
 					Message: "Invalid Credentials",
