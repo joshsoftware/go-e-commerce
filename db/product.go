@@ -9,31 +9,30 @@ import (
 )
 
 const (
-	getProductIDQuery = `SELECT id FROM products`
-	// id is PRIMARY KEY, so no need to limit
+	getProductIDQuery     = `SELECT id FROM products`
 	getProductByIDQuery   = `SELECT * FROM products WHERE id=$1`
 	getProductByNameQuery = `SELECT * FROM products WHERE name=$1`
-
-	getCategoryByID              = `SELECT name FROM category WHERE id = $1`
-	getProductsByCategoryIDQuery = `SELECT id FROM products WHERE category_id = $1`
-
-	insertProductQuery = `INSERT INTO products (
-		 name, description, price, discount, quantity, category_id, brand, color, size) VALUES (  :name, :description, :price, :discount, :quantity, :category_id, :brand, :color, :size)`
-	deleteProductIdQuery = `DELETE FROM products WHERE id = $1`
-
-	newInsertRecord = `SELECT MAX(id) from products`
-
-	insertProductURLsQuery = `INSERT INTO productimages (product_id, url) values ($1, $2)`
+	getCategoryByID       = `SELECT name FROM category WHERE id = $1`
+	insertProductQuery    = `INSERT INTO products ( name, description,
+		  price, discount, quantity, category_id, brand, color, size) VALUES ( 
+		  :name, :description, :price, :discount, :quantity, :category_id, :brand, :color, :size)`
+	deleteProductIdQuery    = `DELETE FROM products WHERE id = $1`
+	updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2`
+	newInsertRecord         = `SELECT MAX(id) from products`
+	insertProductURLsQuery  = `INSERT INTO productimages (product_id, url) values ($1, $2)`
 )
 
 type Product struct {
-	Id           int      `db:"id" json:"id"`
-	Name         string   `db:"name" json:"product_title"`
-	Description  string   `db:"description" json:"description"`
-	Price        float32  `db:"price" json:"product_price"`
-	Discount     float32  `db:"discount" json:"discount"`
-	Quantity     int      `db:"quantity" json:"stock"`
-	CategoryId   int      `db:"category_id" json:"category_id"`
+	Id          int     `db:"id" json:"id"`
+	Name        string  `db:"name" json:"product_title"`
+	Description string  `db:"description" json:"description"`
+	Price       float32 `db:"price" json:"product_price"`
+	Discount    float32 `db:"discount" json:"discount"`
+	Quantity    int     `db:"quantity" json:"stock"`
+	CategoryId  int     `db:"category_id" json:"category_id"`
+	// CategoryName doesn't exists in Product db,
+	// it is fetched from category table whenever
+	// products are to be returned
 	CategoryName string   `json:"category"`
 	Brand        string   `db:"brand" json:"brand"`
 	Color        string   `db:"color" json:"color"`
@@ -41,26 +40,30 @@ type Product struct {
 	URLs         []string `json:"image_url,omitempty"`
 }
 
+// Pagination helps to return UI side with number of pages given a limit and page
+type Pagination struct {
+	Products   []Product `json:"products"`
+	TotalPages int       `json:"total_pages"`
+}
+
 func (product *Product) Validate() (errorResponse map[string]ErrorResponse, valid bool) {
 	fieldErrors := make(map[string]string)
 
-	/* if product.Id == 0 {
-		fieldErrors["product_id"] = "Can't be blank"
-	} */
 	if product.Name == "" {
 		fieldErrors["product_name"] = "Can't be blank"
 	}
 	if product.Description == "" {
-		fieldErrors["product_description"] = "Can't be blank"
+		fieldErrors["product_description"] = "Can't be blank "
 	}
 	if product.Price <= 0 {
-		fieldErrors["price"] = "Can't be blank"
+		fieldErrors["price"] = "Can't be blank  or less than zero"
 	}
 	if product.Discount < 0 {
-		fieldErrors["discount"] = "Can't be blank"
+		fieldErrors["discount"] = "Can't be blank  or less than zero"
 	}
+	// If Quantity gets's < 0 by UpdateProductStockById Method, this is what saves us
 	if product.Quantity < 0 {
-		fieldErrors["available_quantity"] = "Can't be blank"
+		fieldErrors["available_quantity"] = "Can't be blank or less than zero"
 	}
 	if product.CategoryId == 0 {
 		fieldErrors["category_id"] = "Can't be blank"
@@ -82,18 +85,21 @@ func (product *Product) Validate() (errorResponse map[string]ErrorResponse, vali
 	return
 }
 
+// @Title GetProductByID
+// @Description Get a Product Object by its Id
+// @Params req.Context, product's Id
+// @Returns Product Object, error if any
 func (s *pgStore) GetProductByID(ctx context.Context, Id int) (product Product, err error) {
 
 	err = s.db.Get(&product, getProductByIDQuery, Id)
-
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error selecting product from database by id: " + string(Id))
 		return
 	}
 
+	// Add category to Product's object
 	var category string
 	err = s.db.Get(&category, getCategoryByID, product.CategoryId)
-
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching category from database by product_id: " + string(Id))
 		return
@@ -101,6 +107,7 @@ func (s *pgStore) GetProductByID(ctx context.Context, Id int) (product Product, 
 
 	product.CategoryName = category
 
+	// Add Product Image URL's to Product's Object
 	productImage, err := s.GetProductImagesByID(ctx, Id)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error selecting productImage from database by id " + string(Id))
@@ -112,10 +119,13 @@ func (s *pgStore) GetProductByID(ctx context.Context, Id int) (product Product, 
 	}
 
 	return
-
 }
 
-func (s *pgStore) TotalRecords(ctx context.Context) (total int) {
+// @Title TotalRecords
+// @Description Get count of Total Product Records
+// @Params req.Context
+// @Returns Count of Records, error if any
+func (s *pgStore) TotalRecords(ctx context.Context) (total int, err error) {
 
 	getTotalRecord := "SELECT count(id) from Products ;"
 	result, err := s.db.Query(getTotalRecord)
@@ -123,14 +133,21 @@ func (s *pgStore) TotalRecords(ctx context.Context) (total int) {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
 		return
 	}
-	var number int
+
 	for result.Next() {
-		err = result.Scan(&number)
+		err = result.Scan(&total)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error scanning Product Ids into integer variable")
+			return
+		}
 	}
-	fmt.Println(number)
-	return number
+	return
 }
 
+// @Title ListProducts
+// @Description Get limited number of Products of particular page
+// @Params req.Context , limit, page
+// @Returns Count of Records, error if any
 func (s *pgStore) ListProducts(ctx context.Context, limit string, page string) (products []Product, err error) {
 
 	// idArr stores id's of all products
@@ -140,44 +157,9 @@ func (s *pgStore) ListProducts(ctx context.Context, limit string, page string) (
 	getProductQuery += " LIMIT " + string(limit) + "  OFFSET  (" + string(page) + " -1) * " + string(limit) + ""
 	getProductQuery += " ;"
 
-	fmt.Println(getProductQuery)
 	result, err := s.db.Query(getProductQuery)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
-		return
-	}
-
-	for result.Next() {
-		var Id int
-		err = result.Scan(&Id)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Couldn't Scan Product ids")
-			return
-		}
-		idArr = append(idArr, Id)
-	}
-
-	for i := 0; i < len(idArr); i++ {
-		var product Product
-		product, err = s.GetProductByID(ctx, int(idArr[i]))
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error selecting Product from database by id " + string(idArr[i]))
-			return
-		}
-		products = append(products, product)
-	}
-
-	return
-}
-
-func (s *pgStore) GetProductsByCategoryID(ctx context.Context, CategoryId int) (products []Product, err error) {
-
-	// idArr stores id's of all products
-	var idArr []int
-
-	result, err := s.db.Query(getProductsByCategoryIDQuery, CategoryId)
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error fetching Product Ids by their category from database")
 		return
 	}
 
@@ -258,6 +240,47 @@ func (s *pgStore) CreateNewProduct(ctx context.Context, p Product) (createdProdu
 	createdProduct, err = s.GetProductByID(ctx, number)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error selecting from database with id: " + string(p.Id))
+		return
+	}
+	return
+}
+
+func (s *pgStore) UpdateProductStockById(ctx context.Context, product Product, Id int) (updatedProduct Product, err error) {
+
+	var dbProduct Product
+	err = s.db.Get(&dbProduct, getProductByIDQuery, Id)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("Error while fetching product ")
+		return
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		logger.WithField("err:", err.Error()).Error("Error while initiating update transaction")
+		return
+	}
+
+	_, err = tx.Exec(updateProductStockQuery,
+		product.Quantity,
+		Id,
+	)
+
+	if err != nil {
+		// FAIL : Could not Update Product
+		logger.WithField("err", err.Error()).Error("Error updating product attribute(s) to database :" + string(Id))
+		return
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		// FAIL : transaction commit failed. Will Automatically rollback
+		logger.WithField("err", err.Error()).Error("Error commiting transaction updating product into database: " + string(Id))
+		return
+	}
+
+	updatedProduct, err = s.GetProductByID(ctx, Id)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("Error while getting updated product ")
 		return
 	}
 	return
