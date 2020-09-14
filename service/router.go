@@ -44,6 +44,8 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	router.HandleFunc("/products/category/{category_id:[0-9]+}", listProductsByCategoryHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 	router.HandleFunc("/createProduct", createProductHandler(deps)).Methods(http.MethodPost).Headers(versionHeader, v1)
 	router.HandleFunc("/product/{product_id:[0-9]+}", deleteProductByIdHandler(deps)).Methods(http.MethodDelete).Headers(versionHeader, v1)
+	router.HandleFunc("/products/filters", getProductByFiltersHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
+	router.HandleFunc("/product/stock", updateProductStockByIdHandler(deps)).Methods(http.MethodPut).Headers(versionHeader, v1)
 
 	router.Handle("/cart", jwtMiddleWare(getCartHandler(deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 
@@ -52,6 +54,7 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	router.Handle("/cart", jwtMiddleWare(addToCartHandler(deps), deps)).Methods(http.MethodPost).Headers(versionHeader, v1)
 	router.Handle("/cart", jwtMiddleWare(removeFromCartHandler(deps), deps)).Methods(http.MethodDelete).Headers(versionHeader, v1)
 	router.Handle("/cart", jwtMiddleWare(updateIntoCartHandler(deps), deps)).Methods(http.MethodPut).Headers(versionHeader, v1)
+	//router.HandleFunc("/product/{product_id:[0-9]+}", updateProductByIdHandler(deps)).Methods(http.MethodPut).Headers(versionHeader, v1)
 	return
 }
 

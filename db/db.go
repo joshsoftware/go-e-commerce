@@ -14,10 +14,13 @@ type Storer interface {
 	GetUser(context.Context, int) (User, error)
 	CreateBlacklistedToken(context.Context, BlacklistedToken) error
 	CheckBlacklistedToken(context.Context, string) (bool, int)
-	ListProducts(context.Context) ([]Product, error)
+	FilteredRecordsCount(context.Context, Filter) (int, error)
+	FilteredRecords(context.Context, Filter, string, string) ([]Product, error)
+	ListProducts(context.Context, string, string) ([]Product, error)
 	GetProductsByCategoryID(context.Context, int) ([]Product, error)
 	CreateNewProduct(context.Context, Product) (Product, error)
 	DeleteProductById(context.Context, int) error
+	UpdateProductById(context.Context, Product, int) (Product, error)
 	GetProductImagesByID(context.Context, int) ([]ProductImage, error)
 	GetProductByID(context.Context, int) (Product, error)
 	GetCart(context.Context, int) ([]CartProduct, error)
@@ -27,4 +30,5 @@ type Storer interface {
 	//Create(context.Context, User) error
 	//GetUser(context.Context) (User, error)
 	//Delete(context.Context, string) error
+	TotalRecords(context.Context) int
 }

@@ -37,7 +37,7 @@ type CartProduct struct {
 const (
 	getCartQuery         = `SELECT product_id  FROM cart WHERE id=$1`
 	getCartQuantityQuery = `SELECT quantity FROM cart WHERE id=$1`
-	getProductsQuery     = `SELECT * FROM products WHERE id IN (?)`
+	getProductsQuery     = `SELECT id,name,description,price,discount,quantity,category_id FROM products WHERE id IN (?)`
 	getCategoryQuery     = `SELECT name from category where id=$1`
 	getProductImageQuery = `SELECT url from productimages where product_id=$1`
 )

@@ -124,6 +124,14 @@ func (s *pgStore) UpdateUser(ctx context.Context, userProfile User, userID int) 
 
 	}()
 
+	// creating hash of the password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userProfile.Password), 8)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("Error while creating hash of the password")
+		return
+	}
+	userProfile.Password = string(hashedPassword)
+
 	var dbUser User
 
 	err = s.db.Get(&dbUser, getUserQuery, userID)
