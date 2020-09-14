@@ -13,7 +13,7 @@ import (
 // @Title getProductByFilters
 // @Description list all Products with specified filters
 // @Router /products/filters [GET]
-// @Params /products/filters?categoryid=id?price=asc?brand=name?size=name?color=name
+// @Params /products/filters?categoryid=id&price=asc&brand=name&size=name&color=name
 //  price can be asc or desc, it will stored as a string
 //  categoryid will be an integer value, but for convinience it will be stored as string
 //  brand, size, color will be case-sensitive string
