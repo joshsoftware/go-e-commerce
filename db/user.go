@@ -33,7 +33,7 @@ const (
 func (s *pgStore) ListUsers(ctx context.Context) (users []User, err error) {
 	err = s.db.Select(&users, "SELECT * FROM users")
 	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error listing users")
+		logger.WithField("err", err.Error()).Error("error listing users")
 		return
 	}
 
@@ -43,58 +43,31 @@ func (s *pgStore) ListUsers(ctx context.Context) (users []User, err error) {
 func (s *pgStore) GetUser(ctx context.Context, id int) (user User, err error) {
 	err = s.db.Get(&user, getUserQuery, id)
 	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error selecting user from database by id " + fmt.Sprint(id))
+		logger.WithField("err", err.Error()).Error(fmt.Errorf("error selecting user from database by id %d", id))
 		return
 	}
 
 	return
 }
 
-func (s *pgStore) UpdateUser(ctx context.Context, userProfile User, userID int) (updatedUser User, err error) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		logger.WithField("err:", err.Error()).Error("Error while initiating transaction")
-		return
-	}
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-			return
-		}
+func (s *pgStore) UpdateUser(ctx context.Context, user User, userID int) (err error) {
 
-	}()
-
-	var dbUser User
-
-	err = s.db.Get(&dbUser, getUserQuery, userID)
-
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("User Not found ")
-		return
-	}
-	colName, colValue := PrepareParameters(dbUser, userProfile)
+	colName, colValue := PrepareParameters(user)
 	var updateQuery string
-	if len(colName) > 1 {
-		updateQuery = `UPDATE users SET (` + strings.Join(colName, ",") + `)=('` + strings.Join(colValue, "','") + "') where id=$1"
 
+	if len(colName) > 1 {
+		updateQuery = fmt.Sprintf("Update users SET (%s)=('%s') where id =$1", strings.Join(colName, ","), strings.Join(colValue, "','"))
 	}
 	if len(colName) == 1 {
-		updateQuery = `UPDATE users SET ` + colName[0] + `='` + colValue[0] + "' where id=$1"
+		updateQuery = fmt.Sprintf("Update users SET %s = '%s' where id =$1", colName[0], colValue[0])
 	}
 
-	_, err = tx.ExecContext(ctx,
+	_, err = s.db.Exec(
 		updateQuery,
 		userID,
 	)
 	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error updating user profile")
-		return
-	}
-	tx.Commit()
-	updatedUser, err = s.GetUser(ctx, userID)
-
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error selecting user from database with userID: ", userID)
+		logger.WithField("err", err.Error()).Error("error updating user profile")
 		return
 	}
 
@@ -106,7 +79,7 @@ func (s *pgStore) AuthenticateUser(ctx context.Context, u User) (user User, err 
 
 	err = s.db.Get(&user, "SELECT * FROM users where email = $1", u.Email)
 	if err != nil {
-		logger.WithField("err", err.Error()).Error("No such User Available")
+		logger.WithField("err", err.Error()).Error("no such user available")
 		return
 	}
 
@@ -117,15 +90,14 @@ func (s *pgStore) AuthenticateUser(ctx context.Context, u User) (user User, err 
 	return
 }
 
-func PrepareParameters(userDb User, userProfile User) (colNames []string, colValues []string) {
+func PrepareParameters(userProfile User) (colNames []string, colValues []string) {
 	user := User{}
 	elem := reflect.ValueOf(&userProfile).Elem()
 	returnElem := reflect.ValueOf(&user).Elem()
-	DbElem := reflect.ValueOf(&userDb).Elem()
 	values := make([]interface{}, 0)
 	for i := 0; i < elem.NumField(); i++ {
 		if elem.Field(i).Interface() != returnElem.Field(i).Interface() {
-			varname := DbElem.Type().Field(i).Tag.Get("db")
+			varname := returnElem.Type().Field(i).Tag.Get("db")
 			colNames = append(colNames, varname)
 			varValue := elem.Field(i).Interface()
 			values = append(values, varValue)

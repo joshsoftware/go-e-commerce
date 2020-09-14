@@ -18,14 +18,14 @@ func listUsersHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		users, err := deps.Store.ListUsers(req.Context())
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error fetching data")
+			logger.WithField("err", err.Error()).Error("error fetching data")
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		respBytes, err := json.Marshal(users)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error marshaling users data")
+			logger.WithField("err", err.Error()).Error("error marshaling users data")
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -54,11 +54,11 @@ func getUserHandler(deps Dependencies) http.HandlerFunc {
 
 		user, err := deps.Store.GetUser(req.Context(), int(userID))
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while fetching User")
+			logger.WithField("err", err.Error()).Error("error while fetching User")
 			rw.WriteHeader(http.StatusNotFound)
 			repsonse(rw, http.StatusNotFound, errorResponse{
 				Error: messageObject{
-					Message: "Id Not Found",
+					Message: "id Not Found",
 				},
 			})
 			return
@@ -90,10 +90,10 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 
 		if err != nil {
 			rw.WriteHeader(http.StatusBadRequest)
-			logger.WithField("err", err.Error()).Error("Error while decoding user")
+			logger.WithField("err", err.Error()).Error("error while decoding user")
 			repsonse(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Invalid json body",
+					Message: "invalid json body",
 				},
 			})
 			return
@@ -102,7 +102,7 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 		if user.Email != "" {
 
 			rw.WriteHeader(http.StatusBadRequest)
-			logger.WithField("err", "CAnnot update Email")
+			logger.WithField("err", "Cannot update email")
 			repsonse(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
 					Message: "cannot update email id !!",
@@ -111,16 +111,27 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		var updatedUser db.User
-		updatedUser, err = deps.Store.UpdateUser(req.Context(), user, int(userID))
+		err = deps.Store.UpdateUser(req.Context(), user, int(userID))
 		if err != nil {
 			rw.WriteHeader(http.StatusInternalServerError)
 			repsonse(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
-					Message: "Internal server error",
+					Message: "internal server error",
 				},
 			})
-			logger.WithField("err", err.Error()).Error("Error while updating user's profile")
+			logger.WithField("err", err.Error()).Error("error while updating user's profile")
+			return
+		}
+
+		updatedUser, err := deps.Store.GetUser(req.Context(), int(userID))
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("error while fetching User")
+			rw.WriteHeader(http.StatusNotFound)
+			repsonse(rw, http.StatusNotFound, errorResponse{
+				Error: messageObject{
+					Message: "error while fetching users",
+				},
+			})
 			return
 		}
 		repsonse(rw, http.StatusOK, successResponse{Data: updatedUser})
