@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"joshsoftware/go-e-commerce/db"
 	"math"
 	"net/http"
@@ -55,7 +56,10 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
+		// Avoid divide by zero exception and -ve values for page and limit
 		if ls <= 0 || ps <= 0 {
+			err = fmt.Errorf("limit or page are non-positive")
+			logger.WithField("err", err.Error()).Error("Error limit or page contained invalid value")
 			rw.WriteHeader(http.StatusBadRequest)
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
