@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	logger "github.com/sirupsen/logrus"
 )
@@ -29,32 +30,47 @@ type Filter struct {
 // @Success total= (count of filtered records), error=nil
 // @Failure total=0, error= "Some Error"
 func (s *pgStore) FilteredRecordsCount(ctx context.Context, filter Filter) (total int, err error) {
+	// We will be checking for SQL Injection as well in this Method only
 	// found flag will help us find out if any of Filter flags were true
 	var found bool
 	// helper will be used in making query dynamic.
 	// See how it's getting concatanation added in case a flag was Filter Flag is true
+	injection := " "
 	helper := " "
 	if filter.CategoryFlag == true {
-		helper += " category_id = " + string(filter.CategoryId) + "' and"
+		helper += " category_id = " + string(filter.CategoryId) + "' AND"
+		injection += filter.CategoryId
 		found = true
 	}
 	if filter.BrandFlag == true {
 		// Since ' existed, we had to use ` instead of " , as compiler gave error otherwise
-		helper += ` brand = '` + string(filter.Brand) + `' and`
+		helper += ` brand = '` + string(filter.Brand) + `' AND`
+		injection += filter.Brand
 		found = true
 	}
 	if filter.SizeFlag == true {
 		// Since ' existed, we had to use ` instead of " , as compiler gave error otherwise
-		helper += ` size ='` + string(filter.Size) + `' and`
+		helper += ` size ='` + string(filter.Size) + `' AND`
+		injection += filter.Size
 		found = true
 	}
 	if filter.ColorFlag == true {
 		// Since ' existed, we had to use ` instead of " , as compiler gave error otherwise
-		helper += ` color ='` + string(filter.Color) + `' and`
+		helper += ` color ='` + string(filter.Color) + `' AND`
+		injection += filter.Color
 		found = true
 	}
 	if found == true {
-		// remove that last comma as it will make query invalid
+		// check for SQL Injection
+		// Only allow words characters like [a-z0-9A-Z] and a space [ ]
+		var validParameters = regexp.MustCompile(`^[\w ]+$`)
+		// if There are other chracters than word and space
+		if validParameters.MatchString(injection) == false {
+			err = fmt.Errorf("Possible SQL Injection Attack.")
+			logger.WithField("err", err.Error()).Error("Error In Parameters, special Characters are present.")
+			return
+		}
+		// remove that last AND as it will make query invalid
 		helper = " WHERE" + helper[:len(helper)-3]
 	}
 	// Ending the Query in a safe way
@@ -62,7 +78,7 @@ func (s *pgStore) FilteredRecordsCount(ctx context.Context, filter Filter) (tota
 
 	getFilterRecordCount := `SELECT COUNT(id) FROM products `
 	getFilterRecordCount += string(helper)
-	fmt.Println("getFilterRecordCOunt---->", getFilterRecordCount)
+	fmt.Println("getFilterRecordCount---->", getFilterRecordCount)
 
 	result, err := s.db.Query(getFilterRecordCount)
 	if err != nil {
@@ -91,22 +107,22 @@ func (s *pgStore) FilteredRecords(ctx context.Context, filter Filter, limit stri
 	// See how it's getting concatanation added in case a flag was Filter Flag is true
 	helper := " "
 	if filter.CategoryFlag == true {
-		helper += " category_id = " + string(filter.CategoryId) + " and"
+		helper += " category_id = " + string(filter.CategoryId) + " AND"
 		found = true
 	}
 	if filter.BrandFlag == true {
 		// Since ' existed, we had to use ` instead of " , as compiler gave error otherwise
-		helper += " brand = '" + filter.Brand + "' and"
+		helper += " brand = '" + filter.Brand + "' AND"
 		found = true
 	}
 	if filter.SizeFlag == true {
 		// Since ' existed, we had to use ` instead of " , as compiler gave error otherwise
-		helper += " size = '" + string(filter.Size) + "' and"
+		helper += " size = '" + string(filter.Size) + "' AND"
 		found = true
 	}
 	if filter.ColorFlag == true {
 		// Since ' existed, we had to use ` instead of " , as compiler gave error otherwise
-		helper += " color = '" + string(filter.Color) + "' and"
+		helper += " color = '" + string(filter.Color) + "' AND"
 		found = true
 	}
 	if found == true {

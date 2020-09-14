@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"joshsoftware/go-e-commerce/db"
 	"math"
 	"net/http"
@@ -73,7 +74,10 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
+		// Avoid divide by zero exception and -ve values for page and limit
 		if ls <= 0 || ps <= 0 {
+			err = fmt.Errorf("limit or page are non-positive")
+			logger.WithField("err", err.Error()).Error("Error limit or page were invalid values")
 			rw.WriteHeader(http.StatusBadRequest)
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
@@ -110,7 +114,7 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 			rw.WriteHeader(http.StatusBadRequest)
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "limits or page value invalid",
+					Message: "limits or page value invalid, or special chracters in filters",
 				},
 			})
 			return
