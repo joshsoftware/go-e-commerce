@@ -219,10 +219,10 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 		createdProduct, err = deps.Store.CreateNewProduct(req.Context(), product)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while inserting product")
-			rw.WriteHeader(http.StatusInternalServerError)
-			response(rw, http.StatusInternalServerError, errorResponse{
+			rw.WriteHeader(http.StatusBadRequest)
+			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Error inserting the product, possibly not new",
+					Message: "Error inserting the product, product already exists",
 				},
 			})
 			return
