@@ -34,7 +34,7 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	router.HandleFunc("/users", listUsersHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 	//routes for cart operations
 	router.HandleFunc("/cart", addToCartHandler(deps)).Methods(http.MethodPost).Headers(versionHeader, v1)
-	router.HandleFunc("/cart", removeFromCartHandler(deps)).Methods(http.MethodDelete).Headers(versionHeader, v1)
+	router.HandleFunc("/cart", deleteFromCartHandler(deps)).Methods(http.MethodDelete).Headers(versionHeader, v1)
 	router.HandleFunc("/cart", updateIntoCartHandler(deps)).Methods(http.MethodPut).Headers(versionHeader, v1)
 	return
 }

@@ -12,7 +12,7 @@ type Storer interface {
 	CreateBlacklistedToken(context.Context, BlacklistedToken) error
 	CheckBlacklistedToken(context.Context, string) (bool, int)
 	AddToCart(context.Context, int, int) (int64, error)
-	RemoveFromCart(context.Context, int, int) (int64, error)
+	DeleteFromCart(context.Context, int, int) (int64, error)
 	UpdateIntoCart(context.Context, int, int, int) (int64, error)
 	//Create(context.Context, User) error
 	//GetUser(context.Context) (User, error)
