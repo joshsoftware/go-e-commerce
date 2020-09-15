@@ -40,23 +40,18 @@ func (s *pgStore) ListUsers(ctx context.Context) (users []User, err error) {
 }
 
 // CreateNewUser = creates a new user in database
-func (s *pgStore) CreateNewUser(ctx context.Context, u User) (newUser User, err error) {
-	tx, err := s.db.Beginx()
+func (s *pgStore) CreateUser(ctx context.Context, u User) (newUser User, err error) {
+	stmt, err := s.db.PrepareNamed(insertUserQuery)
 	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error in beginning user insert transaction")
+		logger.WithField("err", err.Error()).Error("Error while preparing user insert query")
 		return
 	}
-	_, err = tx.NamedExec(insertUserQuery, u)
+	_, err = stmt.Exec(u)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error while inserting user into database")
 		return
 	}
-	err = tx.Commit()
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error while commiting transaction inserting user")
-		return
-	}
-	_, newUser, err = s.CheckUserByEmail(ctx, u.Email)
+	newUser, err = s.GetUserByEmail(ctx, u.Email)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error selecting user from database with email: " + u.Email)
 		return
@@ -64,14 +59,15 @@ func (s *pgStore) CreateNewUser(ctx context.Context, u User) (newUser User, err 
 	return
 }
 
-func (s *pgStore) CheckUserByEmail(ctx context.Context, email string) (check bool, user User, err error) {
+// GetUserByEmail - Checks if user is present in DB and if then return user
+func (s *pgStore) GetUserByEmail(ctx context.Context, email string) (user User, err error) {
 	err = s.db.Get(&user, getUserByEmailQuery, email)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return false, user, err
+			return
 		}
-		logger.WithField("err", err.Error()).Error("Error while selecting user from database by email" + email)
+		logger.WithField("err", err.Error()).Error("Error while selecting user from database by email " + email)
 		return
 	}
-	return true, user, err
+	return
 }

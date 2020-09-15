@@ -15,14 +15,14 @@ func (m *DBMockStore) ListUsers(ctx context.Context) (users []User, err error) {
 	return args.Get(0).([]User), args.Error(1)
 }
 
-// CreateNewUser - test mock
-func (m *DBMockStore) CreateNewUser(ctx context.Context, u User) (user User, err error) {
+// CreateUser - test mock
+func (m *DBMockStore) CreateUser(ctx context.Context, u User) (user User, err error) {
 	args := m.Called(ctx, u)
 	return args.Get(0).(User), args.Error(1)
 }
 
-// CheckUserByEmail - test mock
-func (m *DBMockStore) CheckUserByEmail(ctx context.Context, email string) (check bool, user User, err error) {
+// GetUserByEmail - test mock
+func (m *DBMockStore) GetUserByEmail(ctx context.Context, email string) (user User, err error) {
 	args := m.Called(ctx, email)
-	return args.Get(0).(bool), args.Get(1).(User), args.Get(2).(error)
+	return args.Get(0).(User), args.Error(1)
 }
