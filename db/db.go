@@ -4,9 +4,9 @@ import (
 	"context"
 )
 
+//Storer - interface to add methods used for db operations
 type Storer interface {
-	ListUsers(context.Context) ([]User, error)
-	//Create(context.Context, User) error
-	//GetUser(context.Context) (User, error)
-	//Delete(context.Context, string) error
+	ListUsers(ctx context.Context) (userList []User, err error)
+	GetUser(ctx context.Context, id int) (user User, err error)
+	UpdateUserByID(ctx context.Context, user User, id int) (err error)
 }
