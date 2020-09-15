@@ -52,7 +52,7 @@ func (m *DBMockStore) GetProductImagesByID(ctx context.Context, id int) (product
 	return args.Get(0).([]ProductImage), args.Error(1)
 }
 
-func (m *DBMockStore) UpdateProductStockById(ctx context.Context, product Product, id int) (products Product, err error) {
-	args := m.Called(ctx, product, id)
+func (m *DBMockStore) UpdateProductStockById(ctx context.Context, p Product, id int) (product Product, err error) {
+	args := m.Called(ctx, p, id)
 	return args.Get(0).(Product), args.Error(1)
 }

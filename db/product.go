@@ -60,10 +60,10 @@ func (product *Product) Validate() (errorResponse map[string]ErrorResponse, vali
 		fieldErrors["price"] = "Can't be blank  or less than zero"
 	}
 	if product.Discount < 0 {
-		fieldErrors["discount"] = "Can't be blank  or less than zero"
+		fieldErrors["discount"] = "Can't be less than zero"
 	}
 	if product.Tax < 0 {
-		fieldErrors["tax"] = "Can't be blank  or less than zero"
+		fieldErrors["tax"] = "Can't be less than zero"
 	}
 	// If Quantity gets's < 0 by UpdateProductStockById Method, this is what saves us
 	if product.Quantity < 0 {
