@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"golang.org/x/crypto/bcrypt"
@@ -19,7 +20,6 @@ const (
 		country,
 		state,
 		city
-		
 		) = 
 		($1, $2, $3, $4, $5, $6 ,$7,$8) where id = $9 `
 
@@ -62,17 +62,14 @@ func (s *pgStore) GetUser(ctx context.Context, id int) (user User, err error) {
 }
 
 func (s *pgStore) UpdateUserByID(ctx context.Context, user User, userID int) (err error) {
-
 	//check if password is to be updated then convert it to hashcode
 	if user.Password != "" {
-
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 8)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("error while creating hash of the password")
 			return err
 		}
 		user.Password = string(hashedPassword)
-
 	}
 
 	_, err = s.db.Exec(
@@ -91,48 +88,36 @@ func (s *pgStore) UpdateUserByID(ctx context.Context, user User, userID int) (er
 		logger.WithField("err", err.Error()).Error("error updating user profile")
 		return
 	}
-
 	return
-
 }
 
 //Validate function for user
-func (user *User) Validate() (valid bool) {
-	fieldErrors := make(map[string]string)
+func (user *User) Validate() (err error) {
 
 	if user.FirstName == "" {
-		fieldErrors["name"] = "Can't be blank"
+		return errors.New("first name cannot be blank")
 	}
 	if user.LastName == "" {
-		fieldErrors["LastName"] = "Can't be blank"
+		return errors.New("first name cannot be blank")
 	}
 	if user.Mobile == "" {
-		fieldErrors["Mobile"] = "Can't be blank"
+		return errors.New("first name cannot be blank")
 	}
 	if user.Password == "" {
-		fieldErrors["Password"] = "Can't be blank"
+		return errors.New("first name cannot be blank")
 	}
 	if user.Address == "" {
-		fieldErrors["Address"] = "Can't be blank"
+		return errors.New("first name cannot be blank")
 	}
 	if user.Country == "" {
-		fieldErrors["Country"] = "Can't be blank"
+		return errors.New("first name cannot be blank")
 	}
 	if user.State == "" {
-		fieldErrors["State"] = "Can't be blank"
+		return errors.New("first name cannot be blank")
 	}
 	if user.City == "" {
-		fieldErrors["City"] = "Can't be blank"
+		return errors.New("first name cannot be blank")
 	}
-
-	if len(fieldErrors) == 0 {
-		valid = true
-		return
-	}
-
-	valid = false
-	//TODO: Ask what other validations are expected
-
 	return
 }
 

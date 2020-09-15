@@ -89,7 +89,20 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		user.Validate()
+		err = user.Validate()
+
+		if err != nil {
+			{
+				rw.WriteHeader(http.StatusBadRequest)
+				repsonse(rw, http.StatusBadRequest, errorResponse{
+					Error: messageObject{
+						Message: err.Error(),
+					},
+				})
+				logger.WithField("err", err.Error()).Error("error while validating user's profile")
+				return
+			}
+		}
 
 		err = deps.Store.UpdateUserByID(req.Context(), user, int(userID))
 		if err != nil {
