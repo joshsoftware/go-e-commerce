@@ -14,8 +14,8 @@ const (
 	getProductByNameQuery = `SELECT * FROM products WHERE name=$1`
 	getCategoryByID       = `SELECT name FROM category WHERE id = $1`
 	insertProductQuery    = `INSERT INTO products ( name, description,
-		  price, discount, quantity, category_id, brand, color, size) VALUES ( 
-		  :name, :description, :price, :discount, :quantity, :category_id, :brand, :color, :size)`
+		  price, discount, tax, quantity, category_id, brand, color, size) VALUES ( 
+		  :name, :description, :price, :discount, :tax, :quantity, :category_id, :brand, :color, :size)`
 	deleteProductIdQuery    = `DELETE FROM products WHERE id = $1`
 	updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2`
 	newInsertRecord         = `SELECT MAX(id) from products`
@@ -28,6 +28,7 @@ type Product struct {
 	Description string  `db:"description" json:"description"`
 	Price       float32 `db:"price" json:"product_price"`
 	Discount    float32 `db:"discount" json:"discount"`
+	Tax         float32 `db:"tax" json:"tax"`
 	Quantity    int     `db:"quantity" json:"stock"`
 	CategoryId  int     `db:"category_id" json:"category_id"`
 	// CategoryName doesn't exists in Product db,
@@ -60,6 +61,9 @@ func (product *Product) Validate() (errorResponse map[string]ErrorResponse, vali
 	}
 	if product.Discount < 0 {
 		fieldErrors["discount"] = "Can't be blank  or less than zero"
+	}
+	if product.Tax < 0 {
+		fieldErrors["tax"] = "Can't be blank  or less than zero"
 	}
 	// If Quantity gets's < 0 by UpdateProductStockById Method, this is what saves us
 	if product.Quantity < 0 {
@@ -203,7 +207,7 @@ func (s *pgStore) CreateNewProduct(ctx context.Context, p Product) (createdProdu
 	}
 
 	_, err = tx.NamedExec(insertProductQuery, p)
-	//  p.Name, p.Description, p.Price, p.Discount, p.Quantity, p.CategoryId, p.Brand, p.Color, p.Size
+	//  p.Name, p.Description, p.Price, p.Discount, p.Tax, p.Quantity, p.CategoryId, p.Brand, p.Color, p.Size
 
 	if err != nil {
 		// FAIL : Could not run insert Query

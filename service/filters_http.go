@@ -114,7 +114,7 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 			rw.WriteHeader(http.StatusBadRequest)
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "limits or page value invalid, or special chracters in filters",
+					Message: "Error getting count of filtered records",
 				},
 			})
 			return

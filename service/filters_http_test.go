@@ -59,13 +59,13 @@ func (suite *FilterHandlerTestSuite) TestFilteredRecordsWhenDBFailure() {
 	recorder := makeHTTPCall(
 		http.MethodGet,
 		"/products/filters",
-		"/product/filters?limit=5&page=1&brand=Apple&price=desc",
+		"/products/filters?limit=5&page=1",
 		"",
 		getProductByFiltersHandler(Dependencies{Store: suite.dbMock}),
 	)
 
-	//assert.Equal(suite.T(), `{"error":"Error getting count of filtered records"}`, recorder.Body.String())
+	assert.Equal(suite.T(), `{"error":{"message":"Error getting count of filtered records"}}`, recorder.Body.String())
 	assert.Equal(suite.T(), http.StatusBadRequest, recorder.Code)
-	//suite.dbMock.AssertNotCalled(suite.T(), "FilteredRecords", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
-	//suite.dbMock.AssertCalled(suite.T(), "FilteredRecordsCount", mock.Anything, mock.Anything)
+	suite.dbMock.AssertNotCalled(suite.T(), "FilteredRecords", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	suite.dbMock.AssertCalled(suite.T(), "FilteredRecordsCount", mock.Anything, mock.Anything)
 }
