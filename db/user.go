@@ -52,6 +52,18 @@ func (s *pgStore) GetUser(ctx context.Context, id int) (user User, err error) {
 
 func (s *pgStore) UpdateUser(ctx context.Context, user User, userID int) (err error) {
 
+	//check if password is to be updated then convert it to hashcode
+	if user.Password != "" {
+
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 8)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("error while creating hash of the password")
+			return err
+		}
+		user.Password = string(hashedPassword)
+
+	}
+
 	colName, colValue := PrepareParameters(user)
 	var updateQuery string
 

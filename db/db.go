@@ -11,7 +11,7 @@ type Storer interface {
 	UpdateUser(ctx context.Context, user User, id int) (err error)
 	CreateBlacklistedToken(ctx context.Context, blToken BlacklistedToken) (err error)
 	CheckBlacklistedToken(cyx context.Context, token string) (res bool, id int)
-	AuthenticateUser(ctx context.Context, user User) (user User, err error)
+	AuthenticateUser(ctx context.Context, u User) (user User, err error)
 	//Create(context.Context, User) error
 
 	//Delete(context.Context, string) error
