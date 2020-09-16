@@ -164,3 +164,146 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 	})
 
 }
+
+// @Title getProductBySearch
+// @Description list all Products with specified filters
+// @Router /products/search [GET]
+// @Params /products/search?text=apple+that+can+be+eaten
+//  checking will take place in product name then its discription
+//  brand, size, color will be also be checked case-insensitively string
+// @Accept	json
+// @Success 200 {object}
+// @Failure 404 {object}
+
+// TODO Optimize the queries
+
+func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+
+		page := req.URL.Query().Get("page")
+		limit := req.URL.Query().Get("limit")
+		text := req.URL.Query().Get("text")
+
+		// Setting default limit as 5
+		if limit == "" {
+			limit = "5"
+		}
+
+		// Setting default page as 1
+		if page == "" {
+			page = "1"
+		}
+
+		ls, err := strconv.Atoi(limit)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while converting limit to int")
+			rw.WriteHeader(http.StatusBadRequest)
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "limits or page value invalid",
+				},
+			})
+			return
+		}
+
+		ps, err := strconv.Atoi(page)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while converting page to int")
+			rw.WriteHeader(http.StatusBadRequest)
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "limits or page value invalid",
+				},
+			})
+			return
+		}
+
+		// Avoid divide by zero exception and -ve values for page and limit
+		if ls <= 0 || ps <= 0 {
+			err = fmt.Errorf("limit or page are non-positive")
+			logger.WithField("err", err.Error()).Error("Error limit or page were invalid values")
+			rw.WriteHeader(http.StatusBadRequest)
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "limits or page value invalid",
+				},
+			})
+			return
+		}
+
+		if text == "" {
+			// Behave same as List All Products and return
+			/*
+				url, err := mux.CurrentRoute(req).Subrouter().Get("list").URL()
+				if err != nil {
+					logger.WithField("err", err.Error()).Error("Error getting URL of listAllProductds ")
+					rw.WriteHeader(http.StatusInternalServerError)
+					response(rw, http.StatusInternalServerError, errorResponse{
+						Error: messageObject{
+							Message: "Redirection failed!",
+						},
+					})
+				}
+				http.Redirect(rw, req, url.String(), 303)
+			*/
+			return
+
+		}
+
+		count, products, err := deps.Store.SearchRecords(req.Context(), text, limit, page)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error getting count of search records")
+			rw.WriteHeader(http.StatusBadRequest)
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Error getting count of search records",
+				},
+			})
+			return
+		}
+
+		if (count - 1) < (ls * (int(ps) - 1)) {
+			err = fmt.Errorf("Desired Page not found")
+			logger.WithField("err", err.Error()).Error("Error as page is out of range")
+			rw.WriteHeader(http.StatusBadRequest)
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "limits or page value invalid",
+				},
+			})
+			return
+		}
+
+		var pagination db.Pagination
+		pagination.TotalPages = int(math.Ceil(float64(count) / float64(ls)))
+
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error fetching data filtered products")
+			rw.WriteHeader(http.StatusBadRequest)
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "limits or page value invalid",
+				},
+			})
+			return
+		}
+		pagination.Products = products
+
+		respBytes, err := json.Marshal(pagination)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error mashaling pagination and product data")
+			rw.WriteHeader(http.StatusBadRequest)
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "limits or page value invalid",
+				},
+			})
+			return
+		}
+
+		rw.Header().Add("Content-Type", "application/json")
+		rw.WriteHeader(http.StatusOK)
+		rw.Write(respBytes)
+	})
+
+}
