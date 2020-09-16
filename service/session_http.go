@@ -15,12 +15,13 @@ import (
 
 //AuthBody stores responce body for login
 type authBody struct {
-	Message string `json:"meassage"`
+	Message string `json:"message"`
 	Token   string `json:"token"`
+	IsAdmin bool   `json:"isAdmin"`
 }
 
 //generateJWT function generates and return a new JWT token
-func generateJwt(userID int) (tokenString string, err error) {
+func generateJwt(userID int, isAdmin bool) (tokenString string, err error) {
 	mySigningKey := config.JWTKey()
 	if mySigningKey == nil {
 		ae.Error(ae.ErrNoSigningKey, "Application error: No signing key configured", err)
@@ -30,6 +31,7 @@ func generateJwt(userID int) (tokenString string, err error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
 	claims["id"] = userID
+	claims["isAdmin"] = isAdmin
 	claims["exp"] = time.Now().Add(time.Duration(config.JWTExpiryDurationHours()) * time.Hour).Unix()
 
 	tokenString, err = token.SignedString(mySigningKey)
@@ -59,7 +61,6 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		//TODO change no need to return user object from Authentication
 		//checking if the user is authenticated or not
 		// by passing the credentials to the AuthenticateUser function
 		user, err = deps.Store.AuthenticateUser(req.Context(), user)
@@ -75,7 +76,7 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 
 		//Generate new JWT token if the user is authenticated
 		// and return the token in request header
-		token, err := generateJwt(user.ID)
+		token, err := generateJwt(user.ID, user.IsAdmin)
 		if err != nil {
 			responses(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
@@ -89,8 +90,10 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 			Data: authBody{
 				Message: "Login Successfull",
 				Token:   token,
+				IsAdmin: user.IsAdmin,
 			},
 		})
+		return
 	})
 }
 
@@ -103,7 +106,7 @@ func userLogoutHandler(deps Dependencies) http.Handler {
 		authToken := req.Header.Get("Token")
 
 		//fetching details from the token
-		userID, expirationTimeStamp, err := getDataFromToken(authToken)
+		userID, expirationTimeStamp, _, err := getDataFromToken(authToken)
 		if err != nil {
 			responses(rw, http.StatusUnauthorized, errorResponse{
 				Error: messageObject{
@@ -141,7 +144,7 @@ func userLogoutHandler(deps Dependencies) http.Handler {
 	})
 }
 
-func getDataFromToken(Token string) (userID float64, expirationTime int64, err error) {
+func getDataFromToken(Token string) (userID float64, expirationTime int64, isAdmin bool, err error) {
 	mySigningKey := config.JWTKey()
 
 	token, err := jwt.Parse(Token, func(token *jwt.Token) (interface{}, error) {
@@ -163,6 +166,7 @@ func getDataFromToken(Token string) (userID float64, expirationTime int64, err e
 	}
 
 	userID = claims["id"].(float64)
+	isAdmin = claims["isAdmin"].(bool)
 	expirationTime = int64(claims["exp"].(float64))
 	return
 }
