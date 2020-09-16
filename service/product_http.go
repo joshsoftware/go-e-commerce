@@ -72,25 +72,13 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		count, err := deps.Store.TotalRecords(req.Context())
+		count, products, err := deps.Store.ListProducts(req.Context(), limit, page)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while getting TotalRecords Count")
-			rw.Header().Add("Content-Type", "application/json")
-			rw.WriteHeader(http.StatusInternalServerError)
-			response(rw, http.StatusInternalServerError, errorResponse{
-				Error: messageObject{
-					Message: "Error while getting TotalRecords Count",
-				},
-			})
-			return
-		}
-
-		if (count - 1) < (ls * (int(ps) - 1)) {
-			rw.Header().Add("Content-Type", "application/json")
+			logger.WithField("err", err.Error()).Error("Error Couldn't find any Product records or Page out of range")
 			rw.WriteHeader(http.StatusBadRequest)
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Page Not Found..!",
+					Message: "Couldn't find any Products records or Page out of range",
 				},
 			})
 			return
@@ -98,19 +86,6 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 
 		var pagination db.Pagination
 		pagination.TotalPages = int(math.Ceil(float64(count) / float64(ls)))
-
-		products, err := deps.Store.ListProducts(req.Context(), limit, page)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error fetching data")
-			rw.Header().Add("Content-Type", "application/json")
-			rw.WriteHeader(http.StatusInternalServerError)
-			response(rw, http.StatusInternalServerError, errorResponse{
-				Error: messageObject{
-					Message: "Error fetching data",
-				},
-			})
-			return
-		}
 
 		pagination.Products = products
 
@@ -121,7 +96,7 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 			rw.WriteHeader(http.StatusInternalServerError)
 			response(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
-					Message: "mashaling pagination data",
+					Message: "Couldn't mashal pagination data",
 				},
 			})
 			return
