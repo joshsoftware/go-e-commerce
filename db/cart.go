@@ -18,7 +18,8 @@ type Products struct {
 	Name        string  `db:"name" json:"name"`
 	Description string  `db:"description" json:"description"`
 	Price       float32 `db:"price" json:"price"`
-	Discount    float64 `db:"discount" json:"discount"`
+	Discount    float32 `db:"discount" json:"discount"`
+	Tax         float32 `db:"tax" json:""tax`
 	Quantity    int     `db:"quantity" json:"quantity"`
 	CategoryId  int     `db:"category_id" json:"category_id"`
 }
@@ -27,17 +28,19 @@ type Products struct {
 type CartProduct struct {
 	Id          int     `db:"id" json:"id"`
 	Name        string  `db:"product_title" json:"product_title"`
-	Quantity    int     `db:"quantity" json:"quantity"`
-	Category    string  `db:"category" json:"category"`
-	Price       float32 `db:"price" json:"product_price"`
 	Description string  `db:"description" json:"description"`
+	Quantity    int     `db:"quantity" json:"quantity"`
+	Price       float32 `db:"price" json:"product_price"`
+	Discount    float32 `db:"discount" json:"discount"`
+	Tax         float32 `db:"tax" json:"tax"`
+	Category    string  `db:"category" json:"category"`
 	ImageUrl    string  `db:"image_url" json:"image_url"`
 }
 
 const (
 	getCartQuery         = `SELECT product_id  FROM cart WHERE id=$1`
 	getCartQuantityQuery = `SELECT quantity FROM cart WHERE id=$1`
-	getProductsQuery     = `SELECT id,name,description,price,discount,quantity,category_id FROM products WHERE id IN (?)`
+	getProductsQuery     = `SELECT id,name,description,price,discount,tax,quantity,category_id FROM products WHERE id IN (?)`
 	getCategoryQuery     = `SELECT name from category where id=$1`
 	getProductImageQuery = `SELECT url from productimages where product_id=$1`
 )
@@ -73,12 +76,16 @@ func (s *pgStore) GetCart(ctx context.Context, user_id int) (cart_products []Car
 		cart_products = append(
 			cart_products,
 			CartProduct{
-				Id:       product.Id,
-				Quantity: quantities[index],
-				Category: category[index],
-				Price:    product.Price, Description: product.Description,
-				ImageUrl: image_url[index],
-				Name:     product.Name})
+				Id:          product.Id,
+				Quantity:    quantities[index],
+				Category:    category[index],
+				Price:       product.Price,
+				Description: product.Description,
+				ImageUrl:    image_url[index],
+				Name:        product.Name,
+				Discount:    product.Discount,
+				Tax:         product.Tax,
+			})
 	}
 
 	if err != nil {

@@ -9,23 +9,17 @@ import (
 )
 
 const (
-	getProductIDQuery = `SELECT id FROM products`
-	// id is PRIMARY KEY, so no need to limit
+	getProductIDQuery     = `SELECT id FROM products`
 	getProductByIDQuery   = `SELECT * FROM products WHERE id=$1`
 	getProductByNameQuery = `SELECT * FROM products WHERE name=$1`
-
-	getCategoryByID              = `SELECT name FROM category WHERE id = $1`
-	getProductsByCategoryIDQuery = `SELECT id FROM products WHERE category_id = $1`
-
-	insertProductQuery = `INSERT INTO products (
-		 name, description, price, discount, quantity, category_id, brand, color, size) VALUES (  :name, :description, :price, :discount, :quantity, :category_id, :brand, :color, :size)`
-	deleteProductIdQuery = `DELETE FROM products WHERE id = $1`
-
-	updateProductQuery = `UPDATE products SET quantity= $1 where id = $2`
-
-	newInsertRecord = `SELECT MAX(id) from products`
-
-	insertProductURLsQuery = `INSERT INTO productimages (product_id, url) values ($1, $2)`
+	getCategoryByID       = `SELECT name FROM category WHERE id = $1`
+	insertProductQuery    = `INSERT INTO products ( name, description,
+		  price, discount, tax, quantity, category_id, brand, color, size) VALUES ( 
+		  :name, :description, :price, :discount, :tax, :quantity, :category_id, :brand, :color, :size)`
+	deleteProductIdQuery    = `DELETE FROM products WHERE id = $1`
+	updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2`
+	newInsertRecord         = `SELECT MAX(id) from products`
+	insertProductURLsQuery  = `INSERT INTO productimages (product_id, url) values ($1, $2)`
 )
 
 type Product struct {
@@ -34,6 +28,7 @@ type Product struct {
 	Description  string   `db:"description" json:"description"`
 	Price        float32  `db:"price" json:"product_price"`
 	Discount     float32  `db:"discount" json:"discount"`
+	Tax          float32  `db:"tax" json:"tax"`
 	Quantity     int      `db:"quantity" json:"stock"`
 	CategoryID   int      `db:"category_id" json:"category_id"`
 	CategoryName string   `json:"category"`
@@ -43,6 +38,7 @@ type Product struct {
 	URLs         []string `json:"image_url,omitempty"`
 }
 
+// Pagination helps to return UI side with number of pages given a limit and page
 type Pagination struct {
 	Products   []Product `json:"products"`
 	TotalPages int       `json:"total_pages"`
@@ -51,9 +47,6 @@ type Pagination struct {
 func (product *Product) Validate() (errorResponse map[string]ErrorResponse, valid bool) {
 	fieldErrors := make(map[string]string)
 
-	/* if product.Id == 0 {
-		fieldErrors["product_id"] = "Can't be blank"
-	} */
 	if product.Name == "" {
 		fieldErrors["product_name"] = "Can't be blank"
 	}
@@ -66,6 +59,10 @@ func (product *Product) Validate() (errorResponse map[string]ErrorResponse, vali
 	if product.Discount < 0 {
 		fieldErrors["discount"] = "Can't be blank  or less than zero"
 	}
+	if product.Tax < 0 {
+		fieldErrors["tax"] = "Can't be blank  or less than zero"
+	}
+	// If Quantity gets's < 0 by UpdateProductStockById Method, this is what saves us
 	if product.Quantity < 0 {
 		fieldErrors["available_quantity"] = "Can't be blank or less than zero"
 	}
@@ -89,15 +86,19 @@ func (product *Product) Validate() (errorResponse map[string]ErrorResponse, vali
 	return
 }
 
+// @Title GetProductByID
+// @Description Get a Product Object by its Id
+// @Params req.Context, product's Id
+// @Returns Product Object, error if any
 func (s *pgStore) GetProductByID(ctx context.Context, Id int) (product Product, err error) {
 
 	err = s.db.Get(&product, getProductByIDQuery, Id)
-
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error selecting product from database by id: " + string(Id))
 		return
 	}
 
+	// Add category to Product's object
 	var category string
 	err = s.db.Get(&category, getCategoryByID, product.CategoryID)
 
@@ -108,6 +109,7 @@ func (s *pgStore) GetProductByID(ctx context.Context, Id int) (product Product, 
 
 	product.CategoryName = category
 
+	// Add Product Image URL's to Product's Object
 	productImage, err := s.GetProductImagesByID(ctx, Id)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error selecting productImage from database by id " + string(Id))
@@ -119,10 +121,13 @@ func (s *pgStore) GetProductByID(ctx context.Context, Id int) (product Product, 
 	}
 
 	return
-
 }
 
-func (s *pgStore) TotalRecords(ctx context.Context) (total int) {
+// @Title TotalRecords
+// @Description Get count of Total Product Records
+// @Params req.Context
+// @Returns Count of Records, error if any
+func (s *pgStore) TotalRecords(ctx context.Context) (total int, err error) {
 
 	getTotalRecord := "SELECT count(id) from Products ;"
 	result, err := s.db.Query(getTotalRecord)
@@ -130,14 +135,21 @@ func (s *pgStore) TotalRecords(ctx context.Context) (total int) {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
 		return
 	}
-	var number int
+
 	for result.Next() {
-		err = result.Scan(&number)
+		err = result.Scan(&total)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error scanning Product Ids into integer variable")
+			return
+		}
 	}
-	fmt.Println(number)
-	return number
+	return
 }
 
+// @Title ListProducts
+// @Description Get limited number of Products of particular page
+// @Params req.Context , limit, page
+// @Returns Count of Records, error if any
 func (s *pgStore) ListProducts(ctx context.Context, limit string, page string) (products []Product, err error) {
 
 	// idArr stores id's of all products
@@ -147,44 +159,9 @@ func (s *pgStore) ListProducts(ctx context.Context, limit string, page string) (
 	getProductQuery += " LIMIT " + string(limit) + "  OFFSET  (" + string(page) + " -1) * " + string(limit) + ""
 	getProductQuery += " ;"
 
-	fmt.Println(getProductQuery)
 	result, err := s.db.Query(getProductQuery)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
-		return
-	}
-
-	for result.Next() {
-		var Id int
-		err = result.Scan(&Id)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Couldn't Scan Product ids")
-			return
-		}
-		idArr = append(idArr, Id)
-	}
-
-	for i := 0; i < len(idArr); i++ {
-		var product Product
-		product, err = s.GetProductByID(ctx, int(idArr[i]))
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error selecting Product from database by id " + string(idArr[i]))
-			return
-		}
-		products = append(products, product)
-	}
-
-	return
-}
-
-func (s *pgStore) GetProductsByCategoryID(ctx context.Context, CategoryId int) (products []Product, err error) {
-
-	// idArr stores id's of all products
-	var idArr []int
-
-	result, err := s.db.Query(getProductsByCategoryIDQuery, CategoryId)
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error fetching Product Ids by their category from database")
 		return
 	}
 
@@ -228,7 +205,7 @@ func (s *pgStore) CreateNewProduct(ctx context.Context, p Product) (createdProdu
 	}
 
 	_, err = tx.NamedExec(insertProductQuery, p)
-	//  p.Name, p.Description, p.Price, p.Discount, p.Quantity, p.CategoryId, p.Brand, p.Color, p.Size
+	//  p.Name, p.Description, p.Price, p.Discount, p.Tax, p.Quantity, p.CategoryId, p.Brand, p.Color, p.Size
 
 	if err != nil {
 		// FAIL : Could not run insert Query
@@ -270,7 +247,7 @@ func (s *pgStore) CreateNewProduct(ctx context.Context, p Product) (createdProdu
 	return
 }
 
-func (s *pgStore) UpdateProductById(ctx context.Context, product Product, Id int) (updatedProduct Product, err error) {
+func (s *pgStore) UpdateProductStockById(ctx context.Context, product Product, Id int) (updatedProduct Product, err error) {
 
 	var dbProduct Product
 	err = s.db.Get(&dbProduct, getProductByIDQuery, Id)
@@ -285,7 +262,7 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, Id int
 		return
 	}
 
-	_, err = tx.Exec(updateProductQuery,
+	_, err = tx.Exec(updateProductStockQuery,
 		product.Quantity,
 		Id,
 	)
