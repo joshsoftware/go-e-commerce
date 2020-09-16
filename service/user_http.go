@@ -89,22 +89,30 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		err = user.Validate()
-
+		dbUser, err := deps.Store.GetUser(req.Context(), int(userID))
 		if err != nil {
-			{
-				rw.WriteHeader(http.StatusBadRequest)
-				repsonse(rw, http.StatusBadRequest, errorResponse{
-					Error: messageObject{
-						Message: err.Error(),
-					},
-				})
-				logger.WithField("err", err.Error()).Error("error while validating user's profile")
-				return
-			}
+			logger.WithField("err", err.Error()).Error("error while fetching User")
+			rw.WriteHeader(http.StatusNotFound)
+			repsonse(rw, http.StatusNotFound, errorResponse{
+				Error: messageObject{
+					Message: "error while fetching users",
+				},
+			})
+			return
+		}
+		err = dbUser.ValidatePatchParams(user)
+		if err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			repsonse(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "internal server error",
+				},
+			})
+			logger.WithField("err", err.Error())
+			return
 		}
 
-		err = deps.Store.UpdateUserByID(req.Context(), user, int(userID))
+		err = deps.Store.UpdateUserByID(req.Context(), dbUser, int(userID))
 		if err != nil {
 			rw.WriteHeader(http.StatusInternalServerError)
 			repsonse(rw, http.StatusInternalServerError, errorResponse{
@@ -116,19 +124,7 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		updatedUser, err := deps.Store.GetUser(req.Context(), int(userID))
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("error while fetching User")
-			rw.WriteHeader(http.StatusNotFound)
-			repsonse(rw, http.StatusNotFound, errorResponse{
-				Error: messageObject{
-					Message: "error while fetching users",
-				},
-			})
-			return
-		}
-		repsonse(rw, http.StatusOK, successResponse{Data: updatedUser})
-
+		repsonse(rw, http.StatusOK, successResponse{Data: dbUser})
 		return
 
 	})

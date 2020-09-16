@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"golang.org/x/crypto/bcrypt"
@@ -62,15 +61,6 @@ func (s *pgStore) GetUser(ctx context.Context, id int) (user User, err error) {
 }
 
 func (s *pgStore) UpdateUserByID(ctx context.Context, user User, userID int) (err error) {
-	//check if password is to be updated then convert it to hashcode
-	if user.Password != "" {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 8)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("error while creating hash of the password")
-			return err
-		}
-		user.Password = string(hashedPassword)
-	}
 
 	_, err = s.db.Exec(
 		updateUserQuery,
@@ -91,32 +81,37 @@ func (s *pgStore) UpdateUserByID(ctx context.Context, user User, userID int) (er
 	return
 }
 
-//Validate function for user
-func (user *User) Validate() (err error) {
+//ValidatePatchParams function for user
+func (user *User) ValidatePatchParams(u User) (err error) {
 
-	if user.FirstName == "" {
-		return errors.New("first name cannot be blank")
+	if u.FirstName != "" {
+		user.FirstName = u.FirstName
 	}
-	if user.LastName == "" {
-		return errors.New("first name cannot be blank")
+	if u.LastName != "" {
+		user.LastName = u.LastName
 	}
-	if user.Mobile == "" {
-		return errors.New("first name cannot be blank")
+	if u.Mobile != "" {
+		user.Mobile = u.Mobile
 	}
-	if user.Password == "" {
-		return errors.New("first name cannot be blank")
+	if u.Password != "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), 8)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("error while creating hash of the password")
+			return err
+		}
+		user.Password = string(hashedPassword)
 	}
-	if user.Address == "" {
-		return errors.New("first name cannot be blank")
+	if u.Address != "" {
+		user.Address = u.Address
 	}
-	if user.Country == "" {
-		return errors.New("first name cannot be blank")
+	if u.Country != "" {
+		user.Country = u.Country
 	}
-	if user.State == "" {
-		return errors.New("first name cannot be blank")
+	if u.State != "" {
+		user.State = u.State
 	}
-	if user.City == "" {
-		return errors.New("first name cannot be blank")
+	if u.City != "" {
+		user.City = u.City
 	}
 	return
 }
