@@ -46,19 +46,19 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limit str
 	}
 	if filter.BrandFlag == true {
 		// Since ' existed, we had to use ` instead of " , as compiler gave error otherwise
-		helper += ` brand = '` + string(filter.Brand) + `' AND`
+		helper += ` LOWER(brand) = LOWER('` + filter.Brand + `') AND`
 		injection += filter.Brand
 		found = true
 	}
 	if filter.SizeFlag == true {
 		// Since ' existed, we had to use ` instead of " , as compiler gave error otherwise
-		helper += ` size ='` + string(filter.Size) + `' AND`
+		helper += ` LOWER(size) = LOWER('` + filter.Size + `') AND`
 		injection += filter.Size
 		found = true
 	}
 	if filter.ColorFlag == true {
 		// Since ' existed, we had to use ` instead of " , as compiler gave error otherwise
-		helper += ` color ='` + string(filter.Color) + `' AND`
+		helper += ` LOWER(color) =LOWER('` + filter.Color + `') AND`
 		injection += filter.Color
 		found = true
 	}
@@ -203,10 +203,7 @@ func (s *pgStore) SearchRecords(ctx context.Context, text string, limit string, 
 		helper += ` 
 		LOWER(p.name) LIKE LOWER('%` + key + `%') OR 
 		LOWER(p.brand) LIKE LOWER('%` + key + `%') OR 
-		LOWER(p.color) LIKE LOWER('%` + key + `%') OR 
-		LOWER(p.size) LIKE LOWER('%` + key + `%') OR 
-		LOWER(c.name) LIKE LOWER('%` + key + `%') OR 
-		LOWER(c.description) LIKE LOWER('%` + key + `%') OR`
+		LOWER(c.name) LIKE LOWER('%` + key + `%') OR`
 	}
 
 	// remove that last OR
