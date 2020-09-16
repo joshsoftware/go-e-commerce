@@ -75,8 +75,9 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 		count, products, err := deps.Store.ListProducts(req.Context(), limit, page)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error Couldn't find any Product records or Page out of range")
-			rw.WriteHeader(http.StatusBadRequest)
-			response(rw, http.StatusBadRequest, errorResponse{
+			rw.Header().Add("Content-Type", "application/json")
+			rw.WriteHeader(http.StatusInternalServerError)
+			response(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
 					Message: "Couldn't find any Products records or Page out of range",
 				},
@@ -257,7 +258,7 @@ func deleteProductByIdHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		rw.WriteHeader(http.StatusOK)
-		rw.Header().Add("Content-Type", "application/json")
+		//rw.Header().Add("Content-Type", "application/json")
 		return
 	})
 }
@@ -280,6 +281,7 @@ func updateProductStockByIdHandler(deps Dependencies) http.HandlerFunc {
 
 		if Id == "" || err != nil {
 			logger.WithField("err", err.Error()).Error("Error product_id parameter is missing or corrupt")
+			rw.Header().Add("Content-Type", "application/json")
 			rw.WriteHeader(http.StatusBadRequest)
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
@@ -293,6 +295,7 @@ func updateProductStockByIdHandler(deps Dependencies) http.HandlerFunc {
 
 		if Count == "" || err != nil {
 			logger.WithField("err", err.Error()).Error("Error stock parameter is missing or corrupt")
+			rw.Header().Add("Content-Type", "application/json")
 			rw.WriteHeader(http.StatusBadRequest)
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
@@ -350,6 +353,7 @@ func updateProductStockByIdHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
+		rw.Header().Add("Content-Type", "application/json")
 		response(rw, http.StatusOK, successResponse{Data: updatedProduct})
 		return
 	})
