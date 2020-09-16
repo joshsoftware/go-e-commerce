@@ -3,12 +3,16 @@ package db
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	//"database/sql"
 	logger "github.com/sirupsen/logrus"
 )
 
 const (
+	getProductCount = `SELECT count(id) from Products ;`
+	getProductQuery = `SELECT id FROM products LIMIT $1  OFFSET  ($2 -1) * $1;`
+
 	getProductIDQuery     = `SELECT id FROM products`
 	getProductByIDQuery   = `SELECT * FROM products WHERE id=$1`
 	getProductByNameQuery = `SELECT * FROM products WHERE name=$1`
@@ -57,10 +61,10 @@ func (product *Product) Validate() (errorResponse map[string]ErrorResponse, vali
 		fieldErrors["price"] = "Can't be blank  or less than zero"
 	}
 	if product.Discount < 0 {
-		fieldErrors["discount"] = "Can't be blank  or less than zero"
+		fieldErrors["discount"] = "Can't be less than zero"
 	}
 	if product.Tax < 0 {
-		fieldErrors["tax"] = "Can't be blank  or less than zero"
+		fieldErrors["tax"] = "Can't be less than zero"
 	}
 	// If Quantity gets's < 0 by UpdateProductStockById Method, this is what saves us
 	if product.Quantity < 0 {
@@ -123,47 +127,50 @@ func (s *pgStore) GetProductByID(ctx context.Context, Id int) (product Product, 
 	return
 }
 
-// @Title TotalRecords
-// @Description Get count of Total Product Records
-// @Params req.Context
-// @Returns Count of Records, error if any
-func (s *pgStore) TotalRecords(ctx context.Context) (total int, err error) {
-
-	getTotalRecord := "SELECT count(id) from Products ;"
-	result, err := s.db.Query(getTotalRecord)
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
-		return
-	}
-
-	for result.Next() {
-		err = result.Scan(&total)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error scanning Product Ids into integer variable")
-			return
-		}
-	}
-	return
-}
-
 // @Title ListProducts
 // @Description Get limited number of Products of particular page
 // @Params req.Context , limit, page
 // @Returns Count of Records, error if any
-func (s *pgStore) ListProducts(ctx context.Context, limit string, page string) (products []Product, err error) {
+func (s *pgStore) ListProducts(ctx context.Context, limit string, page string) (count int, products []Product, err error) {
 
-	// idArr stores id's of all products
-	var idArr []int
+	resultCount, err := s.db.Query(getProductCount)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("Error fetching Cunt of Products from database")
+		return
+	}
 
-	getProductQuery := `SELECT id FROM products`
-	getProductQuery += " LIMIT " + string(limit) + "  OFFSET  (" + string(page) + " -1) * " + string(limit) + ""
-	getProductQuery += " ;"
+	for resultCount.Next() {
+		err = resultCount.Scan(&count)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error scanning Count Of Product into integer variable")
+			return
+		}
+	}
 
-	result, err := s.db.Query(getProductQuery)
+	if count == 0 {
+		err = fmt.Errorf("No records present")
+		logger.WithField("err", err.Error()).Error("No Products were present in database")
+		return
+	}
+
+	// error already handled in product_http
+	ls, _ := strconv.Atoi(limit)
+	ps, _ := strconv.Atoi(page)
+
+	if (count - 1) < (int(ls) * (int(ps) - 1)) {
+		err = fmt.Errorf("Desired Page not found")
+		logger.WithField("err", err.Error()).Error("Page Out Of range")
+		return
+	}
+
+	result, err := s.db.Query(getProductQuery, ls, ps)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
 		return
 	}
+
+	// idArr stores id's of all products
+	var idArr []int
 
 	for result.Next() {
 		var Id int

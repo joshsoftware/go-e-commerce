@@ -278,3 +278,35 @@ func (suite *ProductsHandlerTestSuite) TestDeleteProductByIdDbFailure() {
 
 	suite.dbMock.AssertExpectations(suite.T())
 }
+
+func (suite *ProductsHandlerTestSuite) TestUpdateProductStockByIdSuccess() {
+
+	suite.dbMock.On("UpdateProductStockById", mock.Anything, mock.Anything, 1).Return(db.Product{}, nil)
+
+	recorder := makeHTTPCall(http.MethodPut,
+		"/product/stock",
+		"/product/stock?product_id=1&stock=1",
+		"",
+		updateProductStockByIdHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
+	suite.dbMock.AssertExpectations(suite.T())
+
+}
+
+func (suite *ProductsHandlerTestSuite) TestUpdateProductStockByIdFailure() {
+
+	suite.dbMock.On("UpdateProductStockById", mock.Anything, mock.Anything, "a").Return(db.Product{}, errors.New("Error id is missing/invalid"))
+
+	recorder := makeHTTPCall(http.MethodPut,
+		"/product/stock",
+		"/product/stock?product_id=1&stock=a",
+		"",
+		updateProductStockByIdHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusBadRequest, recorder.Code)
+	assert.Equal(suite.T(), "{\"error\":{\"message\":\"Error id is missing/invalid\"}}", recorder.Body.String())
+
+}
