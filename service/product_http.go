@@ -364,6 +364,116 @@ func updateProductStockByIdHandler(deps Dependencies) http.HandlerFunc {
 	})
 }
 
+func searchProductByAllHandler(deps Dependencies) http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+
+		search := req.URL.Query().Get("search")
+		limit := req.URL.Query().Get("limit")
+		page := req.URL.Query().Get("page")
+
+		if limit == "" {
+			limit = "5"
+		}
+
+		if page == "" {
+			page = "1"
+		}
+
+		ls, err := strconv.Atoi(limit)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while converting limit to int")
+			rw.WriteHeader(http.StatusInternalServerError)
+			response(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Error while converting limit to int",
+				},
+			})
+			return
+		}
+
+		ps, err := strconv.Atoi(page)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while converting page to int")
+			rw.WriteHeader(http.StatusInternalServerError)
+			response(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Error while converting page to int",
+				},
+			})
+			return
+		}
+
+		// Avoid divide by zero exception and -ve values for page and limit
+		if ls <= 0 || ps <= 0 {
+			err = fmt.Errorf("limit or page are non-positive")
+			logger.WithField("err", err.Error()).Error("Error limit or page contained invalid value")
+			rw.WriteHeader(http.StatusBadRequest)
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "limits or page value invalid",
+				},
+			})
+			return
+		}
+
+		count, err := deps.Store.TotalSearchproduct(req.Context(), search)
+		fmt.Println("Search string count------>", count)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while getting TotalRecords Count")
+			rw.WriteHeader(http.StatusInternalServerError)
+			response(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Error while getting TotalRecords Count",
+				},
+			})
+			return
+		}
+
+		if (count - 1) < (ls * (int(ps) - 1)) {
+			rw.WriteHeader(http.StatusBadRequest)
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Page Not Found..!",
+				},
+			})
+			return
+		}
+
+		var pagination db.Pagination
+		pagination.TotalPages = int(math.Ceil(float64(count) / float64(ls)))
+
+		products, err := deps.Store.SerachProducts(req.Context(), search, limit, page)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error fetching data")
+			rw.WriteHeader(http.StatusInternalServerError)
+			response(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Error fetching data",
+				},
+			})
+			return
+		}
+
+		pagination.Products = products
+
+		respBytes, err := json.Marshal(pagination)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error mashaling pagination data")
+			rw.WriteHeader(http.StatusInternalServerError)
+			response(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "mashaling pagination data",
+				},
+			})
+			return
+		}
+
+		rw.Header().Add("Content-Type", "application/json")
+		rw.WriteHeader(http.StatusOK)
+		rw.Write(respBytes)
+	})
+}
+
 // @ Title updateProductById
 // @ Description update product by its id
 // @ Router /product/product_id [put]
