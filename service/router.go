@@ -67,7 +67,7 @@ func jwtMiddleWare(endpoint http.Handler, deps Dependencies) http.Handler {
 	})
 }
 
-func helper(ctx context.Context, deps Dependencies, authToken string) (user db.User, err error) {
+func getUserFromToken(ctx context.Context, deps Dependencies, authToken string) (user db.User, err error) {
 
 	userID, _, _, err := getDataFromToken(authToken)
 	if err != nil {
@@ -87,7 +87,16 @@ func userMiddleware(endpoint http.Handler, deps Dependencies) http.Handler {
 
 		authToken := req.Header.Get("Token")
 
-		user, err := helper(req.Context(), deps, authToken)
+		user, err := getUserFromToken(req.Context(), deps, authToken)
+
+		if user.IsDisabled {
+			responses(rw, http.StatusForbidden, errorResponse{
+				Error: messageObject{
+					Message: "User Forbidden From Accesing Data",
+				},
+			})
+			return
+		}
 
 		if user.IsAdmin || err != nil {
 			responses(rw, http.StatusUnauthorized, errorResponse{
@@ -105,7 +114,7 @@ func adminMiddleware(endpoint http.Handler, deps Dependencies) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
 		authToken := req.Header.Get("Token")
-		user, err := helper(req.Context(), deps, authToken)
+		user, err := getUserFromToken(req.Context(), deps, authToken)
 
 		if !user.IsAdmin || err != nil {
 			responses(rw, http.StatusUnauthorized, errorResponse{

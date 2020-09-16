@@ -74,6 +74,15 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
+		if user.IsDisabled {
+			responses(rw, http.StatusForbidden, errorResponse{
+				Error: messageObject{
+					Message: "User Forbidden From Accesing Data",
+				},
+			})
+			return
+		}
+
 		//Generate new JWT token if the user is authenticated
 		// and return the token in request header
 		token, err := generateJwt(user.ID, user.IsAdmin)
