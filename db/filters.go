@@ -46,19 +46,19 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limit str
 	}
 	if filter.BrandFlag == true {
 		// Since ' existed, we had to use ` instead of " , as compiler gave error otherwise
-		helper += ` brand = '` + string(filter.Brand) + `' AND`
+		helper += ` LOWER(brand) = LOWER('` + filter.Brand + `') AND`
 		injection += filter.Brand
 		found = true
 	}
 	if filter.SizeFlag == true {
 		// Since ' existed, we had to use ` instead of " , as compiler gave error otherwise
-		helper += ` size ='` + string(filter.Size) + `' AND`
+		helper += ` LOWER(size) = LOWER('` + filter.Size + `') AND`
 		injection += filter.Size
 		found = true
 	}
 	if filter.ColorFlag == true {
 		// Since ' existed, we had to use ` instead of " , as compiler gave error otherwise
-		helper += ` color ='` + string(filter.Color) + `' AND`
+		helper += ` LOWER(color) =LOWER('` + filter.Color + `') AND`
 		injection += filter.Color
 		found = true
 	}
@@ -77,7 +77,6 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limit str
 	}
 
 	getFilterProductCount := `SELECT COUNT(id) FROM products ` + helper + `;`
-	fmt.Println("getFilterProductCount---->", getFilterProductCount)
 
 	resultCount, err := s.db.Query(getFilterProductCount)
 	if err != nil {
@@ -94,8 +93,6 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limit str
 		}
 		break
 	}
-
-	fmt.Println(count)
 
 	if count == 0 {
 		err = fmt.Errorf("No records present")
@@ -121,7 +118,6 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limit str
 
 	//fmt.Println(limit, page)
 	getFilterProduct += ` LIMIT ` + limit + `  OFFSET  (` + page + ` -1) * ` + limit + ` ;`
-	fmt.Println("getFilterProduct---->", getFilterProduct)
 
 	result, err := s.db.Query(getFilterProduct)
 	if err != nil {
@@ -202,12 +198,8 @@ func (s *pgStore) SearchRecords(ctx context.Context, text string, limit string, 
 	for key, _ := range textMap {
 		helper += ` 
 		LOWER(p.name) LIKE LOWER('%` + key + `%') OR 
-		LOWER(p.description) LIKE LOWER('%` + key + `%') OR
 		LOWER(p.brand) LIKE LOWER('%` + key + `%') OR 
-		LOWER(p.color) LIKE LOWER('%` + key + `%') OR 
-		LOWER(p.size) LIKE LOWER('%` + key + `%') OR 
-		LOWER(c.name) LIKE LOWER('%` + key + `%') OR 
-		LOWER(c.description) LIKE LOWER('%` + key + `%') OR`
+		LOWER(c.name) LIKE LOWER('%` + key + `%') OR`
 	}
 
 	// remove that last OR
@@ -262,8 +254,6 @@ func (s *pgStore) SearchRecords(ctx context.Context, text string, limit string, 
 	getSearchRecordIds += helper
 
 	getSearchRecordIds += ` LIMIT ` + limit + ` OFFSET  ( ` + page + ` -1) * ` + limit + ` ;`
-
-	fmt.Println("getSearchRecordIds---->", getSearchRecordIds)
 
 	result, err := s.db.Query(getSearchRecordIds)
 	if err != nil {

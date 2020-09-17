@@ -53,6 +53,7 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 		ls, err := strconv.Atoi(limit)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while converting limit to int")
+			rw.Header().Add("Content-Type", "application/json")
 			rw.WriteHeader(http.StatusBadRequest)
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
@@ -65,6 +66,7 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 		ps, err := strconv.Atoi(page)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while converting page to int")
+			rw.Header().Add("Content-Type", "application/json")
 			rw.WriteHeader(http.StatusBadRequest)
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
@@ -78,6 +80,7 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 		if ls <= 0 || ps <= 0 {
 			err = fmt.Errorf("limit or page are non-positive")
 			logger.WithField("err", err.Error()).Error("Error limit or page were invalid values")
+			rw.Header().Add("Content-Type", "application/json")
 			rw.WriteHeader(http.StatusBadRequest)
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
@@ -111,6 +114,7 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 		count, products, err := deps.Store.FilteredProducts(req.Context(), filter, limit, page)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error getting filtered records or Page not Found")
+			rw.Header().Add("Content-Type", "application/json")
 			rw.WriteHeader(http.StatusBadRequest)
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
@@ -122,13 +126,14 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 
 		var pagination db.Pagination
 		pagination.TotalPages = int(math.Ceil(float64(count) / float64(ls)))
-
 		pagination.Products = products
 
 		respBytes, err := json.Marshal(pagination)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error mashaling pagination and product data")
-			responses(rw, http.StatusInternalServerError, errorResponse{
+			rw.Header().Add("Content-Type", "application/json")
+			rw.WriteHeader(http.StatusBadRequest)
+			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
 					Message: "Error Marshaling Pagination data",
 				},
@@ -175,10 +180,11 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 		ls, err := strconv.Atoi(limit)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while converting limit to int")
+			rw.Header().Add("Content-Type", "application/json")
 			rw.WriteHeader(http.StatusBadRequest)
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "limits or page value invalid",
+					Message: "limits value invalid",
 				},
 			})
 			return
@@ -187,10 +193,11 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 		ps, err := strconv.Atoi(page)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while converting page to int")
+			rw.Header().Add("Content-Type", "application/json")
 			rw.WriteHeader(http.StatusBadRequest)
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "limits or page value invalid",
+					Message: "page value invalid",
 				},
 			})
 			return
@@ -200,6 +207,7 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 		if ls <= 0 || ps <= 0 {
 			err = fmt.Errorf("limit or page are non-positive")
 			logger.WithField("err", err.Error()).Error("Error limit or page were invalid values")
+			rw.Header().Add("Content-Type", "application/json")
 			rw.WriteHeader(http.StatusBadRequest)
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
@@ -230,6 +238,7 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 		count, products, err = deps.Store.SearchRecords(req.Context(), text, limit, page)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error Couldn't find any matching search records or Page out of range")
+			rw.Header().Add("Content-Type", "application/json")
 			rw.WriteHeader(http.StatusBadRequest)
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
@@ -239,17 +248,30 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
+		if (count - 1) < (ls * (int(ps) - 1)) {
+			err = fmt.Errorf("Desired Page not found")
+			logger.WithField("err", err.Error()).Error("Error as page is out of range")
+			rw.Header().Add("Content-Type", "application/json")
+			rw.WriteHeader(http.StatusBadRequest)
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Desired Page not found",
+				},
+			})
+			return
+		}
+
 	Skip:
 		var pagination db.Pagination
 		pagination.TotalPages = int(math.Ceil(float64(count) / float64(ls)))
-
 		pagination.Products = products
 
 		respBytes, err := json.Marshal(pagination)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error mashaling pagination and product data")
-			rw.WriteHeader(http.StatusBadRequest)
-			responses(rw, http.StatusBadRequest, errorResponse{
+			rw.Header().Add("Content-Type", "application/json")
+			rw.WriteHeader(http.StatusInternalServerError)
+			responses(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
 					Message: "Error in marshaling Pagination data",
 				},

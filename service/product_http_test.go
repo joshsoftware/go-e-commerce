@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"joshsoftware/go-e-commerce/db"
 	"net/http"
 	"testing"
@@ -79,8 +80,8 @@ func (suite *ProductsHandlerTestSuite) TestGetProductByIdDbFailure() {
 
 func (suite *ProductsHandlerTestSuite) TestListProductsSuccess() {
 
-	suite.dbMock.On("TotalRecords", mock.Anything).Return(2, nil)
-	suite.dbMock.On("ListProducts", mock.Anything, mock.Anything, mock.Anything).Return(
+	//suite.dbMock.On("TotalRecords", mock.Anything).Return(2, nil)
+	suite.dbMock.On("ListProducts", mock.Anything, mock.Anything, mock.Anything).Return(1,
 		[]db.Product{
 			db.Product{
 				Id:           1,
@@ -113,8 +114,8 @@ func (suite *ProductsHandlerTestSuite) TestListProductsSuccess() {
 }
 
 func (suite *ProductsHandlerTestSuite) TestListProductsDBFailure() {
-	suite.dbMock.On("TotalRecords", mock.Anything).Return(2, nil)
-	suite.dbMock.On("ListProducts", mock.Anything, mock.Anything, mock.Anything).Return(
+
+	suite.dbMock.On("ListProducts", mock.Anything, mock.Anything, mock.Anything).Return(0,
 		[]db.Product{},
 		errors.New("error fetching Products records"),
 	)
@@ -138,6 +139,7 @@ var testProduct = db.Product{
 	Description:  "test@gmail.com",
 	Price:        12,
 	Discount:     1,
+	Tax:          0.5,
 	Quantity:     15,
 	CategoryId:   5,
 	CategoryName: "2",
@@ -281,15 +283,16 @@ func (suite *ProductsHandlerTestSuite) TestDeleteProductByIdDbFailure() {
 
 func (suite *ProductsHandlerTestSuite) TestUpdateProductStockByIdSuccess() {
 
-	suite.dbMock.On("UpdateProductStockById", mock.Anything, mock.Anything, 1).Return(db.Product{}, nil)
+	suite.dbMock.On("GetProductByID", mock.Anything, 1).Return(testProduct, nil)
+	suite.dbMock.On("UpdateProductStockById", mock.Anything, testProduct, 1).Return(testProduct, nil)
 
 	recorder := makeHTTPCall(http.MethodPut,
 		"/product/stock",
-		"/product/stock?product_id=1&stock=1",
+		"/product/stock?product_id=1&stock=0",
 		"",
 		updateProductStockByIdHandler(Dependencies{Store: suite.dbMock}),
 	)
-
+	fmt.Println("recorder---->", recorder)
 	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
 	suite.dbMock.AssertExpectations(suite.T())
 

@@ -31,9 +31,7 @@ func TestFilterHandlerTestSuite(t *testing.T) {
 // function covers FilteredRecordsCount as well as Filteredrecords
 func (suite *FilterHandlerTestSuite) TestGetProductByFiltersSuccess() {
 
-	suite.dbMock.On("FilteredRecordsCount", mock.Anything, mock.Anything).Return(1, nil)
-
-	suite.dbMock.On("FilteredRecords", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]db.Product{}, nil)
+	suite.dbMock.On("FilteredProducts", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(1, []db.Product{}, nil)
 
 	recorder := makeHTTPCall(
 		http.MethodGet,
@@ -50,11 +48,12 @@ func (suite *FilterHandlerTestSuite) TestGetProductByFiltersSuccess() {
 func (suite *FilterHandlerTestSuite) TestFilteredRecordsWhenDBFailure() {
 
 	// Count not expected on filter with brand as Apple and price in desc as failure test
-	suite.dbMock.On("FilteredRecordsCount", mock.Anything, mock.Anything).Return(0,
-		errors.New("Error getting count of filtered records"))
+	/* suite.dbMock.On("FilteredRecordsCount", mock.Anything, mock.Anything).Return(0,
+	errors.New("Error getting count of filtered records")) */
 	// When calling FilteredRecords with any args, always return
 	// that fakeProducts Array along with nil as error
-	suite.dbMock.On("FilteredRecords", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]db.Product{}, nil)
+	suite.dbMock.On("FilteredProducts", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(0, []db.Product{},
+		errors.New("Error getting filtered records or Page not Found"))
 
 	recorder := makeHTTPCall(
 		http.MethodGet,
@@ -64,8 +63,42 @@ func (suite *FilterHandlerTestSuite) TestFilteredRecordsWhenDBFailure() {
 		getProductByFiltersHandler(Dependencies{Store: suite.dbMock}),
 	)
 
-	assert.Equal(suite.T(), `{"error":{"message":"Error getting count of filtered records"}}`, recorder.Body.String())
+	assert.Equal(suite.T(), `{"error":{"message":"Error getting filtered records or Page not Found"}}`, recorder.Body.String())
 	assert.Equal(suite.T(), http.StatusBadRequest, recorder.Code)
-	suite.dbMock.AssertNotCalled(suite.T(), "FilteredRecords", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
-	suite.dbMock.AssertCalled(suite.T(), "FilteredRecordsCount", mock.Anything, mock.Anything)
+	suite.dbMock.AssertExpectations(suite.T())
+
+}
+
+func (suite *FilterHandlerTestSuite) TestGetProductBySearchSuccess() {
+
+	suite.dbMock.On("SearchRecords", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(1, []db.Product{}, nil)
+
+	recorder := makeHTTPCall(
+		http.MethodGet,
+		"/products/search",
+		"/products/search?limit=5&page=1&text=Apple",
+		"",
+		getProductBySearchHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
+	suite.dbMock.AssertExpectations(suite.T())
+}
+
+func (suite *FilterHandlerTestSuite) TestGetProductBySearchWhenDBFailure() {
+
+	suite.dbMock.On("SearchRecords", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(0, []db.Product{},
+		errors.New("Couldn't find any matching search records or Page out of range"))
+
+	recorder := makeHTTPCall(
+		http.MethodGet,
+		"/products/search",
+		"/products/search?limit=5&page=1&text=Apple",
+		"",
+		getProductBySearchHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), `{"error":{"message":"Couldn't find any matching search records or Page out of range"}}`, recorder.Body.String())
+	assert.Equal(suite.T(), http.StatusBadRequest, recorder.Code)
+	suite.dbMock.AssertExpectations(suite.T())
 }
