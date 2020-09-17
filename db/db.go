@@ -5,8 +5,6 @@ import (
 )
 
 type Storer interface {
-	ListUsers(context.Context) ([]User, error)
-	//Create(context.Context, User) error
-	//GetUser(context.Context) (User, error)
-	//Delete(context.Context, string) error
+	ListUsers(ctx context.Context) (users []User, err error)
+	DeleteUserByID(ctx context.Context, id int) (err error)
 }

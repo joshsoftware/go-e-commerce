@@ -3,7 +3,9 @@ package service
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
+	"github.com/gorilla/mux"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -31,5 +33,55 @@ func listUsersHandler(deps Dependencies) http.HandlerFunc {
 
 		rw.Header().Add("Content-Type", "application/json")
 		rw.Write(respBytes)
+	})
+}
+
+// @Title deleteuser
+// @Description delete the user record by given id
+// @Router /user/{id} [Delete]
+// @Accept  json
+// @Success 200 {object}
+// @Failure 400 {object}
+func deleteUserHandler(deps Dependencies) http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+
+		//TODO get the IsAdmin field of the user from the token
+		isAdmin := true
+		if !isAdmin {
+			responses(rw, http.StatusForbidden, errorResponse{
+				Error: messageObject{
+					Message: "User Forbidden From Deleting Data",
+				},
+			})
+			return
+		}
+
+		params := mux.Vars(req)
+		userID, err := strconv.Atoi(params["id"])
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error in getting id")
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		err = deps.Store.DeleteUserByID(req.Context(), userID)
+
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("error in deleting user data")
+			rw.WriteHeader(http.StatusBadRequest)
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "error in deleting user data",
+				},
+			})
+			return
+		}
+
+		responses(rw, http.StatusOK, successResponse{
+			Data: "record deleted Successfully",
+		})
+
+		return
+
 	})
 }
