@@ -56,11 +56,12 @@ func (suite *ProductsHandlerTestSuite) TestGetProductByIdHandlerSuccess() {
 	)
 
 	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
+	assert.Equal(suite.T(), `{"id":1,"product_title":"test","description":"test database","product_price":123,"discount":10,"tax":0.5,"stock":5,"category_id":1,"category":"testing","brand":"new brand","color":"black","size":"Medium"}`, recorder.Body.String())
 	suite.dbMock.AssertExpectations(suite.T())
 
 }
 
-func (suite *ProductsHandlerTestSuite) TestGetProductByIdDbFailure() {
+func (suite *ProductsHandlerTestSuite) TestGetProductByIdWhenDBFailure() {
 
 	suite.dbMock.On("GetProductByID", mock.Anything, mock.Anything).Return(
 		db.Product{}, errors.New("Error in fetching data"),
@@ -75,6 +76,7 @@ func (suite *ProductsHandlerTestSuite) TestGetProductByIdDbFailure() {
 	)
 
 	assert.Equal(suite.T(), http.StatusInternalServerError, recorder.Code)
+	assert.Equal(suite.T(), `{"error":{"message":"Error feching data No Row Found"}}`, recorder.Body.String())
 	suite.dbMock.AssertExpectations(suite.T())
 }
 
@@ -110,6 +112,7 @@ func (suite *ProductsHandlerTestSuite) TestListProductsSuccess() {
 	)
 
 	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
+	assert.Equal(suite.T(), `{"products":[{"id":1,"product_title":"test organization","description":"test@gmail.com","product_price":12,"discount":1,"tax":0.5,"stock":15,"category_id":5,"category":"2","brand":"IST","color":"black","size":"Medium"}],"total_pages":1}`, recorder.Body.String())
 	suite.dbMock.AssertExpectations(suite.T())
 }
 
@@ -128,6 +131,7 @@ func (suite *ProductsHandlerTestSuite) TestListProductsDBFailure() {
 	)
 
 	assert.Equal(suite.T(), http.StatusInternalServerError, recorder.Code)
+	assert.Equal(suite.T(), `{"error":{"message":"Couldn't find any Products records or Page out of range"}}`, recorder.Body.String())
 	suite.dbMock.AssertExpectations(suite.T())
 }
 
@@ -151,21 +155,21 @@ var testProduct = db.Product{
 
 func (suite *ProductsHandlerTestSuite) TestCreateProductSuccess() {
 
-	suite.dbMock.On("CreateNewProduct", mock.Anything, mock.Anything).Return(db.Product{}, nil)
+	suite.dbMock.On("CreateNewProduct", mock.Anything, mock.Anything).Return(testProduct, nil)
 
 	body := `{
-		"product_title": "Lancer new",
-        "description": "Mens Running Shoes",
-        "product_price": 150,
-		"discount": 15,
-		"Tax": 0.5,
-        "stock": 10,
-        "category_id": 6,
-        "category": "Sports",
+		"product_title": "test organization",
+        "description": "test@gmail.com",
+        "product_price": 12,
+		"discount": 1,
+		"tax": 0.5,
+        "stock": 15,
+		"category_id": 5,
+		"category":"2",
+		"brand":"IST",
         "image_url": [
-            "Lancer1.jpg",
-            "Lancer2.jpg",
-            "Lancer3.jpg"
+            "url1",
+            "url2"
         ]
 	}`
 
@@ -178,6 +182,7 @@ func (suite *ProductsHandlerTestSuite) TestCreateProductSuccess() {
 	)
 
 	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
+	assert.Equal(suite.T(), `{"data":{"id":1,"product_title":"test organization","description":"test@gmail.com","product_price":12,"discount":1,"tax":0.5,"stock":15,"category_id":5,"category":"2","brand":"IST","color":"black","size":"Medium","image_url":["url1","url2"]}}`, recorder.Body.String())
 	suite.dbMock.AssertExpectations(suite.T())
 }
 
@@ -238,10 +243,13 @@ func (suite *ProductsHandlerTestSuite) TestCreateProductValidationFailure() {
 	)
 
 	testProduct := db.Product{}
-	_ = json.Unmarshal(recorder.Body.Bytes(), &testProduct)
+	err := json.Unmarshal(recorder.Body.Bytes(), &testProduct)
+	if err != nil {
+		fmt.Println("Error Marshaling Product's data")
+	}
 
 	assert.Equal(suite.T(), http.StatusBadRequest, recorder.Code)
-	assert.Equal(suite.T(), "{\"error\":{\"code\":\"Invalid_data\",\"message\":\"Please Provide valid Product data\",\"fields\":{\"product_description\":\"Can't be blank \",\"product_name\":\"Can't be blank\"}}}", recorder.Body.String())
+	assert.Equal(suite.T(), `{"error":{"code":"Invalid_data","message":"Please Provide valid Product data","fields":{"product_description":"Can't be blank ","product_name":"Can't be blank"}}}`, recorder.Body.String())
 
 	suite.dbMock.AssertExpectations(suite.T())
 }
@@ -260,6 +268,7 @@ func (suite *ProductsHandlerTestSuite) TestDeleteProductByIdSuccess() {
 	)
 
 	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
+	assert.Equal(suite.T(), ``, recorder.Body.String())
 	suite.dbMock.AssertExpectations(suite.T())
 }
 
@@ -277,7 +286,7 @@ func (suite *ProductsHandlerTestSuite) TestDeleteProductByIdDbFailure() {
 	)
 
 	assert.Equal(suite.T(), http.StatusInternalServerError, recorder.Code)
-
+	assert.Equal(suite.T(), `{"error":{"message":"Internal server error  (Error feching data)"}}`, recorder.Body.String())
 	suite.dbMock.AssertExpectations(suite.T())
 }
 
@@ -292,8 +301,9 @@ func (suite *ProductsHandlerTestSuite) TestUpdateProductStockByIdSuccess() {
 		"",
 		updateProductStockByIdHandler(Dependencies{Store: suite.dbMock}),
 	)
-	fmt.Println("recorder---->", recorder)
+	//fmt.Println("recorder---->", recorder)
 	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
+	assert.Equal(suite.T(), `{"data":{"id":1,"product_title":"test organization","description":"test@gmail.com","product_price":12,"discount":1,"tax":0.5,"stock":15,"category_id":5,"category":"2","brand":"IST","color":"black","size":"Medium","image_url":["url1","url2"]}}`, recorder.Body.String())
 	suite.dbMock.AssertExpectations(suite.T())
 
 }
@@ -310,6 +320,6 @@ func (suite *ProductsHandlerTestSuite) TestUpdateProductStockByIdFailure() {
 	)
 
 	assert.Equal(suite.T(), http.StatusBadRequest, recorder.Code)
-	assert.Equal(suite.T(), "{\"error\":{\"message\":\"Error id is missing/invalid\"}}", recorder.Body.String())
+	assert.Equal(suite.T(), `{"error":{"message":"Error id is missing/invalid"}}`, recorder.Body.String())
 
 }

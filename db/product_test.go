@@ -151,12 +151,3 @@ func (suite *ProductsTestSuite) TestUpdateProductStockByIdFailure() {
 	assert.NotEqual(suite.T(), updatedProduct, product)
 	assert.NotNil(suite.T(), err)
 }
-
-func (suite *ProductsTestSuite) TestDeleteProductByIdSuccess() {
-	suite.sqlmock.ExpectExec("DELETE").
-		WillReturnResult(sqlmock.NewResult(1, 1))
-
-	err := suite.dbStore.DeleteProductById(context.Background(), testProduct.Id)
-
-	assert.Nil(suite.T(), err)
-}
