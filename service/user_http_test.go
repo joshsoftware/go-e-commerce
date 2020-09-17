@@ -1,17 +1,12 @@
 package service
 
 import (
-	"errors"
-	"joshsoftware/go-e-commerce/db"
-	"net/http"
-	"net/http/httptest"
-	"strings"
-	"testing"
-
-	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+	"joshsoftware/go-e-commerce/db"
+	"net/http"
+	"time"
 )
 
 // Define the suite, and absorb the built-in basic suite
@@ -26,59 +21,79 @@ func (suite *UsersHandlerTestSuite) SetupTest() {
 	suite.dbMock = &db.DBMockStore{}
 }
 
-func TestExampleTestSuite(t *testing.T) {
-	suite.Run(t, new(UsersHandlerTestSuite))
-}
-
 func (suite *UsersHandlerTestSuite) TestListUsersSuccess() {
-	suite.dbMock.On("ListUsers", mock.Anything).Return(
-		[]db.User{
-			db.User{Name: "test-user", Age: 18},
+	fakeUsers := []db.User{
+		{
+			ID:         1,
+			FirstName:  "sagar",
+			LastName:   "sonwane",
+			Email:      "sagar@gmail.com",
+			Mobile:     "8888998887",
+			Address:    "abcsde",
+			Password:   "sagar11111",
+			Country:    "India",
+			State:      "MP",
+			City:       "Nepa",
+			IsAdmin:    true,
+			IsDisabled: false,
+			CreatedAt:  time.Now(),
 		},
-		nil,
-	)
+		{
+			ID:         2,
+			FirstName:  "tejas",
+			LastName:   "sonwane",
+			Email:      "tejas@gmail.com",
+			Mobile:     "8888998887",
+			Address:    "abcsde",
+			Password:   "tejas11111",
+			Country:    "India",
+			State:      "MP",
+			City:       "Nepa",
+			IsAdmin:    false,
+			IsDisabled: false,
+			CreatedAt:  time.Now(),
+		},
+	}
 
-	recorder := makeHTTPCall(
-		http.MethodGet,
+	suite.dbMock.On("ListUsers", mock.Anything).Return(fakeUsers, nil)
+	recorder := makeHTTPCall(http.MethodGet,
+		"/users",
 		"/users",
 		"",
-		listUsersHandler(Dependencies{Store: suite.dbMock}),
-	)
+		listUsersHandler(Dependencies{Store: suite.dbMock}))
 
 	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
-	assert.Equal(suite.T(), `[{"full_name":"test-user","age":18}]`, recorder.Body.String())
+
+	// assert.Equal(suite.T(), `{ "data": 		{
+	// 	id:         1,
+	// 	first_name:  "sagar",
+	// 	last_name:   "sonwane",
+	// 	email:      "sagar@gmail.com",
+	// 	mobile:     "8888998887",
+	// 	address:    "abcsde",
+	// 	password:   "sagar11111",
+	// 	country:    "India",
+	// 	state:      "MP",
+	// 	city:       "Nepa",
+	// 	isAdmin:    true,
+	// 	isDisabled: false,
+	// 	created_at:  "12:00",
+	// },
+	// {
+	// 	id:         2,
+	// 	first_name:  "tejas",
+	// 	last_name:   "sonwane",
+	// 	email:      "tejas@gmail.com",
+	// 	mobile:     "8888998887",
+	// 	address:    "abcsde",
+	// 	password:   "tejas11111",
+	// 	country:    "India",
+	// 	state:      "MP",
+	// 	city:       "Nepa",
+	// 	isAdmin:    false,
+	// 	isDisabled: false,
+	// 	created_at:  "12:00",
+	// }}`, recorder.Body.String())
+
 	suite.dbMock.AssertExpectations(suite.T())
-}
-
-func (suite *UsersHandlerTestSuite) TestListUsersWhenDBFailure() {
-	suite.dbMock.On("ListUsers", mock.Anything).Return(
-		[]db.User{},
-		errors.New("error fetching user records"),
-	)
-
-	recorder := makeHTTPCall(
-		http.MethodGet,
-		"/users",
-		"",
-		listUsersHandler(Dependencies{Store: suite.dbMock}),
-	)
-
-	assert.Equal(suite.T(), http.StatusInternalServerError, recorder.Code)
-	suite.dbMock.AssertExpectations(suite.T())
-}
-
-func makeHTTPCall(method, path, body string, handlerFunc http.HandlerFunc) (recorder *httptest.ResponseRecorder) {
-	// create a http request using the given parameters
-	req, _ := http.NewRequest(method, path, strings.NewReader(body))
-
-	// test recorder created for capturing api responses
-	recorder = httptest.NewRecorder()
-
-	// create a router to serve the handler in test with the prepared request
-	router := mux.NewRouter()
-	router.HandleFunc(path, handlerFunc).Methods(method)
-
-	// serve the request and write the response to recorder
-	router.ServeHTTP(recorder, req)
-	return
 }
