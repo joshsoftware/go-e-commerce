@@ -26,10 +26,11 @@ type OAuthUser struct {
 type authBody struct {
 	Message string `json:"message"`
 	Token   string `json:"token"`
+	IsAdmin bool   `json:"isAdmin"`
 }
 
 //generateJWT function generates and return a new JWT token
-func generateJwt(userID int) (tokenString string, err error) {
+func generateJwt(userID int, isAdmin bool) (tokenString string, err error) {
 	mySigningKey := config.JWTKey()
 	if mySigningKey == nil {
 		ae.Error(ae.ErrNoSigningKey, "Application error: No signing key configured", err)
@@ -39,6 +40,7 @@ func generateJwt(userID int) (tokenString string, err error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
 	claims["id"] = userID
+	claims["isAdmin"] = isAdmin
 	claims["exp"] = time.Now().Add(time.Duration(config.JWTExpiryDurationHours()) * time.Hour).Unix()
 
 	tokenString, err = token.SignedString(mySigningKey)
@@ -60,40 +62,60 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 		err := json.NewDecoder(req.Body).Decode(&user)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("JSON Decoding Failed")
-			rw.WriteHeader(http.StatusBadRequest)
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "JSON Decoding Failed",
+				},
+			})
 			return
 		}
 
-		//TODO change no need to return user object from Authentication
 		//checking if the user is authenticated or not
 		// by passing the credentials to the AuthenticateUser function
-		user, err1 := deps.Store.AuthenticateUser(req.Context(), user)
-		if err1 != nil {
-			logger.WithField("err", err1.Error()).Error("Invalid Credentials")
-			rw.WriteHeader(http.StatusUnauthorized)
+		user, err = deps.Store.AuthenticateUser(req.Context(), user)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Invalid Credentials")
+			responses(rw, http.StatusUnauthorized, errorResponse{
+				Error: messageObject{
+					Message: "Invalid Credentials",
+				},
+			})
 			return
 		}
+
+		if user.IsDisabled {
+			responses(rw, http.StatusForbidden, errorResponse{
+				Error: messageObject{
+					Message: "User Forbidden From Accesing Data",
+				},
+			})
+			return
+		}
+		// authbody := authBody{
+		// 	Message: "Login Successfull",
+		// 	Token:   token,
+		// }
 
 		//Generate new JWT token if the user is authenticated
 		// and return the token in request header
-		token, err := generateJwt(user.ID)
+		token, err := generateJwt(user.ID, user.IsAdmin)
 		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			rw.Write([]byte("Token Generation Failure"))
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Token Generation Failure",
+				},
+			})
 			return
 		}
-		authbody := authBody{
-			Message: "Login Successfull",
-			Token:   token,
-		}
 
-		respBytes, err := json.Marshal(authbody)
-		if err != nil {
-			ae.Error(ae.ErrJSONParseFail, "JSON Parsing Failed", err)
-		}
-
-		rw.Header().Add("Content-Type", "application/json")
-		rw.Write(respBytes)
+		responses(rw, http.StatusOK,
+			authBody{
+				Message: "Login Successfull",
+				Token:   token,
+				IsAdmin: user.IsAdmin,
+			},
+		)
+		return
 	})
 }
 
@@ -103,13 +125,16 @@ func userLogoutHandler(deps Dependencies) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
 		//fetching the token from header
-		authToken := req.Header["Token"]
+		authToken := req.Header.Get("Token")
 
 		//fetching details from the token
-		userID, expirationTimeStamp, err := getDataFromToken(authToken[0])
+		userID, expirationTimeStamp, _, err := getDataFromToken(authToken)
 		if err != nil {
-			rw.WriteHeader(http.StatusUnauthorized)
-			rw.Write([]byte("Unauthorized"))
+			responses(rw, http.StatusUnauthorized, errorResponse{
+				Error: messageObject{
+					Message: "Unauthorized User",
+				},
+			})
 			return
 		}
 		expirationDate := time.Unix(expirationTimeStamp, 0)
@@ -119,35 +144,34 @@ func userLogoutHandler(deps Dependencies) http.Handler {
 		userBlackListedToken := db.BlacklistedToken{
 			UserID:         userID,
 			ExpirationDate: expirationDate,
-			Token:          authToken[0],
+			Token:          authToken,
 		}
 
 		err = deps.Store.CreateBlacklistedToken(req.Context(), userBlackListedToken)
 		if err != nil {
 			ae.Error(ae.ErrFailedToCreate, "Error creating blaclisted token record", err)
-			rw.Header().Add("Content-Type", "application/json")
-			ae.JSONError(rw, http.StatusInternalServerError, err)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal Server Error",
+				},
+			})
 			return
 		}
-
-		rw.Write([]byte("Logged Out Successfully"))
-		rw.WriteHeader(http.StatusOK)
+		responses(rw, http.StatusOK, successResponse{
+			Data: messageObject{
+				Message: "Logged Out Successfully",
+			},
+		})
 		return
 	})
 }
 
-func getDataFromToken(Token string) (userID float64, expirationTime int64, err error) {
+func getDataFromToken(Token string) (userID float64, expirationTime int64, isAdmin bool, err error) {
 	mySigningKey := config.JWTKey()
-
-	//Checking if token not present in header
-	if len(Token) < 1 {
-		ae.Error(ae.ErrMissingAuthHeader, "Missing Authentication Token From Header", err)
-		return
-	}
 
 	token, err := jwt.Parse(Token, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("There was an error")
+			return nil, fmt.Errorf("There was an error while parsing the token")
 		}
 		return mySigningKey, nil
 	})
@@ -164,6 +188,7 @@ func getDataFromToken(Token string) (userID float64, expirationTime int64, err e
 	}
 
 	userID = claims["id"].(float64)
+	isAdmin = claims["isAdmin"].(bool)
 	expirationTime = int64(claims["exp"].(float64))
 	return
 }
@@ -223,7 +248,7 @@ func handleAuth(deps Dependencies) http.HandlerFunc {
 		// Checking if user is already registered if registered then generate JWT token for him
 		check, existingUser, err := deps.Store.CheckUserByEmail(req.Context(), u.Email)
 		if check {
-			token, err := generateJwt(existingUser.ID)
+			token, err := generateJwt(existingUser.ID, false)
 			if err != nil {
 				logger.WithField("err", err.Error()).Error("Unknown/unexpected error while creating JWT for " + existingUser.Email)
 				ae.JSONError(rw, http.StatusInternalServerError, err)
@@ -253,7 +278,7 @@ func handleAuth(deps Dependencies) http.HandlerFunc {
 		}
 
 		// Generating Jwt token
-		token, err := generateJwt(newUser.ID)
+		token, err := generateJwt(newUser.ID, false)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Unknown/unexpected error while creating JWT for " + newUser.Email)
 			ae.JSONError(rw, http.StatusInternalServerError, err)

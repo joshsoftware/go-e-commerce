@@ -23,19 +23,17 @@ func listUsersHandler(deps Dependencies) http.HandlerFunc {
 		users, err := deps.Store.ListUsers(req.Context())
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching data")
-			rw.WriteHeader(http.StatusInternalServerError)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal Server Error",
+				},
+			})
 			return
 		}
 
-		respBytes, err := json.Marshal(users)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error marshaling users data")
-			rw.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		rw.Header().Add("Content-Type", "application/json")
-		rw.Write(respBytes)
+		responses(rw, http.StatusOK, successResponse{
+			Data: users,
+		})
 	})
 
 }
@@ -127,11 +125,15 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 //get user by id
 func getUserHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		authToken := req.Header["Token"]
-		userID, _, err := getDataFromToken(authToken[0])
+		//fetch usedId from request
+		authToken := req.Header.Get("Token")
+		userID, _, _, err := getDataFromToken(authToken)
 		if err != nil {
-			rw.WriteHeader(http.StatusUnauthorized)
-			rw.Write([]byte("Unauthorized"))
+			responses(rw, http.StatusUnauthorized, errorResponse{
+				Error: messageObject{
+					Message: "Unauthorized User",
+				},
+			})
 			return
 		}
 		user, err := deps.Store.GetUser(req.Context(), int(userID))
@@ -155,7 +157,7 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
 		authToken := req.Header["Token"]
-		userID, _, err := getDataFromToken(authToken[0])
+		userID, _, _, err := getDataFromToken(authToken[0])
 		if err != nil {
 			rw.WriteHeader(http.StatusUnauthorized)
 			rw.Write([]byte("Unauthorized"))

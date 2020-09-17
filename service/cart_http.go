@@ -22,7 +22,7 @@ func getCartHandler(deps Dependencies) http.HandlerFunc {
 
 		authToken := req.Header["Token"]
 		fmt.Println("auth Token : ", authToken[0])
-		userID, _, err := getDataFromToken(authToken[0])
+		userID, _, _, err := getDataFromToken(authToken[0])
 		fmt.Println("User id :", userID)
 		if err != nil {
 			rw.WriteHeader(http.StatusUnauthorized)
@@ -52,7 +52,7 @@ func getCartHandler(deps Dependencies) http.HandlerFunc {
 func addToCartHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		authToken := req.Header["Token"]
-		cartId, _, err := getDataFromToken(authToken[0])
+		cartId, _, _, err := getDataFromToken(authToken[0])
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Unauthorized user")
 			error := errorResponse{
@@ -100,7 +100,7 @@ func addToCartHandler(deps Dependencies) http.HandlerFunc {
 func removeFromCartHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		authToken := req.Header["Token"]
-		cartId, _, err := getDataFromToken(authToken[0])
+		cartId, _, _, err := getDataFromToken(authToken[0])
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Unauthorized user")
 			error := errorResponse{
@@ -149,7 +149,7 @@ func removeFromCartHandler(deps Dependencies) http.HandlerFunc {
 func updateIntoCartHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		authToken := req.Header["Token"]
-		cartId, _, err := getDataFromToken(authToken[0])
+		cartId, _, _, err := getDataFromToken(authToken[0])
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Unauthorized user")
 			error := errorResponse{
