@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	logger "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type errorResponse struct {
@@ -69,11 +68,11 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		// For checking if user already registered
+		// Getting user by email to check if user is already present in db
 		_, err = deps.Store.GetUserByEmail(req.Context(), user.Email)
 
-		// If check true then user is already registered
-		if err != sql.ErrNoRows && err == nil {
+		// If error is nil then user is already registered
+		if err == nil {
 			e := errorResponse{
 				Error: "user already registered",
 			}
@@ -95,15 +94,6 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-
-		// creating hash of the password
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 8)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while creating hash of the password")
-			rw.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		user.Password = string(hashedPassword)
 
 		// Storing new user's data in database
 		_, err = deps.Store.CreateUser(req.Context(), user)
