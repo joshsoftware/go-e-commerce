@@ -137,7 +137,7 @@ func (s *pgStore) ListProducts(ctx context.Context, limit string, page string) (
 
 	resultCount, err := s.db.Query(getProductCount)
 	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error fetching Cunt of Products from database")
+		logger.WithField("err", err.Error()).Error("Error fetching Count of Products from database")
 		return
 	}
 
