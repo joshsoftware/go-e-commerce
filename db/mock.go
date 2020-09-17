@@ -102,3 +102,7 @@ func (m *DBMockStore) TotalRecords(ctx context.Context) (count int, err error) {
 	args := m.Called(ctx)
 	return args.Get(0).(int), args.Error(1)
 } */
+func (m *DBMockStore) UpdateUserByID(ctx context.Context, user User, id int) (err error) {
+	args := m.Called(ctx)
+	return args.Error(0)
+}

@@ -7,8 +7,9 @@ import (
 	"reflect"
 	"strings"
 
-	logger "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
+
+	logger "github.com/sirupsen/logrus"
 )
 
 const (
@@ -16,6 +17,17 @@ const (
 	VALUES (:first_name, :last_name, :email, :mobile, :country, :state, :city, :address, :password)`
 
 	getUserByEmailQuery = `SELECT * FROM users WHERE email=$1 LIMIT 1`
+	updateUserQuery     = `UPDATE users SET (
+		first_name,
+		last_name,
+		mobile,
+		address,
+		password,
+		country,
+		state,
+		city
+		) = 
+		($1, $2, $3, $4, $5, $6 ,$7,$8) where id = $9 `
 
 	getUserQuery = `SELECT * from users where id=$1`
 )
@@ -39,7 +51,16 @@ type User struct {
 func (s *pgStore) ListUsers(ctx context.Context) (users []User, err error) {
 	err = s.db.Select(&users, "SELECT * FROM users ORDER BY first_name ASC")
 	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error listing users")
+		logger.WithField("err", err.Error()).Error(fmt.Errorf("error selecting users from database"))
+		return
+	}
+	return
+}
+
+func (s *pgStore) GetUser(ctx context.Context, id int) (user User, err error) {
+	err = s.db.Get(&user, getUserQuery, id)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error(fmt.Errorf("error selecting user from database by id %d", id))
 		return
 	}
 	return
@@ -96,17 +117,6 @@ func (s *pgStore) AuthenticateUser(ctx context.Context, u User) (user User, err 
 		// If the two passwords don't match, return a 401 status
 		logger.WithField("Error", err.Error())
 	}
-	return
-}
-
-//GetUser function is used to Get a Particular User
-func (s *pgStore) GetUser(ctx context.Context, id int) (user User, err error) {
-	err = s.db.Get(&user, getUserQuery, id)
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error selecting user from database by id " + fmt.Sprint(id))
-		return
-	}
-
 	return
 }
 
@@ -193,3 +203,60 @@ func prepareParameters(userDb User, userProfile User) (colNames []string, colVal
 	return
 
 }
+func (s *pgStore) UpdateUserByID(ctx context.Context, user User, userID int) (err error) {
+
+	_, err = s.db.Exec(
+		updateUserQuery,
+		user.FirstName,
+		user.LastName,
+		user.Mobile,
+		user.Address,
+		user.Password,
+		user.Country,
+		user.State,
+		user.City,
+		userID,
+	)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("error updating user profile")
+		return
+	}
+	return
+}
+
+//ValidatePatchParams function for user
+func (user *User) ValidatePatchParams(u User) (err error) {
+
+	if u.FirstName != "" {
+		user.FirstName = u.FirstName
+	}
+	if u.LastName != "" {
+		user.LastName = u.LastName
+	}
+	if u.Mobile != "" {
+		user.Mobile = u.Mobile
+	}
+	if u.Password != "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), 8)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("error while creating hash of the password")
+			return err
+		}
+		user.Password = string(hashedPassword)
+	}
+	if u.Address != "" {
+		user.Address = u.Address
+	}
+	if u.Country != "" {
+		user.Country = u.Country
+	}
+	if u.State != "" {
+		user.State = u.State
+	}
+	if u.City != "" {
+		user.City = u.City
+	}
+	return
+}
+
+//TODO add function for aunthenticating user

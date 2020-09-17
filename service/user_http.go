@@ -40,69 +40,6 @@ func listUsersHandler(deps Dependencies) http.HandlerFunc {
 
 }
 
-// @Title UpdateUser
-// @Description update User by id
-// @Router /users/id [put]
-// @Accept  json
-// @Success 200 {object}
-// @Failure 400 {object}
-func updateUserHandler(deps Dependencies) http.HandlerFunc {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		authToken := req.Header["Token"]
-		userID, _, err := getDataFromToken(authToken[0])
-		if err != nil {
-			rw.WriteHeader(http.StatusUnauthorized)
-			rw.Write([]byte("Unauthorized"))
-			return
-		}
-
-		var user db.User
-
-		err = json.NewDecoder(req.Body).Decode(&user)
-
-		if err != nil {
-			rw.WriteHeader(http.StatusBadRequest)
-			logger.WithField("err", err.Error()).Error("Error while decoding user")
-			responses(rw, http.StatusBadRequest, errorResponse{
-				Error: messageObject{
-					Message: "Invalid json body",
-				},
-			})
-			return
-		}
-
-		if user.Email != "" {
-
-			rw.WriteHeader(http.StatusBadRequest)
-			logger.WithField("err", "CAnnot update Email")
-			responses(rw, http.StatusBadRequest, errorResponse{
-				Error: messageObject{
-					Message: "cannot update email id !!",
-				},
-			})
-			return
-		}
-
-		var updatedUser db.User
-		updatedUser, err = deps.Store.UpdateUser(req.Context(), user, int(userID))
-		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			responses(rw, http.StatusInternalServerError, errorResponse{
-				Error: messageObject{
-					Message: "Internal server error",
-				},
-			})
-			logger.WithField("err", err.Error()).Error("Error while updating user's profile")
-			return
-		}
-		responses(rw, http.StatusOK, successResponse{Data: updatedUser})
-
-		return
-
-	})
-
-}
-
 // @Title registerUser
 // @Description registers new user
 // @Router /register [post]
@@ -187,15 +124,9 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 	})
 }
 
-// @Title getUser
-// @Description get User by id
-// @Router /users/{id} [get]
-// @Accept  json
-// @Success 200 {object}
-// @Failure 400 {object}
+//get user by id
 func getUserHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		//fetch usedId from request
 		authToken := req.Header["Token"]
 		userID, _, err := getDataFromToken(authToken[0])
 		if err != nil {
@@ -203,21 +134,98 @@ func getUserHandler(deps Dependencies) http.HandlerFunc {
 			rw.Write([]byte("Unauthorized"))
 			return
 		}
-
-		user, err1 := deps.Store.GetUser(req.Context(), int(userID))
-		if err1 != nil {
-			logger.WithField("err", err.Error()).Error("Error fetching data")
-			rw.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		respBytes, err := json.Marshal(user)
+		user, err := deps.Store.GetUser(req.Context(), int(userID))
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error marshaling users data")
-			rw.WriteHeader(http.StatusInternalServerError)
+			logger.WithField("err", err.Error()).Error("error while fetching User")
+			rw.WriteHeader(http.StatusNotFound)
+			responses(rw, http.StatusNotFound, errorResponse{
+				Error: messageObject{
+					Message: "id Not Found",
+				},
+			})
+			return
+		}
+		responses(rw, http.StatusOK, successResponse{Data: user})
+	})
+
+}
+
+//update user by id
+func updateUserHandler(deps Dependencies) http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+
+		authToken := req.Header["Token"]
+		userID, _, err := getDataFromToken(authToken[0])
+		if err != nil {
+			rw.WriteHeader(http.StatusUnauthorized)
+			rw.Write([]byte("Unauthorized"))
+			return
+		}
+		var user db.User
+
+		err = json.NewDecoder(req.Body).Decode(&user)
+
+		if err != nil {
+			rw.WriteHeader(http.StatusBadRequest)
+			logger.WithField("err", err.Error()).Error("error while decoding user")
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "invalid json body",
+				},
+			})
 			return
 		}
 
-		rw.Header().Add("Content-Type", "application/json")
-		rw.Write(respBytes)
+		if user.Email != "" {
+
+			rw.WriteHeader(http.StatusBadRequest)
+			logger.WithField("err", "cannot update email")
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "cannot update email id !!",
+				},
+			})
+			return
+		}
+
+		dbUser, err := deps.Store.GetUser(req.Context(), int(userID))
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("error while fetching User")
+			rw.WriteHeader(http.StatusNotFound)
+			responses(rw, http.StatusNotFound, errorResponse{
+				Error: messageObject{
+					Message: "error while fetching users",
+				},
+			})
+			return
+		}
+		err = dbUser.ValidatePatchParams(user)
+		if err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "internal server error",
+				},
+			})
+			logger.WithField("err", err.Error())
+			return
+		}
+
+		err = deps.Store.UpdateUserByID(req.Context(), dbUser, int(userID))
+		if err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "internal server error",
+				},
+			})
+			logger.WithField("err", err.Error()).Error("error while updating user's profile")
+			return
+		}
+
+		responses(rw, http.StatusOK, successResponse{Data: dbUser})
+		return
+
 	})
+
 }

@@ -32,4 +32,6 @@ type Storer interface {
 	//Create(context.Context, User) error
 	//GetUser(context.Context) (User, error)
 	//Delete(context.Context, string) error
+
+	UpdateUserByID(ctx context.Context, user User, id int) (err error)
 }

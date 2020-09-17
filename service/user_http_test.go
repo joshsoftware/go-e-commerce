@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"testing"
 
 	"github.com/stretchr/testify/mock"
 
@@ -29,10 +28,6 @@ type UsersHandlerTestSuite struct {
 
 func (suite *UsersHandlerTestSuite) SetupTest() {
 	suite.dbMock = &db.DBMockStore{}
-}
-
-func TestExampleTestSuite(t *testing.T) {
-	suite.Run(t, new(UsersHandlerTestSuite))
 }
 
 func (suite *UsersHandlerTestSuite) TestListUsersSuccess() {
@@ -84,7 +79,8 @@ func (suite *UsersHandlerTestSuite) TestListUsersWhenDBFailure() {
 
 func (suite *UsersHandlerTestSuite) TestGetUserSuccess() {
 
-	suite.dbMock.On("GetUser", mock.Anything, mock.Anything).Return(
+	userID := 1
+	suite.dbMock.On("GetUser", mock.Anything, userID).Return(
 		db.User{
 			ID:        1,
 			FirstName: "TestUser",
@@ -100,8 +96,8 @@ func (suite *UsersHandlerTestSuite) TestGetUserSuccess() {
 	)
 
 	recorder := makeHTTPCall(http.MethodGet,
-		"/users/{id:[0-9]+}",
-		"/users/1",
+		"/user",
+		"/user",
 		"",
 		getUserHandler(Dependencies{Store: suite.dbMock}),
 	)
@@ -125,10 +121,10 @@ func (suite *UsersHandlerTestSuite) TestGetUserSuccess() {
 }
 
 func (suite *UsersHandlerTestSuite) TestUpdateUserSuccess() {
-
-	suite.dbMock.On("UpdateUser", mock.Anything, mock.Anything, mock.Anything).Return(db.User{
+	userID := 1
+	user := db.User{
 		ID:        1,
-		FirstName: "UpdateUser",
+		FirstName: "UpdatedUserName",
 		LastName:  "TestUser",
 		Email:     "TestEmail",
 		Mobile:    "TestMobile",
@@ -137,12 +133,13 @@ func (suite *UsersHandlerTestSuite) TestUpdateUserSuccess() {
 		State:     "TestState",
 		City:      "TestCity",
 		Address:   "Testaddress",
-	}, nil)
+	}
+
+	suite.dbMock.On("UpdateUserByID", mock.Anything, user, userID).Return(nil)
 
 	body := ` "id": 1,
-	"first_name": "UpdatedUser",
+	"first_name": "UpdatedUserName",
 	"last_name": "TestUser",
-	"email": "TestEmail",
 	"mobile_number": "TestMobile",
 	"password": "TestPass",
 	"country": "TestCountry",
@@ -150,9 +147,9 @@ func (suite *UsersHandlerTestSuite) TestUpdateUserSuccess() {
 	"city": "TestCity",
 	"address": "Testaddress"`
 
-	recorder := makeHTTPCall(http.MethodPut,
-		"/users/{id:[0-9]+}",
-		"/users/1",
+	recorder := makeHTTPCall(http.MethodPatch,
+		"/user/update",
+		"/user/update",
 		body,
 		updateUserHandler(Dependencies{Store: suite.dbMock}),
 	)
@@ -160,7 +157,7 @@ func (suite *UsersHandlerTestSuite) TestUpdateUserSuccess() {
 	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
 	assert.Equal(suite.T(), `{"data": {
         "id": 1,
-        "first_name": "UpdatedtUser",
+        "first_name": "UpdatedUserName",
         "last_name": "TestUser",
         "email": "TestEmail",
 		"mobile": "TestMobile",
@@ -175,12 +172,24 @@ func (suite *UsersHandlerTestSuite) TestUpdateUserSuccess() {
 }
 
 func (suite *UsersHandlerTestSuite) TestUpdateUserDbFailure() {
-	suite.dbMock.On("UpdateUser", mock.Anything, mock.Anything, mock.Anything).Return(db.User{}, errors.New("Error while updating user"))
+	userID := 1
+	user := db.User{
+		ID:        1,
+		FirstName: "UpdatedUserName",
+		LastName:  "TestUser",
+		Email:     "TestEmail",
+		Mobile:    "TestMobile",
+		Password:  "TestPass",
+		Country:   "TestCountry",
+		State:     "TestState",
+		City:      "TestCity",
+		Address:   "Testaddress",
+	}
+	suite.dbMock.On("UpdateUserByID", mock.Anything, user, userID).Return(errors.New("Error while updating user"))
 
 	body := ` "id": 1,
 	"first_name": "UpdatedUser",
 	"last_name": "TestUser",
-	"email": "TestEmail",
 	"mobile": "TestMobile",
 	"address": "Testaddress",
 	"password": "TestPass",
@@ -190,8 +199,8 @@ func (suite *UsersHandlerTestSuite) TestUpdateUserDbFailure() {
 	`
 
 	recorder := makeHTTPCall(http.MethodPut,
-		"/users/{id:[0-9]+}",
-		"/users/1",
+		"/user/update",
+		"/user/update",
 		body,
 		updateUserHandler(Dependencies{Store: suite.dbMock}),
 	)
