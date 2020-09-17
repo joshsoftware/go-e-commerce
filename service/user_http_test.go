@@ -1,16 +1,17 @@
 package service
 
 import (
-	"errors"
+	"database/sql"
 	"joshsoftware/go-e-commerce/db"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
+
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -30,43 +31,6 @@ func TestExampleTestSuite(t *testing.T) {
 	suite.Run(t, new(UsersHandlerTestSuite))
 }
 
-func (suite *UsersHandlerTestSuite) TestListUsersSuccess() {
-	suite.dbMock.On("ListUsers", mock.Anything).Return(
-		[]db.User{
-			db.User{Name: "test-user", Age: 18},
-		},
-		nil,
-	)
-
-	recorder := makeHTTPCall(
-		http.MethodGet,
-		"/users",
-		"",
-		listUsersHandler(Dependencies{Store: suite.dbMock}),
-	)
-
-	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
-	assert.Equal(suite.T(), `[{"full_name":"test-user","age":18}]`, recorder.Body.String())
-	suite.dbMock.AssertExpectations(suite.T())
-}
-
-func (suite *UsersHandlerTestSuite) TestListUsersWhenDBFailure() {
-	suite.dbMock.On("ListUsers", mock.Anything).Return(
-		[]db.User{},
-		errors.New("error fetching user records"),
-	)
-
-	recorder := makeHTTPCall(
-		http.MethodGet,
-		"/users",
-		"",
-		listUsersHandler(Dependencies{Store: suite.dbMock}),
-	)
-
-	assert.Equal(suite.T(), http.StatusInternalServerError, recorder.Code)
-	suite.dbMock.AssertExpectations(suite.T())
-}
-
 func makeHTTPCall(method, path, body string, handlerFunc http.HandlerFunc) (recorder *httptest.ResponseRecorder) {
 	// create a http request using the given parameters
 	req, _ := http.NewRequest(method, path, strings.NewReader(body))
@@ -81,4 +45,80 @@ func makeHTTPCall(method, path, body string, handlerFunc http.HandlerFunc) (reco
 	// serve the request and write the response to recorder
 	router.ServeHTTP(recorder, req)
 	return
+}
+
+func (suite *UsersHandlerTestSuite) TestRegisterUserSuccess() {
+	user := db.User{}
+	user.Email = "test@gmail.com"
+	user.FirstName = "test1"
+	user.LastName = "test2"
+	user.Mobile = "8421987856"
+	user.Address = "abc"
+	user.State = "Maharashtra"
+	user.City = "Nashik"
+	user.Password = "password"
+	user.Country = "India"
+
+	suite.dbMock.On("CreateUser", mock.Anything, user).Return(user, nil)
+	suite.dbMock.On("GetUserByEmail", mock.Anything, mock.Anything).Return(user, sql.ErrNoRows)
+	body :=
+		`{
+			"first_name" : "test1",
+			"last_name" : "test2",
+			"email" : "test@gmail.com",
+			"mobile": "8421987856",
+			"country": "India",
+			"state": "Maharashtra",
+			"city": "Nashik",
+			"address": "abc",
+			"password": "password"
+		}`
+	recorder := makeHTTPCall(http.MethodPost,
+		"/register",
+		body,
+		registerUserHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusCreated, recorder.Code)
+	suite.dbMock.AssertExpectations(suite.T())
+
+}
+
+func (suite *UsersHandlerTestSuite) TestRegisterUserFailure() {
+	user := db.User{}
+	user.Email = "test@gmail.com"
+	user.FirstName = "test1"
+	user.LastName = "test2"
+	user.Mobile = "8421987856"
+	user.Address = "abc"
+	user.State = "Maharashtra"
+	user.City = "Nashik"
+	user.Password = "password"
+	user.Country = "India"
+
+	suite.dbMock.On("CreateUser", mock.Anything, user).Return(user, nil)
+	suite.dbMock.On("GetUserByEmail", mock.Anything, user.Email).Return(user, nil)
+	body :=
+		`{
+		"first_name" : "test1",
+		"last_name" : "test2",
+		"email" : "test@gmail.com",
+		"mobile": "8421987856",
+		"country": "India",
+		"state": "Maharashtra",
+		"city": "Nashik",
+		"address": "abc",
+		"password": "password"
+	}`
+	recorder := makeHTTPCall(http.MethodPost,
+		"/register",
+		body,
+		registerUserHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), `{"error":"user already registered"}`, recorder.Body.String())
+	assert.Equal(suite.T(), http.StatusBadRequest, recorder.Code)
+	suite.dbMock.AssertNotCalled(suite.T(), "CreateUser", mock.Anything, user)
+	suite.dbMock.AssertCalled(suite.T(), "GetUserByEmail", mock.Anything, user.Email)
+
 }

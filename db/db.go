@@ -6,7 +6,6 @@ import (
 
 type Storer interface {
 	ListUsers(context.Context) ([]User, error)
-	//Create(context.Context, User) error
-	//GetUser(context.Context) (User, error)
-	//Delete(context.Context, string) error
+	CreateUser(context.Context, User) (User, error)
+	GetUserByEmail(context.Context, string) (User, error)
 }
