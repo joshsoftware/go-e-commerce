@@ -48,8 +48,19 @@ func makeHTTPCall(method, path, body string, handlerFunc http.HandlerFunc) (reco
 }
 
 func (suite *UsersHandlerTestSuite) TestRegisterUserSuccess() {
-	suite.dbMock.On("CreateUser", mock.Anything, mock.Anything).Return(db.User{}, nil)
-	suite.dbMock.On("GetUserByEmail", mock.Anything, mock.Anything).Return(db.User{}, sql.ErrNoRows)
+	user := db.User{}
+	user.Email = "test@gmail.com"
+	user.FirstName = "test1"
+	user.LastName = "test2"
+	user.Mobile = "8421987856"
+	user.Address = "abc"
+	user.State = "Maharashtra"
+	user.City = "Nashik"
+	user.Password = "password"
+	user.Country = "India"
+
+	suite.dbMock.On("CreateUser", mock.Anything, user).Return(user, nil)
+	suite.dbMock.On("GetUserByEmail", mock.Anything, mock.Anything).Return(user, sql.ErrNoRows)
 	body :=
 		`{
 			"first_name" : "test1",
@@ -67,14 +78,26 @@ func (suite *UsersHandlerTestSuite) TestRegisterUserSuccess() {
 		body,
 		registerUserHandler(Dependencies{Store: suite.dbMock}),
 	)
+
 	assert.Equal(suite.T(), http.StatusCreated, recorder.Code)
 	suite.dbMock.AssertExpectations(suite.T())
 
 }
 
 func (suite *UsersHandlerTestSuite) TestRegisterUserFailure() {
-	suite.dbMock.On("CreateUser", mock.Anything, mock.Anything).Return(db.User{}, nil)
-	suite.dbMock.On("GetUserByEmail", mock.Anything, mock.Anything).Return(db.User{}, nil)
+	user := db.User{}
+	user.Email = "test@gmail.com"
+	user.FirstName = "test1"
+	user.LastName = "test2"
+	user.Mobile = "8421987856"
+	user.Address = "abc"
+	user.State = "Maharashtra"
+	user.City = "Nashik"
+	user.Password = "password"
+	user.Country = "India"
+
+	suite.dbMock.On("CreateUser", mock.Anything, user).Return(user, nil)
+	suite.dbMock.On("GetUserByEmail", mock.Anything, user.Email).Return(user, nil)
 	body :=
 		`{
 		"first_name" : "test1",
@@ -95,7 +118,7 @@ func (suite *UsersHandlerTestSuite) TestRegisterUserFailure() {
 
 	assert.Equal(suite.T(), `{"error":"user already registered"}`, recorder.Body.String())
 	assert.Equal(suite.T(), http.StatusBadRequest, recorder.Code)
-	suite.dbMock.AssertNotCalled(suite.T(), "CreateNewUser", mock.Anything, mock.Anything)
-	suite.dbMock.AssertCalled(suite.T(), "GetUserByEmail", mock.Anything, mock.Anything)
+	suite.dbMock.AssertNotCalled(suite.T(), "CreateUser", mock.Anything, user)
+	suite.dbMock.AssertCalled(suite.T(), "GetUserByEmail", mock.Anything, user.Email)
 
 }
