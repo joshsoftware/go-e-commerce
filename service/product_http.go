@@ -291,7 +291,7 @@ func updateProductStockByIdHandler(deps Dependencies) http.HandlerFunc {
 // @ Accept json
 // @ Success 200 {object}
 // @ Failure 400 {object}
-/*
+
 func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
@@ -321,22 +321,9 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		errRes, valid := product.Validate()
+		errRes, valid := product.PartialValidate()
 		if !valid {
-			respBytes, err := json.Marshal(errRes)
-			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error marshaling product data")
-				response(rw, http.StatusBadRequest, errorResponse{
-					Error: messageObject{
-						Message: "Invalid json body",
-					},
-				})
-				rw.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			rw.Header().Add("Content-Type", "application/json")
-			rw.WriteHeader(http.StatusBadRequest)
-			rw.Write(respBytes)
+			response(rw, http.StatusBadRequest, errRes)
 			return
 		}
 
@@ -358,4 +345,3 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 		return
 	})
 }
-*/
