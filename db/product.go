@@ -2,10 +2,13 @@ package db
 
 import (
 	"context"
+	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"strconv"
 
 	//"database/sql"
+	"github.com/jmoiron/sqlx/types"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -18,13 +21,55 @@ const (
 	getProductByNameQuery = `SELECT * FROM products WHERE name=$1`
 	getCategoryByID       = `SELECT name FROM category WHERE id = $1`
 	insertProductQuery    = `INSERT INTO products ( name, description,
-		  price, discount, tax, quantity, category_id, brand, color, size) VALUES ( 
-		  :name, :description, :price, :discount, :tax, :quantity, :category_id, :brand, :color, :size)`
+		  price, discount, tax, quantity, category_id, brand, color, size, image_url) VALUES ( 
+		  :name, :description, :price, :discount, :tax, :quantity, :category_id, :brand, :color, :size, :image_url)`
 	deleteProductIdQuery    = `DELETE FROM products WHERE id = $1`
 	updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2`
 	newInsertRecord         = `SELECT MAX(id) from products`
 	insertProductURLsQuery  = `INSERT INTO productimages (product_id, url) values ($1, $2)`
 )
+
+type JSONTags []string
+
+func (tags *JSONTags) Scan(src interface{}) error {
+	var jt types.JSONText
+
+	if err := jt.Scan(src); err != nil {
+		return err
+	}
+
+	if err := jt.Unmarshal(tags); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (tags *JSONTags) Value() (driver.Value, error) {
+	var jt types.JSONText
+
+	data, err := json.Marshal((*[]string)(tags))
+	if err != nil {
+		return nil, err
+	}
+
+	if err := jt.UnmarshalJSON(data); err != nil {
+		return nil, err
+	}
+
+	return jt.Value()
+}
+
+func (tags *JSONTags) MarshalJSON() ([]byte, error) {
+	return json.Marshal((*[]string)(tags))
+}
+
+func (tags *JSONTags) UnmarshalJSON(data []byte) error {
+	if err := json.Unmarshal(data, (*[]string)(tags)); err != nil {
+		return err
+	}
+	return nil
+}
 
 type Product struct {
 	Id          int     `db:"id" json:"id"`
@@ -35,14 +80,14 @@ type Product struct {
 	Tax         float32 `db:"tax" json:"tax"`
 	Quantity    int     `db:"quantity" json:"stock"`
 	CategoryId  int     `db:"category_id" json:"category_id"`
-	// CategoryName doesn't exists in Product db,
-	// it is fetched from category table whenever
-	// products are to be returned
-	CategoryName string   `json:"category"`
-	Brand        string   `db:"brand" json:"brand"`
-	Color        string   `db:"color" json:"color"`
-	Size         string   `db:"size" json:"size"`
-	URLs         []string `json:"image_url,omitempty"`
+
+	CategoryName string    `json:"category"`
+	Brand        string    `db:"brand" json:"brand"`
+	Color        string    `db:"color" json:"color"`
+	Size         string    `db:"size" json:"size"`
+	URLs         *JSONTags `db:"image_url" json:"image_url"`
+
+	//URLs         []string `json:"image_url,omitempty"`
 }
 
 // Pagination helps to return UI side with number of pages given a limit and page
@@ -114,18 +159,6 @@ func (s *pgStore) GetProductByID(ctx context.Context, Id int) (product Product, 
 	}
 
 	product.CategoryName = category
-
-	// Add Product Image URL's to Product's Object
-	productImage, err := s.GetProductImagesByID(ctx, Id)
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error selecting productImage from database by id " + string(Id))
-		return
-	}
-
-	for j := 0; j < len(productImage); j++ {
-		product.URLs = append(product.URLs, productImage[j].URL)
-	}
-
 	return
 }
 
@@ -199,58 +232,27 @@ func (s *pgStore) ListProducts(ctx context.Context, limit string, page string) (
 
 // CreateNewProduct
 func (s *pgStore) CreateNewProduct(ctx context.Context, p Product) (createdProduct Product, err error) {
-	// First, make sure Product isn't already in db, if Product is present, just return the it
+
 	err = s.db.Get(&createdProduct, getProductByNameQuery, p.Name)
 	if err == nil {
-		// If there's already a product, err wil be nil, so no new Product is populated.
 		err = fmt.Errorf("Product Already exists!")
 		return
 	}
-	tx, err := s.db.Beginx() // Use Beginx instead of MustBegin so process doesn't die if there is an error
+	tx, err := s.db.Beginx()
 	if err != nil {
-		// FAIL : Could not begin database transaction
 		logger.WithField("err", err.Error()).Error("Error beginning product insert transaction in db.CreateNewProduct with Id: " + string(p.Id))
 		return
 	}
 
 	_, err = tx.NamedExec(insertProductQuery, p)
-	//  p.Name, p.Description, p.Price, p.Discount, p.Tax, p.Quantity, p.CategoryId, p.Brand, p.Color, p.Size
 
 	if err != nil {
-		// FAIL : Could not run insert Query
 		logger.WithField("err", err.Error()).Error("Error inserting product to database: " + p.Name)
 		return
 	}
 	err = tx.Commit()
 	if err != nil {
-		// FAIL : transaction commit failed.Will Automatically rollback
 		logger.WithField("err", err.Error()).Error("Error commiting transaction inserting product into database: " + string(p.Id))
-		return
-	}
-
-	//length of url
-	urls := len(p.URLs)
-	var number int
-	//new insert record get id number
-	result, err := s.db.Query(newInsertRecord)
-	for result.Next() {
-		err = result.Scan(&number)
-	}
-
-	for i := 0; i < urls; i++ {
-		//insert urls of given records
-		_, err = s.db.Exec(insertProductURLsQuery, number, p.URLs[i])
-		if err != nil {
-			// FAIL : Could not run insert Query
-			logger.WithField("err", err.Error()).Error("Error inserting urls to database: ")
-			return
-		}
-	}
-
-	// Re-select Product and return it
-	createdProduct, err = s.GetProductByID(ctx, number)
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error selecting from database with id: " + string(p.Id))
 		return
 	}
 	return

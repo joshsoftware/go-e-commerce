@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS products (
 	brand varchar(50) NOT NULL,
 	color varchar(50) DEFAULT '',
 	size varchar(50) DEFAULT '',
+	image_url jsonb,
 	FOREIGN KEY(category_id) 
 	REFERENCES Category(id) ON DELETE CASCADE ON UPDATE CASCADE
 );

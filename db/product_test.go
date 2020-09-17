@@ -27,6 +27,24 @@ func (suite *ProductsTestSuite) TearDownTest() {
 	suite.db.Close()
 }
 
+var urls = []string{"url1", "url2"}
+
+var testProduct = Product{
+	Id:           1,
+	Name:         "test organization",
+	Description:  "test@gmail.com",
+	Price:        12,
+	Discount:     1,
+	Tax:          0.5,
+	Quantity:     15,
+	CategoryId:   5,
+	CategoryName: "2",
+	Brand:        "IST",
+	Color:        "black",
+	Size:         "Medium",
+	URLs:         urls,
+}
+
 func (suite *ProductsTestSuite) TestCreateNewProductSuccess() {
 	product := Product{
 		Name:         "test user",
@@ -132,4 +150,13 @@ func (suite *ProductsTestSuite) TestUpdateProductStockByIdFailure() {
 	updatedProduct, err := suite.dbStore.UpdateProductStockById(context.Background(), product, 1)
 	assert.NotEqual(suite.T(), updatedProduct, product)
 	assert.NotNil(suite.T(), err)
+}
+
+func (suite *ProductsTestSuite) TestDeleteProductByIdSuccess() {
+	suite.sqlmock.ExpectExec("DELETE").
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	err := suite.dbStore.DeleteProductById(context.Background(), testProduct.Id)
+
+	assert.Nil(suite.T(), err)
 }
