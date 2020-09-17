@@ -64,8 +64,32 @@ func deleteUserHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		err = deps.Store.DeleteUserByID(req.Context(), userID)
+		//check if the provided id is not of another Admin
+		user, err := deps.Store.GetUser(req.Context(), userID)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("error while fetching User")
+			rw.WriteHeader(http.StatusNotFound)
+			responses(rw, http.StatusNotFound, errorResponse{
+				Error: messageObject{
+					Message: "id Not Found",
+				},
+			})
+			return
+		}
 
+		//check if the users is admin
+		if user.IsAdmin == true {
+			logger.WithField("err", "trying to delete an admin")
+			rw.WriteHeader(http.StatusForbidden)
+			responses(rw, http.StatusForbidden, errorResponse{
+				Error: messageObject{
+					Message: "access denied for delete",
+				},
+			})
+			return
+		}
+
+		err = deps.Store.DeleteUserByID(req.Context(), userID)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("error in deleting user data")
 			rw.WriteHeader(http.StatusBadRequest)

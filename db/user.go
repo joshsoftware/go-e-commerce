@@ -2,7 +2,7 @@ package db
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"time"
 
 	logger "github.com/sirupsen/logrus"
@@ -10,6 +10,7 @@ import (
 
 const (
 	deleteUserQuery = `DELETE FROM users WHERE id=$1`
+	getUserQuery    = `SELECT * from users where id=$1`
 )
 
 //User Struct for declaring attributes of User
@@ -39,15 +40,20 @@ func (s *pgStore) ListUsers(ctx context.Context) (users []User, err error) {
 	return
 }
 
+func (s *pgStore) GetUser(ctx context.Context, id int) (user User, err error) {
+	err = s.db.Get(&user, getUserQuery, id)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error(fmt.Errorf("error selecting user from database by id %d", id))
+		return
+	}
+	return
+}
+
 func (s *pgStore) DeleteUserByID(ctx context.Context, userID int) (err error) {
-	res, err := s.db.Exec(deleteUserQuery, userID)
+	_, err = s.db.Exec(deleteUserQuery, userID)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error Deleting User")
 		return
-	}
-	rowsAffected, err := res.RowsAffected()
-	if rowsAffected == 0 {
-		return errors.New("Id not found")
 	}
 	return
 }
