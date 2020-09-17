@@ -152,7 +152,7 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 // @Description list all Products with specified filters
 // @Router /products/search [GET]
 // @Params /products/search?text=apple+that+can+be+eaten
-//  checking will take place in product name then its discription
+//  checking will take place in product name , brand and category name
 //  brand, size, color will be also be checked case-insensitively string
 // @Accept	json
 // @Success 200 {object}

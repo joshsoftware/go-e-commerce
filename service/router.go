@@ -39,6 +39,8 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	//Router for Get User from ID
 	router.Handle("/user", jwtMiddleWare(userMiddleware(getUserHandler(deps), deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 
+	router.Handle("/admin", jwtMiddleWare(adminMiddleware(getUserHandler(deps), deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
+
 	router.Handle("/users", jwtMiddleWare(adminMiddleware(listUsersHandler(deps), deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 	// router.HandleFunc("/users", listUsersHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 
@@ -49,6 +51,7 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	// router.Handle("/user", jwtMiddleWare(getUserHandler(deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 
 	router.Handle("/user/update", jwtMiddleWare(userMiddleware(updateUserHandler(deps), deps), deps)).Methods(http.MethodPatch).Headers(versionHeader, v1)
+	router.Handle("/admin/update", jwtMiddleWare(adminMiddleware(updateUserHandler(deps), deps), deps)).Methods(http.MethodPatch).Headers(versionHeader, v1)
 
 	router.HandleFunc("/products", listProductsHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 
@@ -58,6 +61,7 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	router.HandleFunc("/products/filters", getProductByFiltersHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 	router.HandleFunc("/product/stock", updateProductStockByIdHandler(deps)).Methods(http.MethodPut).Headers(versionHeader, v1)
 	router.HandleFunc("/products/search", getProductBySearchHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
+	router.HandleFunc("/product/{product_id:[0-9]+}", updateProductByIdHandler(deps)).Methods(http.MethodPut).Headers(versionHeader, v1)
 
 	router.Handle("/cart", jwtMiddleWare(userMiddleware(getCartHandler(deps), deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 

@@ -135,12 +135,12 @@ func getProductByIdHandler(deps Dependencies) http.HandlerFunc {
 
 		product, err := deps.Store.GetProductByID(req.Context(), id)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error fetching data")
+			logger.WithField("err", err.Error()).Error("Error fetching data no product found")
 			rw.Header().Add("Content-Type", "application/json")
 			rw.WriteHeader(http.StatusInternalServerError)
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Error feching data No Row Found",
+					Message: "Error feching data, no row found.",
 				},
 			})
 			return
@@ -175,8 +175,6 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 		var product db.Product
 		err := json.NewDecoder(req.Body).Decode(&product)
 		if err != nil {
-			rw.Header().Add("Content-Type", "application/json")
-			rw.WriteHeader(http.StatusBadRequest)
 			logger.WithField("err", err.Error()).Error("Error while decoding product")
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
@@ -348,8 +346,6 @@ func updateProductStockByIdHandler(deps Dependencies) http.HandlerFunc {
 		var updatedProduct db.Product
 		updatedProduct, err = deps.Store.UpdateProductStockById(req.Context(), product, productId)
 		if err != nil {
-			rw.Header().Add("Content-Type", "application/json")
-			rw.WriteHeader(http.StatusInternalServerError)
 			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
 			responses(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
@@ -372,78 +368,56 @@ func updateProductStockByIdHandler(deps Dependencies) http.HandlerFunc {
 // @ Success 200 {object}
 // @ Failure 400 {object}
 
-// func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
-// 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
-// 		vars := mux.Vars(req)
-// 		id, err := strconv.Atoi(vars["product_id"])
-// 		if err != nil {
-// 			logger.WithField("err", err.Error()).Error("Error id key is missing")
-// 			rw.WriteHeader(http.StatusBadRequest)
-// 			response(rw, http.StatusBadRequest, errorResponse{
-// 				Error: messageObject{
-// 					Message: "Error id is missing/invalid",
-// 				},
-// 			})
-// 			return
-// 		}
+		vars := mux.Vars(req)
+		id, err := strconv.Atoi(vars["product_id"])
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error id key is missing")
+			rw.WriteHeader(http.StatusBadRequest)
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Error id is missing/invalid",
+				},
+			})
+			return
+		}
 
-// 		var product db.Product
-// 		err = json.NewDecoder(req.Body).Decode(&product)
-// 		if err != nil {
-// 			rw.WriteHeader(http.StatusBadRequest)
-// 			logger.WithField("err", err.Error()).Error("Error while decoding user")
-// 			response(rw, http.StatusBadRequest, errorResponse{
-// 				Error: messageObject{
-// 					Message: "Internal server error",
-// 				},
-// 			})
-// 			return
-// 		}
+		var product db.Product
+		err = json.NewDecoder(req.Body).Decode(&product)
+		if err != nil {
+			rw.WriteHeader(http.StatusBadRequest)
+			logger.WithField("err", err.Error()).Error("Error while decoding user")
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Internal server error",
+				},
+			})
+			return
+		}
 
-// 		errRes, valid := product.Validate()
-// 		if !valid {
-// 			respBytes, err := json.Marshal(errRes)
-// 			if err != nil {
-// 				logger.WithField("err", err.Error()).Error("Error marshaling product data")
-// 				response(rw, http.StatusBadRequest, errorResponse{
-// 					Error: messageObject{
-// 						Message: "Invalid json body",
-// 					},
-// 				})
-// 				rw.WriteHeader(http.StatusInternalServerError)
-// 				return
-// 			}
-// 			if err != nil {
-// 				rw.WriteHeader(http.StatusInternalServerError)
-// 				response(rw, http.StatusInternalServerError, errorResponse{
-// 					Error: messageObject{
-// 						Message: "Internal server error",
-// 					},
-// 				})
-// 				logger.WithField("err", err.Error()).Error("Error while updating product attribute")
-// 				return
-// 			}
+		errRes, valid := product.PartialValidate()
+		if !valid {
+			responses(rw, http.StatusBadRequest, errRes)
+			return
+		}
 
-// 			response(rw, http.StatusOK, successResponse{Data: updatedProduct})
+		var updatedProduct db.Product
+		updatedProduct, err = deps.Store.UpdateProductById(req.Context(), product, id)
+		if err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal server error",
+				},
+			})
+			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
+			return
+		}
 
-// 			return
-// 		})
-// 	}		var updatedProduct db.Product
-// 		updatedProduct, err = deps.Store.UpdateProductById(req.Context(), product, id)
-// 		if err != nil {
-// 			rw.WriteHeader(http.StatusInternalServerError)
-// 			response(rw, http.StatusInternalServerError, errorResponse{
-// 				Error: messageObject{
-// 					Message: "Internal server error",
-// 				},
-// 			})
-// 			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
-// 			return
-// 		}
+		responses(rw, http.StatusOK, successResponse{Data: updatedProduct})
 
-// 		response(rw, http.StatusOK, successResponse{Data: updatedProduct})
-
-// 		return
-// 	})
-// }
+		return
+	})
+}

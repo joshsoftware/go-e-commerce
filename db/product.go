@@ -24,6 +24,9 @@ const (
 	updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2`
 	newInsertRecord         = `SELECT MAX(id) from products`
 	insertProductURLsQuery  = `INSERT INTO productimages (product_id, url) values ($1, $2)`
+	updateProductQuery      = `UPDATE products SET name= $1, description=$2, price=$3, 
+			discount=$4, tax=$5, quantity=$6, category_id=$7, brand=$8, color=$9, size=$10 WHERE id = $11`
+	updateProductImageQuery = `UPDATE productimages SET url = $1 WHERE product_id = $2`
 )
 
 type Product struct {
@@ -90,6 +93,42 @@ func (product *Product) Validate() (errorResponse map[string]ErrorResponse, vali
 	return
 }
 
+func (product *Product) PartialValidate() (errorResponse map[string]ErrorResponse, valid bool) {
+	fieldErrors := make(map[string]string)
+
+	if product.Price < 0 {
+		fieldErrors["price"] = "Can't be blank  or less than zero"
+	}
+	if product.Discount < 0 {
+		fieldErrors["discount"] = "Can't be less than zero"
+	}
+	if product.Tax < 0 {
+		fieldErrors["tax"] = "Can't be less than zero"
+	}
+	// If Quantity gets's < 0 by UpdateProductStockById Method, this is what saves us
+	if product.Quantity < 0 {
+		fieldErrors["available_quantity"] = "Can't be blank or less than zero"
+	}
+	if product.CategoryID < 0 {
+		fieldErrors["category_id"] = "Can't be invalid"
+	}
+
+	if len(fieldErrors) == 0 {
+		valid = true
+		return
+	}
+
+	errorResponse = map[string]ErrorResponse{
+		"error": ErrorResponse{
+			Code:    "Invalid_data",
+			Message: "Please Provide valid Product data",
+			Fields:  fieldErrors,
+		},
+	}
+	// TODO Other Validations
+	return
+}
+
 // @Title GetProductByID
 // @Description Get a Product Object by its Id
 // @Params req.Context, product's Id
@@ -135,7 +174,7 @@ func (s *pgStore) ListProducts(ctx context.Context, limit string, page string) (
 
 	resultCount, err := s.db.Query(getProductCount)
 	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error fetching Cunt of Products from database")
+		logger.WithField("err", err.Error()).Error("Error fetching Count of Products from database")
 		return
 	}
 
@@ -306,6 +345,92 @@ func (s *pgStore) DeleteProductById(ctx context.Context, Id int) (err error) {
 	rows_affected, err := rows.RowsAffected()
 	if rows_affected == 0 {
 		err = fmt.Errorf("Product doesn't exist in db, goodluck deleting it")
+	}
+	return
+}
+
+func (s *pgStore) UpdateProductById(ctx context.Context, product Product, Id int) (updatedProduct Product, err error) {
+
+	var dbProduct Product
+	err = s.db.Get(&dbProduct, getProductByIDQuery, Id)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("Error while fetching product ")
+		return
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		logger.WithField("err:", err.Error()).Error("Error while initiating update Product transaction")
+		return
+	}
+
+	if product.Name == "" {
+		product.Name = dbProduct.Name
+	}
+	if product.Description == "" {
+		product.Description = dbProduct.Description
+	}
+	if product.Price == 0 {
+		product.Price = dbProduct.Price
+	}
+	if product.Discount == 0 {
+		product.Discount = dbProduct.Discount
+	}
+	if product.Tax == 0 {
+		product.Tax = dbProduct.Tax
+	}
+	if product.Quantity == 0 {
+		product.Quantity = dbProduct.Quantity
+	}
+	if product.CategoryID == 0 {
+		product.CategoryID = dbProduct.CategoryID
+	}
+	if product.Brand == "" {
+		product.Brand = dbProduct.Brand
+	}
+	if product.Color == "" {
+		product.Color = dbProduct.Color
+	}
+	if product.Size == "" {
+		product.Size = dbProduct.Size
+	}
+
+	_, err = tx.Exec(updateProductQuery,
+		product.Name,
+		product.Description,
+		product.Price,
+		product.Discount,
+		product.Tax,
+		product.Quantity,
+		product.CategoryID,
+		product.Brand,
+		product.Color,
+		product.Size,
+		Id,
+	)
+
+	if len(product.URLs) != 0 {
+		_, err = tx.Exec(updateProductImageQuery, product.URLs[0], Id)
+
+	}
+
+	if err != nil {
+		// FAIL : Could not Update Product
+		logger.WithField("err", err.Error()).Error("Error updating product attribute(s) to database :" + string(Id))
+		return
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		// FAIL : transaction commit failed. Will Automatically rollback
+		logger.WithField("err", err.Error()).Error("Error commiting transaction updating product into database: " + string(Id))
+		return
+	}
+
+	updatedProduct, err = s.GetProductByID(ctx, Id)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("Error while getting updated product ")
+		return
 	}
 	return
 }

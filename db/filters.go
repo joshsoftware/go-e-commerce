@@ -189,8 +189,7 @@ func (s *pgStore) SearchRecords(ctx context.Context, text string, limit string, 
 	getSearchCount := `SELECT COUNT(p.id) from products p
 		INNER JOIN category c 
 		ON p.category_id = c.id
-		WHERE 
-		`
+		WHERE `
 
 	helper := `  `
 

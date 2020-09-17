@@ -133,3 +133,4 @@ func (suite *ProductsTestSuite) TestUpdateProductStockByIdFailure() {
 	assert.NotEqual(suite.T(), updatedProduct, product)
 	assert.NotNil(suite.T(), err)
 }
+
