@@ -26,5 +26,8 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	router.HandleFunc("/users", listUsersHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 
 	router.HandleFunc("/user/{id:[0-9]+}", deleteUserHandler(deps)).Methods(http.MethodDelete).Headers(versionHeader, v1)
+
+	router.HandleFunc("/user/disable/{id:[0-9]+}", disableUserHandler(deps)).Methods(http.MethodPatch).Headers(versionHeader, v1)
+
 	return
 }

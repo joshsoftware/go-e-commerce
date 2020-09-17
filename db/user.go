@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	deleteUserQuery = `DELETE FROM users WHERE id=$1`
-	getUserQuery    = `SELECT * from users where id=$1`
+	deleteUserQuery  = `DELETE FROM users WHERE id=$1`
+	disableUserQuery = `UPDATE users SET isdisabled =$1 WHERE id=$2`
+	getUserQuery     = `SELECT * from users where id=$1`
 )
 
 //User Struct for declaring attributes of User
@@ -51,6 +52,15 @@ func (s *pgStore) GetUser(ctx context.Context, id int) (user User, err error) {
 
 func (s *pgStore) DeleteUserByID(ctx context.Context, userID int) (err error) {
 	_, err = s.db.Exec(deleteUserQuery, userID)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("Error Deleting User")
+		return
+	}
+	return
+}
+
+func (s *pgStore) DisableUserByID(ctx context.Context, userID int) (err error) {
+	_, err = s.db.Exec(disableUserQuery, true, userID)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error Deleting User")
 		return
