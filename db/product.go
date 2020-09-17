@@ -10,7 +10,7 @@ import (
 
 const (
 	getProductCount = `SELECT count(id) from Products ;`
-	getProductQuery = `SELECT id FROM products LIMIT $1  OFFSET  ($2 -1) * $1;`
+	getProductQuery = `SELECT id FROM products LIMIT $1  OFFSET  $2;`
 
 	getProductIDQuery     = `SELECT id FROM products`
 	getProductByIDQuery   = `SELECT * FROM products WHERE id=$1`
@@ -19,6 +19,7 @@ const (
 	insertProductQuery    = `INSERT INTO products ( name, description,
 		  price, discount, tax, quantity, category_id, brand, color, size) VALUES ( 
 		  :name, :description, :price, :discount, :tax, :quantity, :category_id, :brand, :color, :size)`
+
 	deleteProductIdQuery    = `DELETE FROM products WHERE id = $1`
 	updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2`
 	newInsertRecord         = `SELECT MAX(id) from products`
@@ -42,7 +43,7 @@ type Product struct {
 	Color        string `db:"color" json:"color"`
 	Size         string `db:"size" json:"size"`
 
-	URLs []string `json:"image_url,omitempty"`
+	URLs []string `db:"image_url" json:"image_url,omitempty"`
 }
 
 // Pagination helps to return UI side with number of pages given a limit and page
@@ -194,13 +195,14 @@ func (s *pgStore) ListProducts(ctx context.Context, limit string, page string) (
 	ls, _ := strconv.Atoi(limit)
 	ps, _ := strconv.Atoi(page)
 
+	os := (ps - 1) * ls
 	if (count - 1) < (int(ls) * (int(ps) - 1)) {
 		err = fmt.Errorf("Desired Page not found")
 		logger.WithField("err", err.Error()).Error("Page Out Of range")
 		return
 	}
 
-	result, err := s.db.Query(getProductQuery, ls, ps)
+	result, err := s.db.Query(getProductQuery, ls, os)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
 		return
