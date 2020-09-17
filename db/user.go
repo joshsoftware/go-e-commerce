@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	logger "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -41,6 +42,14 @@ func (s *pgStore) ListUsers(ctx context.Context) (users []User, err error) {
 
 // CreateNewUser = creates a new user in database
 func (s *pgStore) CreateUser(ctx context.Context, u User) (newUser User, err error) {
+	// creating hash of the password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), 8)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("Error while creating hash of the password")
+		return
+	}
+	u.Password = string(hashedPassword)
+
 	stmt, err := s.db.PrepareNamed(insertUserQuery)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error while preparing user insert query")
