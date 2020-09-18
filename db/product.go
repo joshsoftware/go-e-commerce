@@ -29,19 +29,20 @@ const (
 )
 
 type Product struct {
-	Id           int            `db:"id" json:"id"`
-	Name         string         `db:"name" json:"product_title"`
-	Description  string         `db:"description" json:"description"`
-	Price        float32        `db:"price" json:"product_price"`
-	Discount     float32        `db:"discount" json:"discount"`
-	Tax          float32        `db:"tax" json:"tax"`
-	Quantity     int            `db:"quantity" json:"stock"`
-	CategoryId   int            `db:"category_id" json:"category_id"`
-	CategoryName string         `json:"category"`
-	Brand        string         `db:"brand" json:"brand"`
-	Color        string         `db:"color" json:"color"`
-	Size         string         `db:"size" json:"size"`
-	URLs         pq.StringArray `json:"image_url,omitempty" db:"image_url"`
+	Id           int     `db:"id" json:"id"`
+	Name         string  `db:"name" json:"product_title"`
+	Description  string  `db:"description" json:"description"`
+	Price        float32 `db:"price" json:"product_price"`
+	Discount     float32 `db:"discount" json:"discount"`
+	Tax          float32 `db:"tax" json:"tax"`
+	Quantity     int     `db:"quantity" json:"stock"`
+	CategoryId   int     `db:"category_id" json:"category_id"`
+	CategoryName string  `json:"category"`
+	Brand        string  `db:"brand" json:"brand"`
+	Color        string  `db:"color" json:"color"`
+	Size         string  `db:"size" json:"size"`
+	//TODO image_urls
+	URLs pq.StringArray `json:"image_url,omitempty" db:"image_url"`
 }
 
 // Pagination helps to return UI side with number of pages given a limitStr and pageStr number from Query Parameters
@@ -257,7 +258,7 @@ func (s *pgStore) CreateProduct(ctx context.Context, product Product) (Product, 
 		logger.WithField("err", err.Error()).Error("Error commiting transaction inserting product into database: " + string(product.Name))
 		return Product{}, err
 	}
-
+	//TODO return product id only
 	return product, nil
 }
 

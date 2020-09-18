@@ -40,9 +40,12 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 
 	// helper will be used in making query dynamic.
 	// See how it's getting concatanation added in case a flag was Filter Flag is true
-	injection := `  `
-	helper := `  `
-	if filter.CategoryFlag == true {
+	injection := ``
+	//TODO change
+	//Found == isFilterAppled
+	helper := ``
+	//TODO cahnge
+	if filter.CategoryFlag {
 		helper += ` category_id = ` + filter.CategoryId + ` AND`
 		injection += filter.CategoryId
 		found = true

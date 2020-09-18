@@ -65,7 +65,8 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 			})
 			return
 		}
-
+		//TODO Count= TotalCount
+		// Pass limit and page as integer
 		count, products, err := deps.Store.ListProducts(req.Context(), limitStr, pageStr)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error Couldn't find any Product records or Page out of range")
