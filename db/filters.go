@@ -10,7 +10,6 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-// Filter struct is used to help us in Generating a dynamic Filter Query
 type Filter struct {
 	// Below fields are what we may receive as Parameters in request body
 	CategoryId string
@@ -31,7 +30,7 @@ type Filter struct {
 // @Accept	request.Context, Filter struct's object
 // @Success total= (count of filtered products), error=nil
 // @Failure total=0, error= "Some Error"
-func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limit string, page string) (count int, products []Product, err error) {
+func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr string, pageStr string) (count int, products []Product, err error) {
 	// We will be checking for SQL Injection as well in this Method only
 	// found flag will help us find out if any of Filter flags were true
 	var found bool
@@ -51,13 +50,11 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limit str
 		found = true
 	}
 	if filter.SizeFlag == true {
-		// Since ' existed, we had to use ` instead of " , as compiler gave error otherwise
 		helper += ` LOWER(size) = LOWER('` + filter.Size + `') AND`
 		injection += filter.Size
 		found = true
 	}
 	if filter.ColorFlag == true {
-		// Since ' existed, we had to use ` instead of " , as compiler gave error otherwise
 		helper += ` LOWER(color) =LOWER('` + filter.Color + `') AND`
 		injection += filter.Color
 		found = true
@@ -104,10 +101,10 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limit str
 	}
 
 	// error already handled in filters_http
-	ls, _ := strconv.Atoi(limit)
-	ps, _ := strconv.Atoi(page)
+	limit, _ := strconv.Atoi(limitStr)
+	page, _ := strconv.Atoi(pageStr)
 
-	if (count - 1) < (int(ls) * (int(ps) - 1)) {
+	if (count - 1) < (int(limit) * (int(page) - 1)) {
 		err = fmt.Errorf("Desired Page not found")
 		logger.WithField("err", err.Error()).Error("Page Out Of range")
 		return
@@ -119,8 +116,8 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limit str
 		getFilterProduct += ` ORDER BY price ` + filter.Price
 	}
 
-	//fmt.Println(limit, page)
-	getFilterProduct += ` LIMIT ` + limit + `  OFFSET  (` + page + ` -1) * ` + limit + ` ;`
+	offset := (page - 1) * limit
+	getFilterProduct += ` LIMIT ` + limitStr + `  OFFSET  ` + string(offset) + ` ;`
 	fmt.Println("getFilterProduct---->", getFilterProduct)
 
 	result, err := s.db.Query(getFilterProduct)
@@ -129,17 +126,17 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limit str
 		return
 	}
 
-	// idArr stores id's of all products
+	// idArr stores id's of all Filtered products
 	var idArr []int
 
 	for result.Next() {
-		var Id int
-		err = result.Scan(&Id)
+		var id int
+		err = result.Scan(&id)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Couldn't Scan Resulted Product Ids into Id variable")
 			return
 		}
-		idArr = append(idArr, Id)
+		idArr = append(idArr, id)
 	}
 
 	// get All Filtered Products by their ids
@@ -159,10 +156,10 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limit str
 
 // @Title SearchRecords
 // @Description Get records that are searched as per request Parameter "text" along with count
-// @Accept	request.Context, text as string, limit, page
+// @Accept	request.Context, text as string, limitStr, pageStr
 // @Success total= (count of search qualifying records), error=nil
 // @Failure total=0, error= "Some Error"
-func (s *pgStore) SearchRecords(ctx context.Context, text string, limit string, page string) (count int, products []Product, err error) {
+func (s *pgStore) SearchRecords(ctx context.Context, text string, limitStr string, pageStr string) (count int, products []Product, err error) {
 	// check for SQL Injection
 	// Only allow words characters like [a-z0-9A-Z] and a space [ ]
 	var validParameters = regexp.MustCompile(`^[\w ]+$`)
@@ -236,10 +233,10 @@ func (s *pgStore) SearchRecords(ctx context.Context, text string, limit string, 
 	}
 
 	// error already handled in filters_http
-	ls, _ := strconv.Atoi(limit)
-	ps, _ := strconv.Atoi(page)
+	limit, _ := strconv.Atoi(limitStr)
+	page, _ := strconv.Atoi(pageStr)
 
-	if (count - 1) < (int(ls) * (int(ps) - 1)) {
+	if (count - 1) < (int(limit) * (int(page) - 1)) {
 		err = fmt.Errorf("Desired Page not found")
 		logger.WithField("err", err.Error()).Error("Page Out Of range")
 		return
@@ -255,8 +252,8 @@ func (s *pgStore) SearchRecords(ctx context.Context, text string, limit string, 
 		`
 
 	getSearchRecordIds += helper
-
-	getSearchRecordIds += ` LIMIT ` + limit + ` OFFSET  ( ` + page + ` -1) * ` + limit + ` ;`
+	offset := (page - 1) * limit
+	getSearchRecordIds += ` LIMIT ` + limitStr + ` OFFSET  ` + string(offset) + ` ;`
 
 	fmt.Println("getSearchRecordIds---->", getSearchRecordIds)
 
@@ -266,17 +263,17 @@ func (s *pgStore) SearchRecords(ctx context.Context, text string, limit string, 
 		return
 	}
 
-	// idArr stores id's of all products
+	// idArr stores id's of all matching search text products
 	var idArr []int
 
 	for result.Next() {
-		var Id int
-		err = result.Scan(&Id)
+		var id int
+		err = result.Scan(&id)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Couldn't Scan Resulted Product Ids into Id variable")
 			return
 		}
-		idArr = append(idArr, Id)
+		idArr = append(idArr, id)
 	}
 
 	// get All Filtered Products by their ids
