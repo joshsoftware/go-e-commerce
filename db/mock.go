@@ -15,7 +15,7 @@ func (m *DBMockStore) ListUsers(ctx context.Context) (users []User, err error) {
 	return args.Get(0).([]User), args.Error(1)
 }
 
-func (m *DBMockStore) GetCart(ctx context.Context, user_id int) (products []Product, err error) {
+func (m *DBMockStore) GetCart(ctx context.Context, user_id int) (cart_products []CartProduct, err error) {
 	args := m.Called(ctx, user_id)
-	return args.Get(0).([]Product), args.Error(1)
+	return args.Get(0).([]CartProduct), args.Error(1)
 }
