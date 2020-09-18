@@ -32,5 +32,6 @@ func InitMockDB() (s Storer, sqlConn *sqlx.DB, sqlmockInstance sqlmock.Sqlmock) 
 }
 
 func TestExampleTestSuite(t *testing.T) {
-	suite.Run(t, new(ProductTestSuite))
+	suite.Run(t, new(ProductsTestSuite))
+	suite.Run(t, new(FilterTestSuite))
 }

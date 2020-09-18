@@ -12,7 +12,7 @@ import (
 
 const (
 	getProductCount = `SELECT count(id) from Products ;`
-	getProductQuery = `SELECT id FROM products LIMIT $1 OFFSET  $2;`
+	getProductQuery = `SELECT id FROM products limitStr $1 OFFSET  $2;`
 
 	getProductIDQuery   = `SELECT id FROM products`
 	getProductByIDQuery = `SELECT * FROM products WHERE id=$1`
@@ -43,7 +43,7 @@ type Product struct {
 	URLs         pq.StringArray `json:"image_url,omitempty" db:"image_url"`
 }
 
-// Pagination helps to return UI side with number of pages given a limit and page number from Query Parameters
+// Pagination helps to return UI side with number of pages given a limitStr and pageStr number from Query Parameters
 type Pagination struct {
 	Products   []Product `json:"products"`
 	TotalPages int       `json:"total_pages"`
@@ -152,10 +152,10 @@ func (s *pgStore) GetProductByID(ctx context.Context, id int) (product Product, 
 }
 
 // @Title ListProducts
-// @Description Get limited number of Products of particular page
-// @Params req.Context , limit, page
+// @Description Get limited number of Products of particular pageStr
+// @Params req.Context , limitStr, pageStr
 // @Returns Count of Records, error if any
-func (s *pgStore) ListProducts(ctx context.Context, limit string, page string) (count int, products []Product, err error) {
+func (s *pgStore) ListProducts(ctx context.Context, limitStr string, pageStr string) (count int, products []Product, err error) {
 
 	resultCount, err := s.db.Query(getProductCount)
 	if err != nil {
@@ -178,17 +178,17 @@ func (s *pgStore) ListProducts(ctx context.Context, limit string, page string) (
 	}
 
 	// error already handled in product_http
-	ls, _ := strconv.Atoi(limit)
-	ps, _ := strconv.Atoi(page)
+	limit, _ := strconv.Atoi(limitStr)
+	page, _ := strconv.Atoi(pageStr)
 
-	if (count - 1) < (int(ls) * (int(ps) - 1)) {
-		err = fmt.Errorf("Desired Page not found")
-		logger.WithField("err", err.Error()).Error("Page Out Of range")
+	offset := (page - 1) * limit
+	if (count - 1) < (int(limit) * (int(page) - 1)) {
+		err = fmt.Errorf("Desired pageStr not found")
+		logger.WithField("err", err.Error()).Error("pageStr Out Of range")
 		return
 	}
 
-	offset := (ps - 1) * ls
-	result, err := s.db.Query(getProductQuery, ls, offset)
+	result, err := s.db.Query(getProductQuery, limit, offset)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
 		return

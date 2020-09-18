@@ -33,6 +33,7 @@ type Filter struct {
 func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr string, pageStr string) (count int, products []Product, err error) {
 	// We will be checking for SQL Injection as well in this Method only
 	// found flag will help us find out if any of Filter flags were true
+
 	var found bool
 	// helper will be used in making query dynamic.
 	// See how it's getting concatanation added in case a flag was Filter Flag is true
@@ -74,7 +75,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 	}
 
 	getFilterProductCount := `SELECT COUNT(id) FROM products ` + helper + `;`
-	fmt.Println("getFilterProductCount---->", getFilterProductCount)
+	//fmt.Println("getFilterProductCount---->", getFilterProductCount)
 
 	resultCount, err := s.db.Query(getFilterProductCount)
 	if err != nil {
