@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/lib/pq"
+
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -17,9 +19,8 @@ const (
 	getProductByNameQuery = `SELECT * FROM products WHERE name=$1`
 	getCategoryByID       = `SELECT name FROM category WHERE id = $1`
 	insertProductQuery    = `INSERT INTO products ( name, description,
-		  price, discount, tax, quantity, category_id, brand, color, size) VALUES ( 
-		  :name, :description, :price, :discount, :tax, :quantity, :category_id, :brand, :color, :size)`
-
+		  price, discount, tax, quantity, category_id, brand, color, size, image_url) VALUES ( 
+		  :name, :description, :price, :discount, :tax, :quantity, :category_id, :brand, :color, :size, :image_url)`
 	deleteProductIdQuery    = `DELETE FROM products WHERE id = $1`
 	updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2`
 	newInsertRecord         = `SELECT MAX(id) from products`
@@ -29,21 +30,19 @@ const (
 )
 
 type Product struct {
-	Id          int     `db:"id" json:"id"`
-	Name        string  `db:"name" json:"product_title"`
-	Description string  `db:"description" json:"description"`
-	Price       float32 `db:"price" json:"product_price"`
-	Discount    float32 `db:"discount" json:"discount"`
-	Tax         float32 `db:"tax" json:"tax"`
-	Quantity    int     `db:"quantity" json:"stock"`
-	CategoryId  int     `db:"category_id" json:"category_id"`
-
-	CategoryName string `json:"category"`
-	Brand        string `db:"brand" json:"brand"`
-	Color        string `db:"color" json:"color"`
-	Size         string `db:"size" json:"size"`
-
-	URLs []string `db:"image_url" json:"image_url,omitempty"`
+	Id           int            `db:"id" json:"id"`
+	Name         string         `db:"name" json:"product_title"`
+	Description  string         `db:"description" json:"description"`
+	Price        float32        `db:"price" json:"product_price"`
+	Discount     float32        `db:"discount" json:"discount"`
+	Tax          float32        `db:"tax" json:"tax"`
+	Quantity     int            `db:"quantity" json:"stock"`
+	CategoryId   int            `db:"category_id" json:"category_id"`
+	CategoryName string         `json:"category"`
+	Brand        string         `db:"brand" json:"brand"`
+	Color        string         `db:"color" json:"color"`
+	Size         string         `db:"size" json:"size"`
+	URLs         pq.StringArray `json:"image_url,omitempty" db:"image_url"`
 }
 
 // Pagination helps to return UI side with number of pages given a limit and page
@@ -64,7 +63,7 @@ func (product *Product) Validate() (errorResponse map[string]ErrorResponse, vali
 	if product.Price <= 0 {
 		fieldErrors["price"] = "Can't be blank  or less than zero"
 	}
-	if product.Discount < 0 {
+	if product.Discount < 0 || product.Discount > product.Price {
 		fieldErrors["discount"] = "Can't be less than zero"
 	}
 	if product.Tax < 0 {
@@ -151,17 +150,6 @@ func (s *pgStore) GetProductByID(ctx context.Context, Id int) (product Product, 
 	}
 
 	product.CategoryName = category
-
-	// Add Product Image URL's to Product's Object
-	productImage, err := s.GetProductImagesByID(ctx, Id)
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error selecting productImage from database by id " + string(Id))
-		return
-	}
-
-	for j := 0; j < len(productImage); j++ {
-		product.URLs = append(product.URLs, productImage[j].URL)
-	}
 	return
 }
 
@@ -260,22 +248,11 @@ func (s *pgStore) CreateProduct(ctx context.Context, p Product) (createdProduct 
 		return
 	}
 	//length of url
-	urls := len(p.URLs)
 	var number int
 	//new insert record get id number
 	result, err := s.db.Query(newInsertRecord)
 	for result.Next() {
 		err = result.Scan(&number)
-	}
-
-	for i := 0; i < urls; i++ {
-		//insert urls of given records
-		_, err = s.db.Exec(insertProductURLsQuery, number, p.URLs[i])
-		if err != nil {
-			// FAIL : Could not run insert Query
-			logger.WithField("err", err.Error()).Error("Error inserting urls to database: ")
-			return
-		}
 	}
 
 	// Re-select Product and return it
