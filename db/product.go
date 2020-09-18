@@ -23,7 +23,6 @@ const (
 		  :name, :description, :price, :discount, :tax, :quantity, :category_id, :brand, :color, :size, :image_url)`
 	deleteProductIdQuery    = `DELETE FROM products WHERE id = $1`
 	updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2`
-	newInsertRecord         = `SELECT MAX(id) from products`
 	insertProductURLsQuery  = `INSERT INTO productimages (product_id, url) values ($1, $2)`
 	updateProductQuery      = `UPDATE products SET name= $1, description=$2, price=$3, 
 			discount=$4, tax=$5, quantity=$6, category_id=$7, brand=$8, color=$9, size=$10 WHERE id = $11`
@@ -64,7 +63,7 @@ func (product *Product) Validate() (errorResponse map[string]ErrorResponse, vali
 		fieldErrors["price"] = "Can't be blank  or less than zero"
 	}
 	if product.Discount < 0 || product.Discount > product.Price {
-		fieldErrors["discount"] = "Can't be less than zero"
+		fieldErrors["discount"] = "Can't be less than zero or more than Product's Price"
 	}
 	if product.Tax < 0 {
 		fieldErrors["tax"] = "Can't be less than zero"
@@ -99,8 +98,8 @@ func (product *Product) PartialValidate() (errorResponse map[string]ErrorRespons
 	if product.Price < 0 {
 		fieldErrors["price"] = "Can't be blank  or less than zero"
 	}
-	if product.Discount < 0 {
-		fieldErrors["discount"] = "Can't be less than zero"
+	if product.Discount < 0 || product.Discount > product.Price {
+		fieldErrors["discount"] = "Can't be less than zero or more than Product's Price"
 	}
 	if product.Tax < 0 {
 		fieldErrors["tax"] = "Can't be less than zero"
@@ -221,7 +220,6 @@ func (s *pgStore) ListProducts(ctx context.Context, limit string, page string) (
 	return
 }
 
-// CreateNewProduct
 func (s *pgStore) CreateProduct(ctx context.Context, p Product) (createdProduct Product, err error) {
 
 	err = s.db.Get(&createdProduct, getProductByNameQuery, p.Name)
@@ -246,18 +244,10 @@ func (s *pgStore) CreateProduct(ctx context.Context, p Product) (createdProduct 
 		logger.WithField("err", err.Error()).Error("Error commiting transaction inserting product into database: " + string(p.Id))
 		return
 	}
-	//length of url
-	var number int
-	//new insert record get id number
-	result, err := s.db.Query(newInsertRecord)
-	for result.Next() {
-		err = result.Scan(&number)
-	}
 
-	// Re-select Product and return it
-	createdProduct, err = s.GetProductByID(ctx, number)
+	err = s.db.Get(&createdProduct, getProductByNameQuery, p.Name)
 	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error selecting from database with id: " + string(p.Id))
+		logger.WithField("err", err.Error()).Error("Error selecting from database with Name: " + string(p.Name))
 		return
 	}
 	return
