@@ -15,28 +15,39 @@ import (
 // @Failure 400 {object}
 func getCartHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		// request_params := mux.Vars(req)
-		// user_id, err := strconv.Atoi(request_params["user_id"])
 
 		authToken := req.Header["Token"]
+
 		userID, _, err := getDataFromToken(authToken[0])
 		if err != nil {
-			rw.WriteHeader(http.StatusUnauthorized)
-			rw.Write([]byte("Unauthorized"))
+			logger.WithField("err", err.Error()).Error("Error fetching data")
+			responses(rw, http.StatusUnauthorized, errorResponse{
+				Error: messageObject{
+					Message: "Invalid Credentials",
+				},
+			})
 			return
 		}
 
 		cart_products, err := deps.Store.GetCart(req.Context(), int(userID))
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching data")
-			rw.WriteHeader(http.StatusInternalServerError)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Failure in getting data from database",
+				},
+			})
 			return
 		}
 
 		respBytes, err := json.Marshal(cart_products)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error marshaling cart data")
-			rw.WriteHeader(http.StatusInternalServerError)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Failure in marshalling data",
+				},
+			})
 			return
 		}
 

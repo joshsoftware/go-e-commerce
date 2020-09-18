@@ -55,7 +55,7 @@ func JWTKey() []byte {
 
 // JWTExpiryDurationHours - returns duration for jwt expiry in int
 func JWTExpiryDurationHours() int {
-	return int(ReadEnvInt("JWT_EXPIRY_DURATION_HOURS"))
+	return ReadEnvInt("JWT_EXPIRY_DURATION_HOURS")
 }
 
 // ReadEnvInt - reads an environment variable as an integer
