@@ -16,7 +16,7 @@ func (m *DBMockStore) ListProducts(ctx context.Context, limit string, page strin
 	return args.Get(0).(int), args.Get(1).([]Product), args.Error(2)
 }
 
-func (m *DBMockStore) CreateNewProduct(ctx context.Context, p Product) (product Product, err error) {
+func (m *DBMockStore) CreateProduct(ctx context.Context, p Product) (product Product, err error) {
 	args := m.Called(ctx, p)
 	return args.Get(0).(Product), args.Error(1)
 }

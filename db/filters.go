@@ -10,6 +10,11 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
+var (
+	getFilterProductCount = ""
+	getFilterProduct      = ""
+)
+
 // Filter struct is used to help us in Generating a dynamic Filter Query
 type Filter struct {
 	// Below fields are what we may receive as Parameters in request body
@@ -34,6 +39,7 @@ type Filter struct {
 func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limit string, page string) (count int, products []Product, err error) {
 	// We will be checking for SQL Injection as well in this Method only
 	// found flag will help us find out if any of Filter flags were true
+
 	var found bool
 	// helper will be used in making query dynamic.
 	// See how it's getting concatanation added in case a flag was Filter Flag is true
@@ -76,8 +82,8 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limit str
 		helper = ` WHERE ` + helper[:len(helper)-3]
 	}
 
-	getFilterProductCount := `SELECT COUNT(id) FROM products ` + helper + `;`
-	fmt.Println("getFilterProductCount---->", getFilterProductCount)
+	getFilterProductCount += `SELECT COUNT(id) FROM products ` + helper + `;`
+	//fmt.Println("getFilterProductCount---->", getFilterProductCount)
 
 	resultCount, err := s.db.Query(getFilterProductCount)
 	if err != nil {
@@ -113,7 +119,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limit str
 		return
 	}
 
-	getFilterProduct := `SELECT id from Products` + helper
+	getFilterProduct = `SELECT id from Products` + helper
 
 	if filter.PriceFlag == true {
 		getFilterProduct += ` ORDER BY price ` + filter.Price
@@ -121,7 +127,6 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limit str
 
 	//fmt.Println(limit, page)
 	getFilterProduct += ` LIMIT ` + limit + `  OFFSET  (` + page + ` -1) * ` + limit + ` ;`
-	fmt.Println("getFilterProduct---->", getFilterProduct)
 
 	result, err := s.db.Query(getFilterProduct)
 	if err != nil {
