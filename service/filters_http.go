@@ -192,7 +192,7 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 		var products []db.Product
 		if text == "" {
 			// Behave same as List All Products and return
-			count, products, err = deps.Store.ListProducts(req.Context(), limitStr, pageStr)
+			count, products, err = deps.Store.ListProducts(req.Context(), limit, page)
 			if err != nil {
 				logger.WithField("err", err.Error()).Error("Error Fetching Product details or Page out of range")
 				response(rw, http.StatusBadRequest, errorResponse{

@@ -102,7 +102,7 @@ func (suite *FilterTestSuite) TestFilteredProductsFailure() {
 
 var text = "xr"
 
-func (suite *FilterTestSuite) TestSearchProductsSuccess() {
+func (suite *FilterTestSuite) TestSearchProductsCountsSuccess() {
 
 	products := []Product{
 		Product{
@@ -126,6 +126,9 @@ func (suite *FilterTestSuite) TestSearchProductsSuccess() {
 	}
 
 	suite.sqlmock.ExpectBegin()
+	suite.sqlmock.ExpectExec(` SELECT COUNT(p.id) from products p INNER JOIN category c ON p.category_id = c.id WHERE LOWER(p.name) LIKE LOWER('%xr%') OR LOWER(p.brand) LIKE LOWER('%xr%') OR LOWER(c.name) LIKE LOWER('%xr%')  ;`).
+		WillReturnResult(sqlmock.NewResult(1, 2))
+
 	count, searchProducts, err := suite.dbStore.SearchProductsByText(context.Background(), text, "1", "1")
 
 	assert.Nil(suite.T(), err)

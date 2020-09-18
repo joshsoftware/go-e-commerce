@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -13,7 +12,7 @@ import (
 
 const (
 	getProductCount = `SELECT count(id) from Products ;`
-	getProductQuery = `SELECT id FROM products limit $1 OFFSET  $2;`
+	getProductQuery = `SELECT id FROM products limit $1 OFFSET $2;`
 
 	getProductIDQuery   = `SELECT id FROM products`
 	getProductByIDQuery = `SELECT * FROM products WHERE id=$1`
@@ -96,45 +95,6 @@ func (product *Product) Validate() (map[string]ErrorResponse, bool) {
 	return errorResponse, false
 }
 
-func (product *Product) PartialValidate() (map[string]ErrorResponse, bool) {
-	var errorResponse map[string]ErrorResponse
-	var valid bool
-
-	fieldErrors := make(map[string]string)
-
-	if product.Price < 0 {
-		fieldErrors["price"] = "Can't be blank  or less than zero"
-	}
-	if product.Discount < 0 || product.Discount > product.Price {
-		fieldErrors["discount"] = "Can't be less than zero or more than Product's Price"
-	}
-	if product.Tax < 0 {
-		fieldErrors["tax"] = "Can't be less than zero"
-	}
-	// If Quantity gets's < 0 by UpdateProductStockById Method, this is what saves us
-	if product.Quantity < 0 {
-		fieldErrors["available_quantity"] = "Can't be blank or less than zero"
-	}
-	if product.CategoryId < 0 {
-		fieldErrors["category_id"] = "Can't be invalid"
-	}
-
-	if len(fieldErrors) == 0 {
-		valid = true
-		return nil, valid
-	}
-
-	errorResponse = map[string]ErrorResponse{
-		"error": ErrorResponse{
-			Code:    "Invalid_data",
-			Message: "Please Provide valid Product data",
-			Fields:  fieldErrors,
-		},
-	}
-	// TODO Other Validations
-	return errorResponse, false
-}
-
 // @Title GetProductByID
 // @Description Get a Product Object by its Id
 // @Params req.Context, product's Id
@@ -164,7 +124,7 @@ func (s *pgStore) GetProductByID(ctx context.Context, id int) (Product, error) {
 // @Description Get limited number of Products of particular pageStr
 // @Params req.Context , limitStr, pageStr
 // @Returns Count of Records, error if any
-func (s *pgStore) ListProducts(ctx context.Context, limitStr string, pageStr string) (int, []Product, error) {
+func (s *pgStore) ListProducts(ctx context.Context, limit int, page int) (int, []Product, error) {
 
 	var count = 0
 	var products []Product
@@ -190,11 +150,11 @@ func (s *pgStore) ListProducts(ctx context.Context, limitStr string, pageStr str
 	}
 
 	// error already handled in product_http
-	limit, _ := strconv.Atoi(limitStr)
-	page, _ := strconv.Atoi(pageStr)
+	//limit, _ := strconv.Atoi(limitStr)
+	//page, _ := strconv.Atoi(pageStr)
 
 	offset := (page - 1) * limit
-	if (count - 1) < (int(limit) * (int(page) - 1)) {
+	if (count - 1) < (limit * (page - 1)) {
 		err = fmt.Errorf("Desired pageStr not found")
 		logger.WithField("err", err.Error()).Error("pageStr Out Of range")
 		return 0, []Product{}, err
@@ -352,6 +312,11 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 	}
 	if product.Size == "" {
 		product.Size = dbProduct.Size
+	}
+
+	_, valid := product.Validate()
+	if !valid {
+		return Product{}, fmt.Errorf("Product Validation failed. Invalid Fields present in the product e.g Discount is greater than Price")
 	}
 
 	_, err = tx.Exec(updateProductQuery,

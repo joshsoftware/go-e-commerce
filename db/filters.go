@@ -114,7 +114,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 		return 0, []Product{}, err
 	}
 
-	getFilterProduct := `SELECT id from Products` + helper
+	getFilterProduct := `SELECT * from Products` + helper
 
 	if filter.PriceFlag == true {
 		getFilterProduct += ` ORDER BY price ` + filter.Price
@@ -126,31 +126,17 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 	getFilterProduct += ` LIMIT ` + limitStr + `  OFFSET  ` + offsetStr + ` ;`
 	fmt.Println("getFilterProduct---->", getFilterProduct)
 
-	result, err := s.db.Query(getFilterProduct)
+	result, err := s.db.Queryx(getFilterProduct)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
 		return 0, []Product{}, err
 	}
 
-	// idArr stores id's of all Filtered products
-	var idArr []int
-
 	for result.Next() {
-		var id int
-		err = result.Scan(&id)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Couldn't Scan Resulted Product Ids into Id variable")
-			return 0, []Product{}, err
-		}
-		idArr = append(idArr, id)
-	}
-
-	// get All Filtered Products by their ids
-	for i := 0; i < len(idArr); i++ {
 		var product Product
-		product, err = s.GetProductByID(ctx, int(idArr[i]))
+		err = result.StructScan(&product)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error selecting Product from database by id " + string(idArr[i]))
+			logger.WithField("err", err.Error()).Error("Couldn't Scan Resulted Product")
 			return 0, []Product{}, err
 		}
 		products = append(products, product)
@@ -254,7 +240,7 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 	// Query to return Id's of Products where we may find a match in
 	// product's name, description, brand, size, color or in
 	// the category of that products category's name or description
-	getSearchRecordIds := `SELECT p.id from products p
+	getSearchRecordIds := `SELECT * from products p
 		INNER JOIN category c 
 		ON p.category_id = c.id
 		WHERE 
@@ -268,31 +254,17 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 
 	fmt.Println("getSearchRecordIds---->", getSearchRecordIds)
 
-	result, err := s.db.Query(getSearchRecordIds)
+	result, err := s.db.Queryx(getSearchRecordIds)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Results from database")
 		return 0, []Product{}, err
 	}
 
-	// idArr stores id's of all matching search text products
-	var idArr []int
-
 	for result.Next() {
-		var id int
-		err = result.Scan(&id)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Couldn't Scan Resulted Product Ids into Id variable")
-			return 0, []Product{}, err
-		}
-		idArr = append(idArr, id)
-	}
-
-	// get All Filtered Products by their ids
-	for i := 0; i < len(idArr); i++ {
 		var product Product
-		product, err = s.GetProductByID(ctx, int(idArr[i]))
+		err = result.StructScan(&product)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error selecting Product from database by id " + string(idArr[i]))
+			logger.WithField("err", err.Error()).Error("Couldn't Scan Resulted Product")
 			return 0, []Product{}, err
 		}
 		products = append(products, product)

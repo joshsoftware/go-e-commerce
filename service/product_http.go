@@ -66,7 +66,7 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		count, products, err := deps.Store.ListProducts(req.Context(), limitStr, pageStr)
+		count, products, err := deps.Store.ListProducts(req.Context(), limit, page)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error Couldn't find any Product records or Page out of range")
 			response(rw, http.StatusInternalServerError, errorResponse{
@@ -321,22 +321,15 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		errRes, valid := product.PartialValidate()
-		if !valid {
-			response(rw, http.StatusBadRequest, errRes)
-			return
-		}
-
 		var updatedProduct db.Product
 		updatedProduct, err = deps.Store.UpdateProductById(req.Context(), product, id)
 		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
+			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
 			response(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
 					Message: "Internal server error",
 				},
 			})
-			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
 			return
 		}
 
@@ -345,3 +338,5 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 		return
 	})
 }
+
+// TODO test case to delete category

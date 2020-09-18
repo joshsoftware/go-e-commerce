@@ -11,7 +11,7 @@ type DBMockStore struct {
 }
 
 // ListUsers - test mock
-func (m *DBMockStore) ListProducts(ctx context.Context, limitStr string, pageStr string) (count int, product []Product, err error) {
+func (m *DBMockStore) ListProducts(ctx context.Context, limitStr int, pageStr int) (count int, product []Product, err error) {
 	args := m.Called(ctx, limitStr, pageStr)
 	return args.Get(0).(int), args.Get(1).([]Product), args.Error(2)
 }

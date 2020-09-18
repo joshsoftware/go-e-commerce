@@ -45,6 +45,58 @@ var testProduct = Product{
 	URLs:         urls,
 }
 
+func (suite *ProductsTestSuite) TestValidateSuccess() {
+	product := Product{
+		Name:         "test product",
+		Description:  "test description",
+		Price:        123.0,
+		Discount:     10,
+		Tax:          0.5,
+		Quantity:     5,
+		CategoryId:   1,
+		CategoryName: "testing",
+		Brand:        "testing",
+		Color:        "test",
+		Size:         "test",
+		URLs:         []string{"url1", "url2"},
+	}
+
+	_, valid := product.Validate()
+
+	assert.True(suite.T(), valid)
+}
+
+func (suite *ProductsTestSuite) TestValidateFailure() {
+	product := Product{
+		Name:         "",
+		Description:  "test description",
+		Price:        123.0,
+		Discount:     999,
+		Tax:          0.5,
+		Quantity:     5,
+		CategoryId:   1,
+		CategoryName: "testing",
+		Brand:        "testing",
+		Color:        "test",
+		Size:         "test",
+		URLs:         []string{"url1", "url2"},
+	}
+
+	errRes, valid := product.Validate()
+
+	assert.Equal(suite.T(), map[string]ErrorResponse(map[string]ErrorResponse{
+		"error": ErrorResponse{
+			Code:    "Invalid_data",
+			Message: "Please Provide valid Product data",
+			Fields: map[string]string{
+				"discount":     "Can't be less than zero or more than Product's Price",
+				"product_name": "Can't be blank",
+			},
+		},
+	}), errRes)
+	assert.False(suite.T(), valid)
+}
+
 func (suite *ProductsTestSuite) TestCreateProductSuccess() {
 	product := Product{
 		Name:         "test user",
@@ -212,7 +264,7 @@ func (suite *ProductsTestSuite) TestListProductsSuccess() {
 	suite.sqlmock.ExpectQuery(getProductQuery).
 		WillReturnRows(mockedRows)
 
-	_, org, err := suite.dbStore.ListProducts(context.Background(), "1", "1")
+	_, org, err := suite.dbStore.ListProducts(context.Background(), 1, 1)
 
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), []Product{testProduct}, org)
