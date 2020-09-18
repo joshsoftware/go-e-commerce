@@ -50,7 +50,10 @@ type Pagination struct {
 	TotalPages int       `json:"total_pages"`
 }
 
-func (product *Product) Validate() (errorResponse map[string]ErrorResponse, valid bool) {
+func (product *Product) Validate() (map[string]ErrorResponse, bool) {
+	var errorResponse map[string]ErrorResponse
+	var valid bool
+
 	fieldErrors := make(map[string]string)
 
 	if product.Name == "" {
@@ -78,7 +81,7 @@ func (product *Product) Validate() (errorResponse map[string]ErrorResponse, vali
 
 	if len(fieldErrors) == 0 {
 		valid = true
-		return
+		return nil, valid
 	}
 
 	errorResponse = map[string]ErrorResponse{
@@ -88,11 +91,14 @@ func (product *Product) Validate() (errorResponse map[string]ErrorResponse, vali
 			Fields:  fieldErrors,
 		},
 	}
-	// TODO Other Validations
-	return
+
+	return errorResponse, false
 }
 
-func (product *Product) PartialValidate() (errorResponse map[string]ErrorResponse, valid bool) {
+func (product *Product) PartialValidate() (map[string]ErrorResponse, bool) {
+	var errorResponse map[string]ErrorResponse
+	var valid bool
+
 	fieldErrors := make(map[string]string)
 
 	if product.Price < 0 {
@@ -114,7 +120,7 @@ func (product *Product) PartialValidate() (errorResponse map[string]ErrorRespons
 
 	if len(fieldErrors) == 0 {
 		valid = true
-		return
+		return nil, valid
 	}
 
 	errorResponse = map[string]ErrorResponse{
@@ -125,19 +131,20 @@ func (product *Product) PartialValidate() (errorResponse map[string]ErrorRespons
 		},
 	}
 	// TODO Other Validations
-	return
+	return errorResponse, false
 }
 
 // @Title GetProductByID
 // @Description Get a Product Object by its Id
 // @Params req.Context, product's Id
 // @Returns Product Object, error if any
-func (s *pgStore) GetProductByID(ctx context.Context, id int) (product Product, err error) {
+func (s *pgStore) GetProductByID(ctx context.Context, id int) (Product, error) {
 
-	err = s.db.Get(&product, getProductByIDQuery, id)
+	var product Product
+	err := s.db.Get(&product, getProductByIDQuery, id)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error selecting product from database by id: " + string(id))
-		return
+		return Product{}, err
 	}
 
 	// Add category to Product's object
@@ -145,37 +152,40 @@ func (s *pgStore) GetProductByID(ctx context.Context, id int) (product Product, 
 	err = s.db.Get(&category, getCategoryByID, product.CategoryId)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching category from database by product_id: " + string(id))
-		return
+		return Product{}, err
 	}
 
 	product.CategoryName = category
-	return
+	return product, nil
 }
 
 // @Title ListProducts
 // @Description Get limited number of Products of particular pageStr
 // @Params req.Context , limitStr, pageStr
 // @Returns Count of Records, error if any
-func (s *pgStore) ListProducts(ctx context.Context, limitStr string, pageStr string) (count int, products []Product, err error) {
+func (s *pgStore) ListProducts(ctx context.Context, limitStr string, pageStr string) (int, []Product, error) {
+
+	var count = 0
+	var products []Product
 
 	resultCount, err := s.db.Query(getProductCount)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Count of Products from database")
-		return
+		return 0, []Product{}, err
 	}
 
 	for resultCount.Next() {
 		err = resultCount.Scan(&count)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error scanning Count Of Product into integer variable")
-			return
+			return 0, []Product{}, err
 		}
 	}
 
 	if count == 0 {
 		err = fmt.Errorf("No records present")
 		logger.WithField("err", err.Error()).Error("No Products were present in database")
-		return
+		return 0, []Product{}, err
 	}
 
 	// error already handled in product_http
@@ -186,13 +196,13 @@ func (s *pgStore) ListProducts(ctx context.Context, limitStr string, pageStr str
 	if (count - 1) < (int(limit) * (int(page) - 1)) {
 		err = fmt.Errorf("Desired pageStr not found")
 		logger.WithField("err", err.Error()).Error("pageStr Out Of range")
-		return
+		return 0, []Product{}, err
 	}
 
 	result, err := s.db.Query(getProductQuery, limit, offset)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
-		return
+		return 0, []Product{}, err
 	}
 
 	// idArr stores id's of all products
@@ -203,7 +213,7 @@ func (s *pgStore) ListProducts(ctx context.Context, limitStr string, pageStr str
 		err = result.Scan(&id)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Couldn't Scan Product ids")
-			return
+			return 0, []Product{}, err
 		}
 		idArr = append(idArr, id)
 	}
@@ -213,12 +223,12 @@ func (s *pgStore) ListProducts(ctx context.Context, limitStr string, pageStr str
 		product, err = s.GetProductByID(ctx, int(idArr[i]))
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error selecting Product from database by id " + string(idArr[i]))
-			return
+			return 0, []Product{}, err
 		}
 		products = append(products, product)
 	}
 
-	return
+	return count, products, nil
 }
 
 func (s *pgStore) CreateProduct(ctx context.Context, product Product) (Product, error) {
@@ -251,12 +261,14 @@ func (s *pgStore) CreateProduct(ctx context.Context, product Product) (Product, 
 	return product, nil
 }
 
-func (s *pgStore) UpdateProductStockById(ctx context.Context, product Product, id int) (updatedProduct Product, err error) {
+func (s *pgStore) UpdateProductStockById(ctx context.Context, product Product, id int) (Product, error) {
+
+	var updatedProduct Product
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		logger.WithField("err:", err.Error()).Error("Error while initiating update transaction")
-		return
+		return Product{}, err
 	}
 
 	_, err = tx.Exec(updateProductStockQuery,
@@ -266,53 +278,55 @@ func (s *pgStore) UpdateProductStockById(ctx context.Context, product Product, i
 	if err != nil {
 		// FAIL : Could not Update Product
 		logger.WithField("err", err.Error()).Error("Error updating product attribute(s) to database Records not Found:" + string(id))
-		return
+		return Product{}, err
 	}
 
 	err = tx.Commit()
 	if err != nil {
 		// FAIL : transaction commit failed. Will Automatically rollback
 		logger.WithField("err", err.Error()).Error("Error commiting transaction updating product into database: " + string(id))
-		return
+		return Product{}, err
 	}
 
 	updatedProduct, err = s.GetProductByID(ctx, id)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error while getting updated product ")
-		return
+		return Product{}, err
 	}
-	return
+	return updatedProduct, nil
 }
 
-func (s *pgStore) DeleteProductById(ctx context.Context, id int) (err error) {
+func (s *pgStore) DeleteProductById(ctx context.Context, id int) error {
 
 	rows, err := s.db.Exec(deleteProductIdQuery, id)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error deleting product" + string(id))
-		return
+		return err
 	}
 
 	rows_affected, err := rows.RowsAffected()
 	// if there is an error then roes_affected will by default be 0, so err != nil need not be handled separately
 	if rows_affected == 0 {
 		err = fmt.Errorf("Product doesn't exist in db, goodluck deleting it")
+		return err
 	}
-	return
+	return nil
 }
 
-func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int) (updatedProduct Product, err error) {
+func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int) (Product, error) {
 
 	var dbProduct Product
-	err = s.db.Get(&dbProduct, getProductByIDQuery, id)
+	var updatedProduct Product
+	err := s.db.Get(&dbProduct, getProductByIDQuery, id)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error while fetching product ")
-		return
+		return Product{}, err
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		logger.WithField("err:", err.Error()).Error("Error while initiating update Product transaction")
-		return
+		return Product{}, err
 	}
 
 	if product.Name == "" {
@@ -362,20 +376,20 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error updating product attribute(s) to database :" + string(id))
-		return
+		return Product{}, err
 	}
 
 	err = tx.Commit()
 	if err != nil {
 		// FAIL : transaction commit failed. Will Automatically rollback
 		logger.WithField("err", err.Error()).Error("Error commiting transaction updating product into database: " + string(id))
-		return
+		return Product{}, nil
 	}
 
 	updatedProduct, err = s.GetProductByID(ctx, id)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error while getting updated product ")
-		return
+		return Product{}, nil
 	}
-	return
+	return updatedProduct, nil
 }

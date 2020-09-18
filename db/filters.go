@@ -30,11 +30,14 @@ type Filter struct {
 // @Accept	request.Context, Filter struct's object
 // @Success total= (count of filtered products), error=nil
 // @Failure total=0, error= "Some Error"
-func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr string, pageStr string) (count int, products []Product, err error) {
+func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr string, pageStr string) (int, []Product, error) {
 	// We will be checking for SQL Injection as well in this Method only
 	// found flag will help us find out if any of Filter flags were true
 
 	var found bool
+	var count int
+	var products []Product
+
 	// helper will be used in making query dynamic.
 	// See how it's getting concatanation added in case a flag was Filter Flag is true
 	injection := `  `
@@ -66,9 +69,9 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 		var validParameters = regexp.MustCompile(`^[\w ]+$`)
 		// if There are other chracters than word and space
 		if validParameters.MatchString(injection) == false {
-			err = fmt.Errorf("Possible SQL Injection Attack.")
+			err := fmt.Errorf("Possible SQL Injection Attack.")
 			logger.WithField("err", err.Error()).Error("Error In Parameters, special Characters are present.")
-			return
+			return 0, []Product{}, err
 		}
 		// remove that last AND as it will make query invalid
 		helper = ` WHERE ` + helper[:len(helper)-3]
@@ -80,7 +83,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 	resultCount, err := s.db.Query(getFilterProductCount)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error getting Count of Filtered Products from database")
-		return
+		return 0, []Product{}, err
 	}
 
 	// resultCount set should have only 1 record
@@ -88,7 +91,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 		err = resultCount.Scan(&count)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching count of getFilterProductCount from database")
-			return
+			return 0, []Product{}, err
 		}
 		break
 	}
@@ -98,7 +101,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 	if count == 0 {
 		err = fmt.Errorf("No records present")
 		logger.WithField("err", err.Error()).Error("No records were in db for Products")
-		return
+		return 0, []Product{}, err
 	}
 
 	// error already handled in filters_http
@@ -108,7 +111,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 	if (count - 1) < (int(limit) * (int(page) - 1)) {
 		err = fmt.Errorf("Desired Page not found")
 		logger.WithField("err", err.Error()).Error("Page Out Of range")
-		return
+		return 0, []Product{}, err
 	}
 
 	getFilterProduct := `SELECT id from Products` + helper
@@ -126,7 +129,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 	result, err := s.db.Query(getFilterProduct)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
-		return
+		return 0, []Product{}, err
 	}
 
 	// idArr stores id's of all Filtered products
@@ -137,7 +140,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 		err = result.Scan(&id)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Couldn't Scan Resulted Product Ids into Id variable")
-			return
+			return 0, []Product{}, err
 		}
 		idArr = append(idArr, id)
 	}
@@ -148,12 +151,12 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 		product, err = s.GetProductByID(ctx, int(idArr[i]))
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error selecting Product from database by id " + string(idArr[i]))
-			return
+			return 0, []Product{}, err
 		}
 		products = append(products, product)
 	}
 
-	return
+	return count, products, nil
 
 }
 
@@ -162,15 +165,18 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 // @Accept	request.Context, text as string, limitStr, pageStr
 // @Success total= (count of search qualifying records), error=nil
 // @Failure total=0, error= "Some Error"
-func (s *pgStore) SearchRecords(ctx context.Context, text string, limitStr string, pageStr string) (count int, products []Product, err error) {
+func (s *pgStore) SearchRecords(ctx context.Context, text string, limitStr string, pageStr string) (int, []Product, error) {
 	// check for SQL Injection
 	// Only allow words characters like [a-z0-9A-Z] and a space [ ]
+	var count int
+	var products []Product
 	var validParameters = regexp.MustCompile(`^[\w ]+$`)
+
 	// if There are other chracters than word and space
 	if validParameters.MatchString(text) == false {
-		err = fmt.Errorf("Possible SQL Injection Attack.")
+		err := fmt.Errorf("Possible SQL Injection Attack.")
 		logger.WithField("err", err.Error()).Error("Error In Parameters, special Characters are present.")
-		return
+		return 0, []Product{}, err
 	}
 
 	// Split the text into slice of strings, max 10 first words will be considered
@@ -178,9 +184,9 @@ func (s *pgStore) SearchRecords(ctx context.Context, text string, limitStr strin
 
 	// If there are more than 10 words in search, ask user to be less verbose
 	if len(textSlice) > 10 {
-		err = fmt.Errorf("Unnecessary detailed text given.")
+		err := fmt.Errorf("Unnecessary detailed text given.")
 		logger.WithField("err", err.Error()).Error("Error In Parameters, very detailed!.")
-		return
+		return 0, []Product{}, err
 	}
 
 	// Removing Duplicate words from textSlice
@@ -213,7 +219,7 @@ func (s *pgStore) SearchRecords(ctx context.Context, text string, limitStr strin
 
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching count of getSearchCount from database")
-		return
+		return 0, []Product{}, err
 	}
 
 	// countResult set should have only 1 record
@@ -222,7 +228,7 @@ func (s *pgStore) SearchRecords(ctx context.Context, text string, limitStr strin
 		err = countResult.Scan(&count)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching count of getSearchCount from database")
-			return
+			return 0, []Product{}, err
 		}
 		break
 	}
@@ -232,7 +238,7 @@ func (s *pgStore) SearchRecords(ctx context.Context, text string, limitStr strin
 	if count == 0 {
 		err = fmt.Errorf("No records  present")
 		logger.WithField("err", err.Error()).Error("No records were present for that search keyword")
-		return
+		return 0, []Product{}, err
 	}
 
 	// error already handled in filters_http
@@ -242,7 +248,7 @@ func (s *pgStore) SearchRecords(ctx context.Context, text string, limitStr strin
 	if (count - 1) < (int(limit) * (int(page) - 1)) {
 		err = fmt.Errorf("Desired Page not found")
 		logger.WithField("err", err.Error()).Error("Page Out Of range")
-		return
+		return 0, []Product{}, err
 	}
 
 	// Query to return Id's of Products where we may find a match in
@@ -265,7 +271,7 @@ func (s *pgStore) SearchRecords(ctx context.Context, text string, limitStr strin
 	result, err := s.db.Query(getSearchRecordIds)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Results from database")
-		return
+		return 0, []Product{}, err
 	}
 
 	// idArr stores id's of all matching search text products
@@ -276,7 +282,7 @@ func (s *pgStore) SearchRecords(ctx context.Context, text string, limitStr strin
 		err = result.Scan(&id)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Couldn't Scan Resulted Product Ids into Id variable")
-			return
+			return 0, []Product{}, err
 		}
 		idArr = append(idArr, id)
 	}
@@ -287,11 +293,11 @@ func (s *pgStore) SearchRecords(ctx context.Context, text string, limitStr strin
 		product, err = s.GetProductByID(ctx, int(idArr[i]))
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error selecting Product from database by id " + string(idArr[i]))
-			return
+			return 0, []Product{}, err
 		}
 		products = append(products, product)
 	}
 
-	return
+	return count, products, nil
 
 }

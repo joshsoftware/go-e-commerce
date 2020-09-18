@@ -49,10 +49,10 @@ func (suite *ProductsTestSuite) TestCreateProductSuccess() {
 	product := Product{
 		Name:         "test user",
 		Description:  "test database",
-		Price:        123,
+		Price:        123.0,
 		Discount:     10,
 		Tax:          0.5,
-		Quantity:     5.0,
+		Quantity:     5,
 		CategoryId:   1,
 		CategoryName: "testing",
 		Brand:        "testing",
@@ -64,7 +64,7 @@ func (suite *ProductsTestSuite) TestCreateProductSuccess() {
 	suite.sqlmock.ExpectBegin()
 
 	suite.sqlmock.ExpectExec("INSERT INTO product").
-		WithArgs("test user", "test database", 123, 10, 0.5, 5.0, 1, "testing", "testing", "test", "heigh").
+		WithArgs("test user", "test database", 123, 10, 0.5, 5, 1, "testing", "testing", "test", `ARRAY["url1"]`).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	suite.sqlmock.ExpectCommit()

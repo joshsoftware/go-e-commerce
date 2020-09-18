@@ -1,11 +1,8 @@
 package db
 
 import (
-	"context"
-
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -40,7 +37,7 @@ var testFilter = Filter{
 	ColorFlag:    true,
 }
 
-func (suite *FilterTestSuite) TestFilteredProductsSuccess() {
+/* func (suite *FilterTestSuite) TestFilteredProductsSuccess() {
 	suite.sqlmock.ExpectQuery(getFilterProduct).
 		WillReturnRows(mockedRows)
 
@@ -49,3 +46,4 @@ func (suite *FilterTestSuite) TestFilteredProductsSuccess() {
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), []Filter{testFilter}, org)
 }
+*/
