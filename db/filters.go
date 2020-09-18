@@ -165,7 +165,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 // @Accept	request.Context, text as string, limitStr, pageStr
 // @Success total= (count of search qualifying records), error=nil
 // @Failure total=0, error= "Some Error"
-func (s *pgStore) SearchRecords(ctx context.Context, text string, limitStr string, pageStr string) (int, []Product, error) {
+func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitStr string, pageStr string) (int, []Product, error) {
 	// check for SQL Injection
 	// Only allow words characters like [a-z0-9A-Z] and a space [ ]
 	var count int

@@ -205,7 +205,7 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 			goto Skip
 		}
 
-		count, products, err = deps.Store.SearchRecords(req.Context(), text, limitStr, pageStr)
+		count, products, err = deps.Store.SearchProductsByText(req.Context(), text, limitStr, pageStr)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error Couldn't find any matching search records or Page out of range")
 			response(rw, http.StatusBadRequest, errorResponse{

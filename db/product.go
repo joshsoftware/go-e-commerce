@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 
 	logger "github.com/sirupsen/logrus"
@@ -20,9 +21,9 @@ const (
 
 	insertProductQuery = `INSERT INTO products ( name, description,
 		  price, discount, tax, quantity, category_id, brand, color, size, image_url) VALUES ( 
-		  :name, :description, :price, :discount, :tax, :quantity, :category_id, :brand, :color, :size, :image_url);`
+		  :name, :description, :price, :discount, :tax, :quantity, :category_id, :brand, :color, :size, :image_url) RETURNING id;`
 	deleteProductIdQuery    = `DELETE FROM products WHERE id = $1`
-	updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2`
+	updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2 `
 	insertProductURLsQuery  = `INSERT INTO productimages (product_id, url) values ($1, $2)`
 	updateProductQuery      = `UPDATE products SET name= $1, description=$2, price=$3, 
 			discount=$4, tax=$5, quantity=$6, category_id=$7, brand=$8, color=$9, size=$10 WHERE id = $11`
@@ -174,7 +175,7 @@ func (s *pgStore) ListProducts(ctx context.Context, limitStr string, pageStr str
 		return 0, []Product{}, err
 	}
 
-	for resultCount.Next() {
+	if resultCount.Next() {
 		err = resultCount.Scan(&count)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error scanning Count Of Product into integer variable")
@@ -239,18 +240,19 @@ func (s *pgStore) CreateProduct(ctx context.Context, product Product) (Product, 
 		return Product{}, err
 	}
 
-	_, err = tx.NamedExec(insertProductQuery, product)
+	var row *sqlx.Rows
+	row, err = tx.NamedQuery(insertProductQuery, product)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error inserting product to database: " + product.Name)
 		return Product{}, err
 	}
-
-	/* id, err := result.LastInsertId()
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error fetching Product Id from database for product Named: " + string(product.Name))
-		return Product{}, err
+	if row.Next() {
+		err = row.Scan(&product.Id)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error scanning product id from database: " + product.Name)
+			return Product{}, err
+		}
 	}
-	product.Id = int(id) */
 
 	err = tx.Commit()
 	if err != nil {
@@ -262,8 +264,6 @@ func (s *pgStore) CreateProduct(ctx context.Context, product Product) (Product, 
 }
 
 func (s *pgStore) UpdateProductStockById(ctx context.Context, product Product, id int) (Product, error) {
-
-	var updatedProduct Product
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -288,12 +288,7 @@ func (s *pgStore) UpdateProductStockById(ctx context.Context, product Product, i
 		return Product{}, err
 	}
 
-	updatedProduct, err = s.GetProductByID(ctx, id)
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error while getting updated product ")
-		return Product{}, err
-	}
-	return updatedProduct, nil
+	return product, nil
 }
 
 func (s *pgStore) DeleteProductById(ctx context.Context, id int) error {
@@ -316,7 +311,6 @@ func (s *pgStore) DeleteProductById(ctx context.Context, id int) error {
 func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int) (Product, error) {
 
 	var dbProduct Product
-	var updatedProduct Product
 	err := s.db.Get(&dbProduct, getProductByIDQuery, id)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error while fetching product ")
@@ -386,10 +380,5 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 		return Product{}, nil
 	}
 
-	updatedProduct, err = s.GetProductByID(ctx, id)
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error while getting updated product ")
-		return Product{}, nil
-	}
-	return updatedProduct, nil
+	return product, nil
 }
