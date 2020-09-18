@@ -45,18 +45,3 @@ func (m *DBMockStore) GetProductByID(ctx context.Context, id int) (product Produ
 	args := m.Called(ctx, id)
 	return args.Get(0).(Product), args.Error(1)
 }
-
-/* func (m *DBMockStore) FilteredRecords(ctx context.Context, filter Filter, limit string, page string) (product []Product, err error) {
-	args := m.Called(ctx, filter, limit, page)
-	return args.Get(0).([]Product), args.Error(1)
-}
-
-func (m *DBMockStore) FilteredRecordsCount(ctx context.Context, filter Filter) (count int, err error) {
-	args := m.Called(ctx, filter)
-	return args.Get(0).(int), args.Error(1)
-}
-
-func (m *DBMockStore) TotalRecords(ctx context.Context) (count int, err error) {
-	args := m.Called(ctx)
-	return args.Get(0).(int), args.Error(1)
-} */

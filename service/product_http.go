@@ -21,41 +21,41 @@ import (
 func listProductsHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
-		limit := req.URL.Query().Get("limit")
-		page := req.URL.Query().Get("page")
+		limitStr := req.URL.Query().Get("limit")
+		pageStr := req.URL.Query().Get("page")
 
-		if limit == "" {
-			limit = "5"
+		if limitStr == "" {
+			limitStr = "5"
 		}
 
-		if page == "" {
-			page = "1"
+		if pageStr == "" {
+			pageStr = "1"
 		}
 
-		ls, err := strconv.Atoi(limit)
+		limit, err := strconv.Atoi(limitStr)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while converting limit to int")
+			logger.WithField("err", err.Error()).Error("Error while converting limitStr to int")
 			response(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
-					Message: "Error while converting limit to int",
+					Message: "Error while converting limitStr to int",
 				},
 			})
 			return
 		}
 
-		ps, err := strconv.Atoi(page)
+		page, err := strconv.Atoi(pageStr)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while converting page to int")
+			logger.WithField("err", err.Error()).Error("Error while converting pageStr to int")
 			response(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
-					Message: "Error while converting page to int",
+					Message: "Error while converting pageStr to int",
 				},
 			})
 			return
 		}
 
 		// Avoid divide by zero exception and -ve values for page and limit
-		if ls <= 0 || ps <= 0 {
+		if limit <= 0 || page <= 0 {
 			err = fmt.Errorf("limit or page are non-positive")
 			logger.WithField("err", err.Error()).Error("Error limit or page contained invalid value")
 			response(rw, http.StatusBadRequest, errorResponse{
@@ -66,7 +66,7 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		count, products, err := deps.Store.ListProducts(req.Context(), limit, page)
+		count, products, err := deps.Store.ListProducts(req.Context(), limitStr, pageStr)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error Couldn't find any Product records or Page out of range")
 			response(rw, http.StatusInternalServerError, errorResponse{
@@ -78,7 +78,7 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		var pagination db.Pagination
-		pagination.TotalPages = int(math.Ceil(float64(count) / float64(ls)))
+		pagination.TotalPages = int(math.Ceil(float64(count) / float64(limit)))
 
 		pagination.Products = products
 
