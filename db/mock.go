@@ -31,7 +31,6 @@ func (m *DBMockStore) SearchRecords(ctx context.Context, text string, limit stri
 	return args.Get(0).(int), args.Get(1).([]Product), args.Error(2)
 }
 
-// DeleteCoreValue - Deletes the core value of the organization
 func (m *DBMockStore) DeleteProductById(ctx context.Context, id int) (err error) {
 	args := m.Called(ctx, id)
 	return args.Error(0)
@@ -40,11 +39,6 @@ func (m *DBMockStore) DeleteProductById(ctx context.Context, id int) (err error)
 func (m *DBMockStore) UpdateProductStockById(ctx context.Context, p Product, id int) (product Product, err error) {
 	args := m.Called(ctx, p, id)
 	return args.Get(0).(Product), args.Error(1)
-}
-
-func (m *DBMockStore) GetProductImagesByID(ctx context.Context, id int) (productimage []ProductImage, err error) {
-	args := m.Called(ctx, id)
-	return args.Get(0).([]ProductImage), args.Error(1)
 }
 
 func (m *DBMockStore) GetProductByID(ctx context.Context, id int) (product Product, err error) {

@@ -256,13 +256,6 @@ func (s *pgStore) CreateProduct(ctx context.Context, p Product) (createdProduct 
 
 func (s *pgStore) UpdateProductStockById(ctx context.Context, product Product, Id int) (updatedProduct Product, err error) {
 
-	var dbProduct Product
-	err = s.db.Get(&dbProduct, getProductByIDQuery, Id)
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error while fetching product ")
-		return
-	}
-
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		logger.WithField("err:", err.Error()).Error("Error while initiating update transaction")
@@ -275,7 +268,7 @@ func (s *pgStore) UpdateProductStockById(ctx context.Context, product Product, I
 	)
 	if err != nil {
 		// FAIL : Could not Update Product
-		logger.WithField("err", err.Error()).Error("Error updating product attribute(s) to database :" + string(Id))
+		logger.WithField("err", err.Error()).Error("Error updating product attribute(s) to database Records not Found:" + string(Id))
 		return
 	}
 
