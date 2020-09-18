@@ -1,19 +1,20 @@
 package service
 
 import (
+	"strings"
 	"strconv"
 	"encoding/json"
 	"net/http"
 	logger "github.com/sirupsen/logrus"
 )
 
-type successResponse struct {
-	Message string `json: "message"`
-}
+// type successResponse struct {
+// 	Message string `json: "message"`
+// }
 
-type errorResponse struct {
-	Error string `json: "error"`
-}
+// type errorResponse struct {
+// 	Error string `json: "error"`
+// }
 
 func response(rw http.ResponseWriter, status int, responseData interface{}){
 	respBody, err := json.Marshal(responseData)
@@ -29,8 +30,12 @@ func response(rw http.ResponseWriter, status int, responseData interface{}){
 
 func addToCartHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		authToken := req.Header["Token"]
-		cartID, _, err := getDataFromToken(authToken[0])
+		authToken := req.Header.Get("Authorization")
+    if strings.HasPrefix(strings.ToUpper(authToken), "BEARER") {
+        authToken = authToken[len("BEARER "):]
+    }
+
+		cartID, _, err := getDataFromToken(authToken)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Unauthorized user")
 			error := errorResponse {
@@ -62,14 +67,14 @@ func addToCartHandler(deps Dependencies) http.HandlerFunc {
 
 		if rowsAffected != 1 {
 			success := successResponse {
-				Message : "zero rows affected",
+				Data : "zero rows affected",
 			}
 			response(rw, http.StatusOK, success)
 			return
 		}		
 
 		success := successResponse{
-			Message: "Item added successfully",
+			Data: "Item added successfully",
 		}
 		response(rw, http.StatusOK, success)
 	})
@@ -110,14 +115,14 @@ func deleteFromCartHandler(deps Dependencies) http.HandlerFunc {
 
 		if rowsAffected != 1 {
 			success := successResponse {
-				Message : "zero rows affected",
+				Data : "zero rows affected",
 			}
 			response(rw, http.StatusOK, success)
 			return
 		}
 
 		success := successResponse{
-			Message: "Item removed successfully",
+			Data: "Item removed successfully",
 		}
 		response(rw, http.StatusOK, success)
 	})
@@ -168,14 +173,14 @@ func updateIntoCartHandler(deps Dependencies) http.HandlerFunc {
 
 		if rowsAffected != 1 {
 			success := successResponse {
-				Message : "zero rows affected",
+				Data : "zero rows affected",
 			}
 			response(rw, http.StatusOK, success)
 			return
 		}
 
 		success := successResponse{
-			Message : "Quantity updated successfully", 
+			Data : "Quantity updated successfully", 
 		}
 		response(rw, http.StatusOK, success)
 	})
