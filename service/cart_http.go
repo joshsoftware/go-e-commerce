@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	logger "github.com/sirupsen/logrus"
 )
@@ -16,9 +17,12 @@ import (
 func getCartHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
-		authToken := req.Header["Token"]
+		authToken := req.Header.Get("Authorization")
+		if strings.HasPrefix(strings.ToUpper(authToken), "BEARER") {
+			authToken = authToken[len("BEARER "):]
+		}
 
-		userID, _, err := getDataFromToken(authToken[0])
+		userID, _, err := getDataFromToken(authToken)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching data")
 			responses(rw, http.StatusUnauthorized, errorResponse{

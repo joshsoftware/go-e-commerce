@@ -64,7 +64,7 @@ func main() {
 }
 
 func startApp() (err error) {
-	store, err := db.Init()
+	store, err := db.Init() //pg.go - datatype will be &pgStore - *sql.DB
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Database init failed")
 		return
@@ -72,10 +72,14 @@ func startApp() (err error) {
 
 	deps := service.Dependencies{
 		Store: store,
+		// here value assigned to Store which is of type interface Storer ? and value of type &pgStore - *sql.DB
+		// 1st how are we able to create object of Store which is a interface
+		// 2nd how are we assigning it to variable of another type
 	}
 
 	// mux router
-	router := service.InitRouter(deps)
+	router := service.InitRouter(deps) // init router - return mux.NewRouter with all hanldefuncs
+	//in router.go why have in some places we have used hanldefunc and some handle
 
 	// init web server
 	server := negroni.Classic()
