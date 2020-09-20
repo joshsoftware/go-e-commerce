@@ -11,21 +11,16 @@ import (
 )
 
 const (
-	getProductCount = `SELECT count(id) from Products ;`
-	getProductQuery = `SELECT id FROM products limit $1 OFFSET $2;`
-
-	getProductIDQuery   = `SELECT id FROM products`
-	getProductByIDQuery = `SELECT * FROM products WHERE id=$1`
-	getCategoryByID     = `SELECT name FROM category WHERE id = $1`
-
-	insertProductQuery = `INSERT INTO products ( name, description,
-		  price, discount, tax, quantity, category_id, brand, color, size, image_url) VALUES ( 
-		  :name, :description, :price, :discount, :tax, :quantity, :category_id, :brand, :color, :size, :image_url) RETURNING id;`
+	getProductCount     = `SELECT count(id) from Products ;`
+	getProductQuery     = `SELECT * FROM products p INNER JOIN category c ON p.cid = c.cid ORDER BY p.id LIMIT $1 OFFSET $2 ;`
+	getProductByIDQuery = `SELECT * FROM products p INNER JOIN category c ON p.cid = c.cid WHERE p.id=$1`
+	insertProductQuery  = `INSERT INTO products ( name, description,
+		  price, discount, tax, quantity, cid, brand, color, size, image_urls) VALUES ( 
+		  :name, :description, :price, :discount, :tax, :quantity, :cid, :brand, :color, :size, :image_urls) RETURNING id;`
 	deleteProductIdQuery    = `DELETE FROM products WHERE id = $1`
 	updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2 `
-	insertProductURLsQuery  = `INSERT INTO productimages (product_id, url) values ($1, $2)`
 	updateProductQuery      = `UPDATE products SET name= $1, description=$2, price=$3, 
-			discount=$4, tax=$5, quantity=$6, category_id=$7, brand=$8, color=$9, size=$10 WHERE id = $11`
+			discount=$4, tax=$5, quantity=$6, cid=$7, brand=$8, color=$9, size=$10, image_urls=$11 WHERE id = $12`
 )
 
 type Product struct {
@@ -36,12 +31,12 @@ type Product struct {
 	Discount     float32        `db:"discount" json:"discount"`
 	Tax          float32        `db:"tax" json:"tax"`
 	Quantity     int            `db:"quantity" json:"stock"`
-	CategoryId   int            `db:"category_id" json:"category_id"`
-	CategoryName string         `json:"category"`
+	CategoryId   int            `db:"cid" json:"category_id"`
+	CategoryName string         `db:"cname" json:"category",""`
 	Brand        string         `db:"brand" json:"brand"`
-	Color        string         `db:"color" json:"color"`
-	Size         string         `db:"size" json:"size"`
-	URLs         pq.StringArray `json:"image_url,omitempty" db:"image_url"`
+	Color        *string        `db:"color" json:"color,*"`
+	Size         *string        `db:"size" json:"size,*"`
+	URLs         pq.StringArray `db:"image_urls" json:"image_urls,*" `
 }
 
 // Pagination helps to return UI side with number of pages given a limitStr and pageStr number from Query Parameters
@@ -108,15 +103,6 @@ func (s *pgStore) GetProductByID(ctx context.Context, id int) (Product, error) {
 		return Product{}, err
 	}
 
-	// Add category to Product's object
-	var category string
-	err = s.db.Get(&category, getCategoryByID, product.CategoryId)
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error fetching category from database by product_id: " + string(id))
-		return Product{}, err
-	}
-
-	product.CategoryName = category
 	return product, nil
 }
 
@@ -149,10 +135,6 @@ func (s *pgStore) ListProducts(ctx context.Context, limit int, page int) (int, [
 		return 0, []Product{}, err
 	}
 
-	// error already handled in product_http
-	//limit, _ := strconv.Atoi(limitStr)
-	//page, _ := strconv.Atoi(pageStr)
-
 	offset := (page - 1) * limit
 	if (count - 1) < (limit * (page - 1)) {
 		err = fmt.Errorf("Desired pageStr not found")
@@ -160,30 +142,18 @@ func (s *pgStore) ListProducts(ctx context.Context, limit int, page int) (int, [
 		return 0, []Product{}, err
 	}
 
-	result, err := s.db.Query(getProductQuery, limit, offset)
+	result, err := s.db.Queryx(getProductQuery, limit, offset)
+	fmt.Println(getProductQuery, limit, offset)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
 		return 0, []Product{}, err
 	}
 
-	// idArr stores id's of all products
-	var idArr []int
-
 	for result.Next() {
-		var id int
-		err = result.Scan(&id)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Couldn't Scan Product ids")
-			return 0, []Product{}, err
-		}
-		idArr = append(idArr, id)
-	}
-
-	for i := 0; i < len(idArr); i++ {
 		var product Product
-		product, err = s.GetProductByID(ctx, int(idArr[i]))
+		err = result.StructScan(&product)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error selecting Product from database by id " + string(idArr[i]))
+			logger.WithField("err", err.Error()).Error("Couldn't Scan Resulted Product")
 			return 0, []Product{}, err
 		}
 		products = append(products, product)
@@ -307,11 +277,14 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 	if product.Brand == "" {
 		product.Brand = dbProduct.Brand
 	}
-	if product.Color == "" {
-		product.Color = dbProduct.Color
+	if product.Color == nil || *product.Color == "" {
+		*product.Color = *dbProduct.Color
 	}
-	if product.Size == "" {
-		product.Size = dbProduct.Size
+	if product.Size == nil || *product.Color == "" {
+		*product.Size = *dbProduct.Size
+	}
+	if product.URLs == nil {
+		product.URLs = dbProduct.URLs
 	}
 
 	_, valid := product.Validate()
@@ -330,6 +303,7 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 		product.Brand,
 		product.Color,
 		product.Size,
+		product.URLs,
 		id,
 	)
 
@@ -344,6 +318,8 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 		logger.WithField("err", err.Error()).Error("Error commiting transaction updating product into database: " + string(id))
 		return Product{}, nil
 	}
+
+	product.Id = id
 
 	return product, nil
 }

@@ -43,7 +43,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 	injection := `  `
 	helper := `  `
 	if filter.CategoryFlag == true {
-		helper += ` category_id = ` + filter.CategoryId + ` AND`
+		helper += ` cid = ` + filter.CategoryId + ` AND`
 		injection += filter.CategoryId
 		found = true
 	}
@@ -114,7 +114,9 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 		return 0, []Product{}, err
 	}
 
-	getFilterProduct := `SELECT * from Products` + helper
+	getFilterProduct := `SELECT * from products p
+	INNER JOIN category c 
+	ON p.cid = c.cid ` + helper
 
 	if filter.PriceFlag == true {
 		getFilterProduct += ` ORDER BY price ` + filter.Price
@@ -123,7 +125,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 	offset := (page - 1) * limit
 	offsetStr := strconv.Itoa(offset)
 
-	getFilterProduct += ` LIMIT ` + limitStr + `  OFFSET  ` + offsetStr + ` ;`
+	getFilterProduct += ` ORDER BY p.id LIMIT ` + limitStr + `  OFFSET  ` + offsetStr + `  ;`
 	fmt.Println("getFilterProduct---->", getFilterProduct)
 
 	result, err := s.db.Queryx(getFilterProduct)
@@ -184,7 +186,7 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 	// Query to help us get count of all such results
 	getSearchCount := `SELECT COUNT(p.id) from products p
 		INNER JOIN category c 
-		ON p.category_id = c.id
+		ON p.cid = c.cid
 		WHERE `
 
 	helper := `  `
@@ -194,7 +196,7 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 		helper += ` 
 		LOWER(p.name) LIKE LOWER('%` + key + `%') OR 
 		LOWER(p.brand) LIKE LOWER('%` + key + `%') OR 
-		LOWER(c.name) LIKE LOWER('%` + key + `%') OR`
+		LOWER(c.cname) LIKE LOWER('%` + key + `%') OR`
 	}
 
 	// remove that last OR
@@ -242,7 +244,7 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 	// the category of that products category's name or description
 	getSearchRecordIds := `SELECT * from products p
 		INNER JOIN category c 
-		ON p.category_id = c.id
+		ON p.cid = c.cid
 		WHERE 
 		`
 
@@ -250,7 +252,7 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 	offset := (page - 1) * limit
 	offsetStr := strconv.Itoa(offset)
 
-	getSearchRecordIds += ` LIMIT ` + limitStr + ` OFFSET  ` + offsetStr + ` ;`
+	getSearchRecordIds += `  ORDER BY p.id LIMIT ` + limitStr + ` OFFSET  ` + offsetStr + ` ;`
 
 	fmt.Println("getSearchRecordIds---->", getSearchRecordIds)
 
