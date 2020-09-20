@@ -23,7 +23,7 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	// Version 1 API management
 	v1 := fmt.Sprintf("application/vnd.%s.v1", config.AppName())
 
-	router.HandleFunc("/products", listProductsHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1).Name("list")
+	router.HandleFunc("/products", listProductsHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 	router.HandleFunc("/product/{product_id:[0-9]+}", getProductByIdHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 	router.HandleFunc("/createProduct", createProductHandler(deps)).Methods(http.MethodPost).Headers(versionHeader, v1)
 	router.HandleFunc("/product/{product_id:[0-9]+}", deleteProductByIdHandler(deps)).Methods(http.MethodDelete).Headers(versionHeader, v1)

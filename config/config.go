@@ -63,5 +63,6 @@ func checkIfSet(key string) {
 	if !viper.IsSet(key) {
 		err := errors.New(fmt.Sprintf("Key %s is not set", key))
 		panic(err)
+		//logger.WithField("err", err.Error()).Error("Error Couldn't find db!")
 	}
 }
