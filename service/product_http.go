@@ -65,9 +65,8 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 			})
 			return
 		}
-		//TODO Count= TotalCount
-		// Pass limit and page as integer
-		count, products, err := deps.Store.ListProducts(req.Context(), limitStr, pageStr)
+		offset := (page - 1) * limit
+		totalRecords, products, err := deps.Store.ListProducts(req.Context(), limit, offset)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error Couldn't find any Product records or Page out of range")
 			response(rw, http.StatusInternalServerError, errorResponse{
@@ -79,7 +78,7 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		var pagination db.Pagination
-		pagination.TotalPages = int(math.Ceil(float64(count) / float64(limit)))
+		pagination.TotalPages = int(math.Ceil(float64(totalRecords) / float64(limit)))
 
 		pagination.Products = products
 
@@ -153,8 +152,8 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		var createdProduct db.Product
-		createdProduct, err = deps.Store.CreateProduct(req.Context(), product)
+		//var createdProduct db.Product
+		createdProductID, err := deps.Store.CreateProduct(req.Context(), product)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while inserting product")
 			response(rw, http.StatusBadRequest, errorResponse{
@@ -164,7 +163,7 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 			})
 			return
 		}
-		response(rw, http.StatusOK, successResponse{Data: createdProduct})
+		response(rw, http.StatusOK, successResponse{Data: createdProductID})
 		return
 	})
 }
@@ -322,22 +321,15 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		errRes, valid := product.PartialValidate()
-		if !valid {
-			response(rw, http.StatusBadRequest, errRes)
-			return
-		}
-
 		var updatedProduct db.Product
 		updatedProduct, err = deps.Store.UpdateProductById(req.Context(), product, id)
 		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
+			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
 			response(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
 					Message: "Internal server error",
 				},
 			})
-			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
 			return
 		}
 
@@ -346,3 +338,5 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 		return
 	})
 }
+
+// TODO test case to delete category

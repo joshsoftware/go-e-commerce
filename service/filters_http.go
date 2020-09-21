@@ -104,7 +104,9 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 			filter.ColorFlag = true
 		}
 
-		count, products, err := deps.Store.FilteredProducts(req.Context(), filter, limitStr, pageStr)
+		offset := (page - 1) * limit
+		offsetStr := strconv.Itoa(offset)
+		totalRecords, products, err := deps.Store.FilteredProducts(req.Context(), filter, limitStr, offsetStr)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error getting filtered records or Page not Found")
 			response(rw, http.StatusBadRequest, errorResponse{
@@ -116,7 +118,7 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		var pagination db.Pagination
-		pagination.TotalPages = int(math.Ceil(float64(count) / float64(limit)))
+		pagination.TotalPages = int(math.Ceil(float64(totalRecords) / float64(limit)))
 		pagination.Products = products
 
 		response(rw, http.StatusOK, pagination)
@@ -188,11 +190,13 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		var count int
+		var totalRecords int
 		var products []db.Product
+		offset := (page - 1) * limit
+		offsetStr := strconv.Itoa(offset)
 		if text == "" {
 			// Behave same as List All Products and return
-			count, products, err = deps.Store.ListProducts(req.Context(), limitStr, pageStr)
+			totalRecords, products, err = deps.Store.ListProducts(req.Context(), limit, offset)
 			if err != nil {
 				logger.WithField("err", err.Error()).Error("Error Fetching Product details or Page out of range")
 				response(rw, http.StatusBadRequest, errorResponse{
@@ -205,7 +209,7 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 			goto Skip
 		}
 
-		count, products, err = deps.Store.SearchRecords(req.Context(), text, limitStr, pageStr)
+		totalRecords, products, err = deps.Store.SearchProductsByText(req.Context(), text, limitStr, offsetStr)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error Couldn't find any matching search records or Page out of range")
 			response(rw, http.StatusBadRequest, errorResponse{
@@ -216,7 +220,7 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		if (count - 1) < (limit * (int(page) - 1)) {
+		/* if (count - 1) < (limit * (int(page) - 1)) {
 			err = fmt.Errorf("Desired Page not found")
 			logger.WithField("err", err.Error()).Error("Error as page is out of range")
 			response(rw, http.StatusBadRequest, errorResponse{
@@ -225,11 +229,11 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 				},
 			})
 			return
-		}
+		} */
 
 	Skip:
 		var pagination db.Pagination
-		pagination.TotalPages = int(math.Ceil(float64(count) / float64(limit)))
+		pagination.TotalPages = int(math.Ceil(float64(totalRecords) / float64(limit)))
 		pagination.Products = products
 
 		response(rw, http.StatusOK, pagination)
