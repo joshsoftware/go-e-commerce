@@ -72,6 +72,8 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	//router.HandleFunc("/product/{product_id:[0-9]+}", updateProductByIdHandler(deps)).Methods(http.MethodPut).Headers(versionHeader, v1)
 	router.HandleFunc("/footer", getFooterHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 
+	router.HandleFunc("/country_data", countryDataHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
+
 	return
 }
 
