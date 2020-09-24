@@ -2,11 +2,12 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
-
-	"golang.org/x/crypto/bcrypt"
+	"time"
 
 	logger "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -27,17 +28,31 @@ const (
 
 //User is a structure of the user
 type User struct {
-	ID        int    `db:"id" json:"id"`
+	ID         int       `db:"id" json:"id"`
+	FirstName  string    `db:"first_name" json:"first_name"`
+	LastName   string    `db:"last_name" json:"last_name"`
+	Email      string    `db:"email" json:"email"`
+	Mobile     string    `db:"mobile" json:"mobile"`
+	Address    string    `db:"address" json:"address"`
+	Password   string    `db:"password" json:"password"`
+	Country    string    `db:"country" json:"country"`
+	State      string    `db:"state" json:"state"`
+	City       string    `db:"city" json:"city"`
+	IsAdmin    bool      `db:"isadmin" json:"isAdmin"`
+	IsDisabled bool      `db:"isdisabled" json:"isDisabled"`
+	CreatedAt  time.Time `db:"created_at" json:"created_at"`
+}
+
+//UserUpdateParams :user fields to be updated
+type UserUpdateParams struct {
 	FirstName string `db:"first_name" json:"first_name"`
 	LastName  string `db:"last_name" json:"last_name"`
-	Email     string `db:"email" json:"email"`
 	Mobile    string `db:"mobile" json:"mobile"`
 	Address   string `db:"address" json:"address"`
 	Password  string `db:"password" json:"password"`
 	Country   string `db:"country" json:"country"`
 	State     string `db:"state" json:"state"`
 	City      string `db:"city" json:"city"`
-	CreatedAt string `db:"created_at" json:"created_at"`
 }
 
 func (s *pgStore) ListUsers(ctx context.Context) (users []User, err error) {
@@ -60,7 +75,14 @@ func (s *pgStore) GetUser(ctx context.Context, id int) (user User, err error) {
 	return
 }
 
-func (s *pgStore) UpdateUserByID(ctx context.Context, user User, userID int) (err error) {
+func (s *pgStore) UpdateUserByID(ctx context.Context, user UserUpdateParams, userID int) (err error) {
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 8)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("error while creating hash of the password")
+		return err
+	}
+	user.Password = string(hashedPassword)
 
 	_, err = s.db.Exec(
 		updateUserQuery,
@@ -81,37 +103,32 @@ func (s *pgStore) UpdateUserByID(ctx context.Context, user User, userID int) (er
 	return
 }
 
-//ValidatePatchParams function for user
-func (user *User) ValidatePatchParams(u User) (err error) {
+//Validate function to check empty fields
+func (user *UserUpdateParams) Validate() (err error) {
 
-	if u.FirstName != "" {
-		user.FirstName = u.FirstName
+	if user.FirstName == "" {
+		return errors.New("first name cannot be blank")
 	}
-	if u.LastName != "" {
-		user.LastName = u.LastName
+	if user.LastName == "" {
+		return errors.New("last name cannot be blank")
 	}
-	if u.Mobile != "" {
-		user.Mobile = u.Mobile
+	if user.Mobile == "" {
+		return errors.New("mobile cannot be blank")
 	}
-	if u.Password != "" {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), 8)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("error while creating hash of the password")
-			return err
-		}
-		user.Password = string(hashedPassword)
+	if user.Password == "" {
+		return errors.New("password cannot be blank")
 	}
-	if u.Address != "" {
-		user.Address = u.Address
+	if user.Address == "" {
+		return errors.New("address cannot be blank")
 	}
-	if u.Country != "" {
-		user.Country = u.Country
+	if user.Country == "" {
+		return errors.New("country cannot be blank")
 	}
-	if u.State != "" {
-		user.State = u.State
+	if user.State == "" {
+		return errors.New("state cannot be blank")
 	}
-	if u.City != "" {
-		user.City = u.City
+	if user.City == "" {
+		return errors.New("city cannot be blank")
 	}
 	return
 }

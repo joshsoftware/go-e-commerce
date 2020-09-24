@@ -62,7 +62,7 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 
 		//TODO :- get the userID from JWT autentication token
 		userID := 1
-		var user db.User
+		var user db.UserUpdateParams
 
 		err := json.NewDecoder(req.Body).Decode(&user)
 
@@ -76,43 +76,19 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 			})
 			return
 		}
-
-		if user.Email != "" {
-
+		err = user.Validate()
+		if err != nil {
 			rw.WriteHeader(http.StatusBadRequest)
-			logger.WithField("err", "cannot update email")
 			repsonse(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "cannot update email id !!",
+					Message: err.Error(),
 				},
 			})
+			logger.WithField("err", err.Error()).Error("error while validating user's profile")
 			return
 		}
 
-		dbUser, err := deps.Store.GetUser(req.Context(), int(userID))
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("error while fetching User")
-			rw.WriteHeader(http.StatusNotFound)
-			repsonse(rw, http.StatusNotFound, errorResponse{
-				Error: messageObject{
-					Message: "error while fetching users",
-				},
-			})
-			return
-		}
-		err = dbUser.ValidatePatchParams(user)
-		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			repsonse(rw, http.StatusInternalServerError, errorResponse{
-				Error: messageObject{
-					Message: "internal server error",
-				},
-			})
-			logger.WithField("err", err.Error())
-			return
-		}
-
-		err = deps.Store.UpdateUserByID(req.Context(), dbUser, int(userID))
+		err = deps.Store.UpdateUserByID(req.Context(), user, int(userID))
 		if err != nil {
 			rw.WriteHeader(http.StatusInternalServerError)
 			repsonse(rw, http.StatusInternalServerError, errorResponse{
@@ -124,7 +100,19 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		repsonse(rw, http.StatusOK, successResponse{Data: dbUser})
+		uUser, err := deps.Store.GetUser(req.Context(), int(userID))
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("error while fetching User")
+			rw.WriteHeader(http.StatusNotFound)
+			repsonse(rw, http.StatusNotFound, errorResponse{
+				Error: messageObject{
+					Message: "error in fetching user",
+				},
+			})
+			return
+		}
+
+		repsonse(rw, http.StatusOK, successResponse{Data: uUser})
 		return
 
 	})

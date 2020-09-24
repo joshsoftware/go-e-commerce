@@ -23,7 +23,7 @@ func (m *DBMockStore) GetUser(ctx context.Context, id int) (user User, err error
 }
 
 //UpdateUser mock method
-func (m *DBMockStore) UpdateUserByID(ctx context.Context, user User, id int) (err error) {
+func (m *DBMockStore) UpdateUserByID(ctx context.Context, user UserUpdateParams, id int) (err error) {
 	args := m.Called(ctx)
 	return args.Error(0)
 }

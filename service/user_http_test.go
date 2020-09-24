@@ -185,7 +185,7 @@ func (suite *UsersHandlerTestSuite) TestUpdateUserDbFailure() {
 	}
 	suite.dbMock.On("UpdateUserByID", mock.Anything, user, userID).Return(errors.New("Error while updating user"))
 
-	body := ` "id": 1,
+	body := `"id": 1,
 	"first_name": "UpdatedUser",
 	"last_name": "TestUser",
 	"mobile": "TestMobile",
@@ -193,8 +193,7 @@ func (suite *UsersHandlerTestSuite) TestUpdateUserDbFailure() {
 	"password": "TestPass",
 	"country": "TestCountry",
 	"state": "TestState",
-	"city": "TestCity"
-	`
+	"city": "TestCity"`
 
 	recorder := makeHTTPCall(http.MethodPut,
 		"/user/update",

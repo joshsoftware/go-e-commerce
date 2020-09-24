@@ -8,5 +8,5 @@ import (
 type Storer interface {
 	ListUsers(ctx context.Context) (user []User, err error)
 	GetUser(ctx context.Context, id int) (user User, err error)
-	UpdateUserByID(ctx context.Context, user User, id int) (err error)
+	UpdateUserByID(ctx context.Context, user UserUpdateParams, id int) (err error)
 }
