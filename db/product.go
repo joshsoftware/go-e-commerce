@@ -11,53 +11,32 @@ import (
 )
 
 const (
-	getProductCount = `SELECT count(id) from Products ;`
-
-	getProductQuery = `SELECT                 
-		p.id, p.name, p.description, p.price, p.discount, p.tax, p.quantity, 
-		p.category_id, c.name category_name, p.brand, p.color, p.size, p.image_urls
-		FROM   products p
-		INNER JOIN category c
-		ON p.category_id = c.id 
-		LIMIT $1  OFFSET $2;`
-
-	getProductByIDQuery = `SELECT                 
-		p.id, p.name, p.description, p.price, p.discount, p.tax, p.quantity, 
-		p.category_id, c.name category_name, p.brand, p.color, p.size, p.image_urls
-		FROM   products p
-		INNER JOIN category c
-		ON p.category_id=c.id
-		WHERE p.id=$1;`
-
-	insertProductQuery = `INSERT INTO products 
-		(name, description, price, discount, tax, quantity, category_id, brand, color, size, image_urls)
-		VALUES 
-		(:name, :description, :price, :discount, :tax, :quantity, :category_id, :brand, :color,:size, :image_urls) 
-		RETURNING id;`
-
-	deleteProductIdQuery    = `DELETE FROM products WHERE id = $1;`
-	updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2; `
-
-	updateProductQuery = `UPDATE products SET 
-		name= $1, description=$2, price=$3, discount=$4, tax=$5, quantity=$6, category_id=$7, brand=$8, color=$9, size=$10 
-		WHERE id = $11;`
+	getProductCount     = `SELECT count(id) from Products ;`
+	getProductQuery     = `SELECT * FROM products p INNER JOIN category c ON p.cid = c.cid ORDER BY p.id LIMIT $1 OFFSET $2 ;`
+	getProductByIDQuery = `SELECT * FROM products p INNER JOIN category c ON p.cid = c.cid WHERE p.id=$1`
+	insertProductQuery  = `INSERT INTO products ( name, description,
+		  price, discount, tax, quantity, cid, brand, color, size, image_urls) VALUES ( 
+		  :name, :description, :price, :discount, :tax, :quantity, :cid, :brand, :color, :size, :image_urls) RETURNING id;`
+	deleteProductIdQuery    = `DELETE FROM products WHERE id = $1`
+	updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2 `
+	updateProductQuery      = `UPDATE products SET name= $1, description=$2, price=$3, 
+			discount=$4, tax=$5, quantity=$6, cid=$7, brand=$8, color=$9, size=$10, image_urls=$11 WHERE id = $12`
 )
 
 type Product struct {
-	Id           int     `db:"id" json:"id"`
-	Name         string  `db:"name" json:"product_title"`
-	Description  string  `db:"description" json:"description"`
-	Price        float32 `db:"price" json:"product_price"`
-	Discount     float32 `db:"discount" json:"discount"`
-	Tax          float32 `db:"tax" json:"tax"`
-	Quantity     int     `db:"quantity" json:"stock"`
-	CategoryId   int     `db:"category_id" json:"category_id"`
-	CategoryName string  `db:"category_name" json:"category"`
-	Brand        string  `db:"brand" json:"brand"`
-	Color        string  `db:"color" json:"color"`
-	Size         string  `db:"size" json:"size"`
-	//TODO image_urls
-	URLs pq.StringArray `json:"image_url,omitempty" db:"image_urls"`
+	Id           int            `db:"id" json:"id"`
+	Name         string         `db:"name" json:"product_title"`
+	Description  string         `db:"description" json:"description"`
+	Price        float32        `db:"price" json:"product_price"`
+	Discount     float32        `db:"discount" json:"discount"`
+	Tax          float32        `db:"tax" json:"tax"`
+	Quantity     int            `db:"quantity" json:"stock"`
+	CategoryId   int            `db:"cid" json:"category_id"`
+	CategoryName string         `db:"cname" json:"category",""`
+	Brand        string         `db:"brand" json:"brand"`
+	Color        *string        `db:"color" json:"color,*"`
+	Size         *string        `db:"size" json:"size,*"`
+	URLs         pq.StringArray `db:"image_urls" json:"image_urls,*" `
 }
 
 // Pagination helps to return UI side with number of pages given a limitStr and pageStr number from Query Parameters
@@ -278,11 +257,14 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 	if product.Brand == "" {
 		product.Brand = dbProduct.Brand
 	}
-	if product.Color == "" {
-		product.Color = dbProduct.Color
+	if product.Color == nil || *product.Color == "" {
+		*product.Color = *dbProduct.Color
 	}
-	if product.Size == "" {
-		product.Size = dbProduct.Size
+	if product.Size == nil || *product.Color == "" {
+		*product.Size = *dbProduct.Size
+	}
+	if product.URLs == nil {
+		product.URLs = dbProduct.URLs
 	}
 
 	_, valid := product.Validate()
@@ -301,6 +283,7 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 		product.Brand,
 		product.Color,
 		product.Size,
+		product.URLs,
 		id,
 	)
 
@@ -315,6 +298,8 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 		logger.WithField("err", err.Error()).Error("Error commiting transaction updating product into database: " + string(id))
 		return Product{}, nil
 	}
+
+	product.Id = id
 
 	return product, nil
 }

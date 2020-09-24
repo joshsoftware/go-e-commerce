@@ -45,3 +45,8 @@ func (m *DBMockStore) GetProductByID(ctx context.Context, id int) (product Produ
 	args := m.Called(ctx, id)
 	return args.Get(0).(Product), args.Error(1)
 }
+
+func (m *DBMockStore) UpdateProductById(ctx context.Context, product Product, id int) (updatedProduct Product, err error) {
+	args := m.Called(ctx, product, id)
+	return args.Get(0).(Product), args.Error(1)
+}

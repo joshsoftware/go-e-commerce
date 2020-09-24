@@ -14,14 +14,14 @@ var (
 		COUNT(p.id)
 		FROM   products p
 		INNER JOIN category c
-		ON p.category_id = c.id`
+		ON p.cid = c.cid`
 
 	filterProduct = `SELECT                 
 		p.id, p.name, p.description, p.price, p.discount, p.tax, p.quantity, 
-		p.category_id, c.name category_name, p.brand, p.color, p.size, p.image_urls
+		p.cid, c.cname, p.brand, p.color, p.size, p.image_urls
 		FROM   products p
 		INNER JOIN category c
-		ON p.category_id = c.id`
+		ON p.cid = c.cid`
 )
 
 type Filter struct {
@@ -50,11 +50,12 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 	var totalRecords int
 	var products []Product
 
+	// helper will be used in making query dynamic.
+	// See how it's getting concatanation added in case a flag was Filter Flag is true
 	sqlRegexp := ``
 	isFiltered := ``
-
-	if filter.CategoryFlag {
-		isFiltered += ` p.category_id = ` + filter.CategoryId + ` AND`
+	if filter.CategoryFlag == true {
+		isFiltered += ` c.cid = ` + filter.CategoryId + ` AND`
 		sqlRegexp += filter.CategoryId
 		found = true
 	}
@@ -84,7 +85,6 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 	}
 
 	getFilterProductCount := filterProductCount + isFiltered + `;`
-
 	resultCount, err := s.db.Query(getFilterProductCount)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error getting Count of Filtered Products from database")
@@ -106,7 +106,16 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 		getFilterProduct += ` ORDER BY p.price ` + filter.Price
 	}
 
-	getFilterProduct += ` LIMIT ` + limitStr + `  OFFSET  ` + offsetStr + ` ;`
+	getFilterProduct = `SELECT * from products p
+	INNER JOIN category c 
+	ON p.cid = c.cid ` + isFiltered
+
+	if filter.PriceFlag == true {
+		getFilterProduct += ` ORDER BY price ` + filter.Price
+	}
+
+	getFilterProduct += ` ORDER BY p.id LIMIT ` + limitStr + `  OFFSET  ` + offsetStr + `  ;`
+	fmt.Println("getFilterProduct---->", getFilterProduct)
 
 	err = s.db.Select(&products, getFilterProduct)
 	if err != nil {
@@ -157,7 +166,10 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 	}
 
 	// Query to help us get count of all such results
-	getSearchCount := filterProductCount
+	getSearchCount := `SELECT COUNT(p.id) from products p
+		INNER JOIN category c 
+		ON p.cid = c.cid
+		WHERE `
 
 	isFiltered := ``
 
@@ -166,13 +178,15 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 		isFiltered += ` 
 		LOWER(p.name) LIKE LOWER('%` + key + `%') OR 
 		LOWER(p.brand) LIKE LOWER('%` + key + `%') OR 
-		LOWER(c.name) LIKE LOWER('%` + key + `%') OR`
+		LOWER(c.cname) LIKE LOWER('%` + key + `%') OR`
 	}
 
 	// remove that last OR
-	isFiltered = ` WHERE ` + isFiltered[:len(isFiltered)-2]
+	isFiltered = isFiltered[:len(isFiltered)-2]
 
 	getSearchCount += isFiltered + ` ;`
+	fmt.Println("getsearchProduct---->", getSearchCount)
+
 	countResult, err := s.db.Query(getSearchCount)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching count of getSearchCount from database")
@@ -190,9 +204,11 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 		break
 	}
 
-	getSearchRecord := filterProduct
+	getSearchRecord := filterProduct + ` WHERE `
 	getSearchRecord += isFiltered
 	getSearchRecord += ` LIMIT ` + limitStr + ` OFFSET  ` + offsetStr + ` ;`
+
+	fmt.Println("getsearchRecords---->", getSearchRecord)
 
 	err = s.db.Select(&products, getSearchRecord)
 	if err != nil {

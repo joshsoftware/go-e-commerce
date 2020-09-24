@@ -6,11 +6,11 @@ CREATE TABLE IF NOT EXISTS products (
 	discount   float DEFAULT 0,
 	quantity	int NOT NULL ,
 	tax float DEFAULT 0,
-	category_id	int NOT NULL ,
+	cid	int NOT NULL ,
 	brand varchar(50) NOT NULL ,
-	color varchar(50) NOT NULL,
-	size varchar(50) NOT NULL,
-	image_urls text[] NOT NULL,
-	FOREIGN KEY(category_id) 
-	REFERENCES Category(id) ON DELETE CASCADE ON UPDATE CASCADE
+	color varchar(50) ,
+	size varchar(50) ,
+	image_urls text[],
+	FOREIGN KEY(cid) 
+	REFERENCES Category(cid) ON DELETE CASCADE ON UPDATE CASCADE
 );
