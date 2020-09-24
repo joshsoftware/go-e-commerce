@@ -25,7 +25,7 @@ func (m *DBMockStore) DeleteFromCart(ctx context.Context, cartID int, productID 
 	return int64(args.Int(0)), args.Error(1)
 }
 
-func (m *DBMockStore)	UpdateIntoCart(ctx context.Context, cartID int, productID int, quantity int) (rowsAffected int64,err error){
+func (m *DBMockStore)	UpdateIntoCart(ctx context.Context, quantity int, cartID int, productID int) (rowsAffected int64,err error){
 	args := m.Called(ctx, cartID, productID, quantity)
 	return int64(args.Int(0)), args.Error(1)
 }

@@ -3,7 +3,7 @@ package service
 import (
 	"strings"
 	"strconv"
-	"encoding/json"
+	// "encoding/json"
 	"net/http"
 	logger "github.com/sirupsen/logrus"
 )
@@ -16,17 +16,17 @@ import (
 // 	Error string `json: "error"`
 // }
 
-func response(rw http.ResponseWriter, status int, responseData interface{}){
-	respBody, err := json.Marshal(responseData)
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("error while marshling")
-		rw.WriteHeader(http.StatusInternalServerError)
-		return 
-	}
-	rw.Header().Add("Content-Type","application/json")
-	rw.WriteHeader(status)
-	rw.Write(respBody)
-}
+// func response(rw http.ResponseWriter, status int, responseData interface{}){
+// 	respBody, err := json.Marshal(responseData)
+// 	if err != nil {
+// 		logger.WithField("err", err.Error()).Error("error while marshling")
+// 		rw.WriteHeader(http.StatusInternalServerError)
+// 		return 
+// 	}
+// 	rw.Header().Add("Content-Type","application/json")
+// 	rw.WriteHeader(status)
+// 	rw.Write(respBody)
+// }
 
 func addToCartHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -41,7 +41,7 @@ func addToCartHandler(deps Dependencies) http.HandlerFunc {
 			error := errorResponse {
 				Error : "Unauthorized user",
 			}
-			response(rw, http.StatusUnauthorized, error)
+			responses(rw, http.StatusUnauthorized, error)
 			return
 		}
 
@@ -51,17 +51,17 @@ func addToCartHandler(deps Dependencies) http.HandlerFunc {
 			error := errorResponse {
 				Error : "product_id missing",
 			}
-			response(rw, http.StatusBadRequest, error)
+			responses(rw, http.StatusBadRequest, error)
 			return
 		}
 
 		rowsAffected, err := deps.Store.AddToCart(req.Context(), int(cartID), productID)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("error while adding to cart")
+			logger.WithField("err", err.Error()).Error("Error while adding to cart")
 			error := errorResponse {
 				Error : "could not add item",
 			}
-			response(rw, http.StatusInternalServerError, error)
+			responses(rw, http.StatusInternalServerError, error)
 			return
 		}
 
@@ -69,27 +69,31 @@ func addToCartHandler(deps Dependencies) http.HandlerFunc {
 			success := successResponse {
 				Data : "zero rows affected",
 			}
-			response(rw, http.StatusOK, success)
+			responses(rw, http.StatusOK, success)
 			return
 		}		
 
 		success := successResponse{
 			Data: "Item added successfully",
 		}
-		response(rw, http.StatusOK, success)
+		responses(rw, http.StatusOK, success)
 	})
 }
 
 func deleteFromCartHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		authToken := req.Header["Token"]
-		cartID, _, err := getDataFromToken(authToken[0])
+		authToken := req.Header.Get("Authorization")
+    if strings.HasPrefix(strings.ToUpper(authToken), "BEARER") {
+        authToken = authToken[len("BEARER "):]
+    }
+
+    cartID, _, err := getDataFromToken(authToken)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Unauthorized user")
 			error := errorResponse {
 				Error : "Unauthorized user",
 			}
-			response(rw, http.StatusUnauthorized, error)
+			responses(rw, http.StatusUnauthorized, error)
 			return
 		}
 
@@ -99,7 +103,7 @@ func deleteFromCartHandler(deps Dependencies) http.HandlerFunc {
 			error := errorResponse {
 				Error : "product_id missing",
 			}
-			response(rw, http.StatusBadRequest, error)
+			responses(rw, http.StatusBadRequest, error)
 			return
 		}
 
@@ -109,7 +113,7 @@ func deleteFromCartHandler(deps Dependencies) http.HandlerFunc {
 			error := errorResponse {
 				Error : "could not remove item",
 			}
-			response(rw, http.StatusInternalServerError, error)
+			responses(rw, http.StatusInternalServerError, error)
 			return 
 		}
 
@@ -117,27 +121,31 @@ func deleteFromCartHandler(deps Dependencies) http.HandlerFunc {
 			success := successResponse {
 				Data : "zero rows affected",
 			}
-			response(rw, http.StatusOK, success)
+			responses(rw, http.StatusOK, success)
 			return
 		}
 
 		success := successResponse{
 			Data: "Item removed successfully",
 		}
-		response(rw, http.StatusOK, success)
+		responses(rw, http.StatusOK, success)
 	})
 }
 
 func updateIntoCartHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		authToken := req.Header["Token"]
-		cartID, _, err := getDataFromToken(authToken[0])
+		authToken := req.Header.Get("Authorization")
+    if strings.HasPrefix(strings.ToUpper(authToken), "BEARER") {
+        authToken = authToken[len("BEARER "):]
+    }
+		
+		cartID, _, err := getDataFromToken(authToken)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Unauthorized user")
 			error := errorResponse {
 				Error : "Unauthorized user",
 			}
-			response(rw, http.StatusUnauthorized, error)
+			responses(rw, http.StatusUnauthorized, error)
 			return
 		}
 		
@@ -147,7 +155,7 @@ func updateIntoCartHandler(deps Dependencies) http.HandlerFunc {
 			error := errorResponse {
 				Error : "product_id missing",
 			}
-			response(rw, http.StatusBadRequest, error)
+			responses(rw, http.StatusBadRequest, error)
 			return
 		}
 
@@ -157,7 +165,7 @@ func updateIntoCartHandler(deps Dependencies) http.HandlerFunc {
 			error := errorResponse {
 				Error : "quantity missing",
 			}
-			response(rw, http.StatusBadRequest, error)
+			responses(rw, http.StatusBadRequest, error)
 			return 
 		}
 		
@@ -167,7 +175,7 @@ func updateIntoCartHandler(deps Dependencies) http.HandlerFunc {
 			error := errorResponse {
 				Error : "could not update quantity",
 			}
-			response(rw, http.StatusInternalServerError, error)
+			responses(rw, http.StatusInternalServerError, error)
 			return
 		}
 
@@ -175,13 +183,13 @@ func updateIntoCartHandler(deps Dependencies) http.HandlerFunc {
 			success := successResponse {
 				Data : "zero rows affected",
 			}
-			response(rw, http.StatusOK, success)
+			responses(rw, http.StatusOK, success)
 			return
 		}
 
 		success := successResponse{
 			Data : "Quantity updated successfully", 
 		}
-		response(rw, http.StatusOK, success)
+		responses(rw, http.StatusOK, success)
 	})
 }
