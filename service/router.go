@@ -73,6 +73,7 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	router.HandleFunc("/footer", getFooterHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 
 	router.HandleFunc("/country_data", countryDataHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
+	router.PathPrefix("/static/products").Handler(http.StripPrefix("/static", http.FileServer(http.Dir("./assets/"))))
 
 	return
 }
