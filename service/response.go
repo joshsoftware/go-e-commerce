@@ -32,7 +32,8 @@ func responses(rw http.ResponseWriter, status int, responseBody interface{}) {
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	rw.Header().Add("Content-Type", "application/json")
+
+	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(status)
 	rw.Write(respBytes)
 }

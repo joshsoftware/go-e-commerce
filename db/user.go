@@ -32,9 +32,13 @@ const (
 		($1, $2, $3, $4, $5, $6 ,$7,$8) where id = $9 `
 
 	getUserQuery = `SELECT * from users where id=$1`
+
+	deleteUserQuery  = `DELETE FROM users WHERE id=$1`
+	disableUserQuery = `UPDATE users SET isdisabled =$1 WHERE id=$2`
+	enableUserQuery  = `UPDATE users SET isdisabled =$1 WHERE id=$2`
 )
 
-//User is a structure of the user
+//User Struct for declaring attributes of User
 type User struct {
 	ID         int       `db:"id" json:"id"`
 	FirstName  string    `db:"first_name" json:"first_name"`
@@ -263,4 +267,29 @@ func (user *User) ValidatePatchParams(u User) (err error) {
 	return
 }
 
-//TODO add function for aunthenticating user
+func (s *pgStore) DisableUserByID(ctx context.Context, userID int) (err error) {
+	_, err = s.db.Exec(disableUserQuery, true, userID)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("Error disabling User")
+		return
+	}
+	return
+}
+
+func (s *pgStore) EnableUserByID(ctx context.Context, userID int) (err error) {
+	_, err = s.db.Exec(enableUserQuery, false, userID)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("Error enabling User")
+		return
+	}
+	return
+}
+
+func (s *pgStore) DeleteUserByID(ctx context.Context, userID int) (err error) {
+	_, err = s.db.Exec(deleteUserQuery, userID)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("Error Deleting User")
+		return
+	}
+	return
+}

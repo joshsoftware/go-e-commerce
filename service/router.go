@@ -36,25 +36,17 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	//Router for User Logout
 	router.Handle("/logout", jwtMiddleWare(userLogoutHandler(deps), deps)).Methods(http.MethodDelete).Headers(versionHeader, v1)
 
-	//Router for Get User from ID
+	//Router for users operations
 	router.Handle("/user", jwtMiddleWare(userMiddleware(getUserHandler(deps), deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
-
 	router.Handle("/admin", jwtMiddleWare(adminMiddleware(getUserHandler(deps), deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
-
 	router.Handle("/users", jwtMiddleWare(adminMiddleware(listUsersHandler(deps), deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
-	// router.HandleFunc("/users", listUsersHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
-
-	//Router for Get All Users
-	// router.Handle("/users", jwtMiddleWare(listUsersHandler(deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
-
-	//Router for Get User from ID
-	// router.Handle("/user", jwtMiddleWare(getUserHandler(deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
-
 	router.Handle("/user/update", jwtMiddleWare(userMiddleware(updateUserHandler(deps), deps), deps)).Methods(http.MethodPatch).Headers(versionHeader, v1)
 	router.Handle("/admin/update", jwtMiddleWare(adminMiddleware(updateUserHandler(deps), deps), deps)).Methods(http.MethodPatch).Headers(versionHeader, v1)
+	router.Handle("/user/{id:[0-9]+}", jwtMiddleWare(adminMiddleware(deleteUserHandler(deps), deps), deps)).Methods(http.MethodDelete).Headers(versionHeader, v1)
+	router.Handle("/user/disable/{id:[0-9]+}", jwtMiddleWare(adminMiddleware(disableUserHandler(deps), deps), deps)).Methods(http.MethodPatch).Headers(versionHeader, v1)
+	router.Handle("/user/enable/{id:[0-9]+}", jwtMiddleWare(adminMiddleware(enableUserHandler(deps), deps), deps)).Methods(http.MethodPatch).Headers(versionHeader, v1)
 
-	// router.HandleFunc("/products", listProductsHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
-
+	// routes for product operations
 	router.HandleFunc("/products", listProductsHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 	router.HandleFunc("/product/{product_id:[0-9]+}", getProductByIdHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 	router.Handle("/createProduct", jwtMiddleWare(adminMiddleware(createProductHandler(deps), deps), deps)).Methods(http.MethodPost).Headers(versionHeader, v1)
@@ -63,18 +55,16 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	router.HandleFunc("/product/stock", updateProductStockByIdHandler(deps)).Methods(http.MethodPut).Headers(versionHeader, v1)
 	router.HandleFunc("/products/search", getProductBySearchHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 	router.HandleFunc("/product/{product_id:[0-9]+}", updateProductByIdHandler(deps)).Methods(http.MethodPut).Headers(versionHeader, v1)
-
-	router.Handle("/cart", jwtMiddleWare(userMiddleware(getCartHandler(deps), deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
+	router.PathPrefix("/static/products").Handler(http.StripPrefix("/static", http.FileServer(http.Dir("./assets/"))))
 
 	//routes for cart operations
+	router.Handle("/cart", jwtMiddleWare(userMiddleware(getCartHandler(deps), deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 	router.Handle("/cart", jwtMiddleWare(userMiddleware(addToCartHandler(deps), deps), deps)).Methods(http.MethodPost).Headers(versionHeader, v1)
 	router.Handle("/cart", jwtMiddleWare(userMiddleware(removeFromCartHandler(deps), deps), deps)).Methods(http.MethodDelete).Headers(versionHeader, v1)
 	router.Handle("/cart", jwtMiddleWare(userMiddleware(updateIntoCartHandler(deps), deps), deps)).Methods(http.MethodPut).Headers(versionHeader, v1)
-	//router.HandleFunc("/product/{product_id:[0-9]+}", updateProductByIdHandler(deps)).Methods(http.MethodPut).Headers(versionHeader, v1)
-	router.HandleFunc("/footer", getFooterHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 
+	router.HandleFunc("/footer", getFooterHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 	router.HandleFunc("/country_data", countryDataHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
-	router.PathPrefix("/static/products").Handler(http.StripPrefix("/static", http.FileServer(http.Dir("./assets/"))))
 	router.PathPrefix("/assets/").Handler(http.StripPrefix("/assets", http.FileServer(http.Dir("./assets/"))))
 
 	return
