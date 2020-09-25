@@ -3,10 +3,10 @@ package db
 import (
 	"context"
 	"fmt"
-	"log"
+	"io/ioutil"
+	"mime/multipart"
 	"os"
-	"path/filepath"
-	"strings"
+	"regexp"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -154,12 +154,55 @@ func (s *pgStore) ListProducts(ctx context.Context, limit int, offset int) (int,
 	return totalRecords, products, nil
 }
 
-func (s *pgStore) CreateProduct(ctx context.Context, product Product) (int, error) {
+func (s *pgStore) CreateProduct(ctx context.Context, product Product, images []*multipart.FileHeader) (int, error) {
+
+	if images == nil {
+		goto skipImageInsertion
+	}
+
+	for i, _ := range images {
+		image, err := images[i].Open()
+		defer image.Close()
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while decoding image Data, probably invalid image")
+			return 0, err
+		}
+
+		extensionRegex := regexp.MustCompile(`[.]+.*`)
+		extension := extensionRegex.Find([]byte(images[i].Filename))
+		// normally our extensions be like .jpg, .jpeg, .png etc
+		if len(extension) < 2 || len(extension) > 5 {
+			err = fmt.Errorf("Couldn't get extension of file!")
+			logger.WithField("err", err.Error()).Error("Error while getting image Extension. Re-check the image file extension!")
+
+			return 0, err
+		}
+
+		directoryPath := "assets/productImages"
+
+		tempFile, err := ioutil.TempFile(directoryPath, product.Name+"-*"+string(extension))
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
+			return 0, err
+		}
+		defer tempFile.Close()
+
+		imageBytes, err := ioutil.ReadAll(image)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while reading image File")
+			return 0, err
+		}
+		tempFile.Write(imageBytes)
+		product.URLs = append(product.URLs, tempFile.Name()[len(directoryPath)+1:])
+	}
+
+skipImageInsertion:
 
 	var row *sqlx.Rows
 	row, err := s.db.NamedQuery(insertProductQuery, product)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error inserting product to database: " + product.Name)
+		// handle removing image files
 		return 0, err
 	}
 	if row.Next() {
@@ -203,10 +246,11 @@ func (s *pgStore) DeleteProductById(ctx context.Context, id int) error {
 		err = fmt.Errorf("Product doesn't exist in db, goodluck deleting it")
 		return err
 	}
+	// try deleting images, don't throw an error
 	return nil
 }
 
-func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int) (Product, error) {
+func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int, images []*multipart.FileHeader) (Product, error) {
 
 	var dbProduct Product
 	err := s.db.Get(&dbProduct, getProductByIDQuery, id)
@@ -215,28 +259,47 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 		return Product{}, err
 	}
 
-	if product.URLs != nil {
-		//fmt.Println("Db product name--->", dbProduct.Name)
-		var files []string
+	if images == nil {
+		goto skipImageUpdation
+	}
 
-		root := "./assets/productImages/"
-		err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-			files = append(files, path)
-			return nil
-		})
+	for i, _ := range images {
+		image, err := images[i].Open()
+		defer image.Close()
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("cannot fetch products images path from assets/productImages dir for updation")
+			logger.WithField("err", err.Error()).Error("Error while decoding image Data, probably invalid image")
 			return Product{}, err
 		}
-		for _, file := range files {
-			if strings.Index(file, dbProduct.Name) > 0 {
-				err := os.Remove(file)
-				if err != nil {
-					log.Fatal(err)
-				}
-			}
+
+		extensionRegex := regexp.MustCompile(`[.]+.*`)
+		extension := extensionRegex.Find([]byte(images[i].Filename))
+		// normally our extensions be like .jpg, .jpeg, .png etc
+		if len(extension) < 2 || len(extension) > 5 {
+			err = fmt.Errorf("Couldn't get extension of file!")
+			logger.WithField("err", err.Error()).Error("Error while getting image Extension. Re-check the image file extension!")
+
+			return Product{}, err
 		}
+
+		directoryPath := "assets/productImages"
+
+		tempFile, err := ioutil.TempFile(directoryPath, dbProduct.Name+"-*"+string(extension))
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
+			return Product{}, err
+		}
+		defer tempFile.Close()
+
+		imageBytes, err := ioutil.ReadAll(image)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while reading image File")
+			return Product{}, err
+		}
+		tempFile.Write(imageBytes)
+		product.URLs = append(product.URLs, tempFile.Name()[len(directoryPath)+1:])
 	}
+
+skipImageUpdation:
 
 	if product.Name == "" {
 		product.Name = dbProduct.Name
@@ -259,22 +322,41 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 	if product.CategoryId == 0 {
 		product.CategoryId = dbProduct.CategoryId
 	}
+	if product.CategoryName == "" {
+		product.CategoryName = dbProduct.CategoryName
+	}
 	if product.Brand == "" {
 		product.Brand = dbProduct.Brand
 	}
 	if product.Color == nil || *product.Color == "" {
-		*product.Color = *dbProduct.Color
+		product.Color = dbProduct.Color
 	}
-	if product.Size == nil || *product.Color == "" {
-		*product.Size = *dbProduct.Size
-	}
-	if product.URLs == nil {
-		product.URLs = dbProduct.URLs
+	if product.Size == nil || *product.Size == "" {
+		product.Size = dbProduct.Size
 	}
 
 	_, valid := product.Validate()
 	if !valid {
 		return Product{}, fmt.Errorf("Product Validation failed. Invalid Fields present in the product e.g Discount is greater than Price")
+	}
+
+	// Update images only after validations
+	if product.URLs != nil {
+		files := dbProduct.URLs
+
+		root := "./assets/productImages/"
+
+		for _, file := range files {
+			file = root + file
+			fmt.Println(file)
+			err := os.Remove(file)
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error Couldn't remove the file!")
+			}
+		}
+
+	} else {
+		product.URLs = dbProduct.URLs
 	}
 
 	_, err = s.db.Exec(updateProductQuery,

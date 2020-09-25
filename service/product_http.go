@@ -2,11 +2,9 @@ package service
 
 import (
 	"fmt"
-	"io/ioutil"
 	"joshsoftware/go-e-commerce/db"
 	"math"
 	"net/http"
-	"regexp"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -157,7 +155,7 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 
 		// grab the filename
 		contents := formdata.Value
-		images, imageData := formdata.File["images"]
+		images := formdata.File["images"]
 		//err = req.ParseForm()
 
 		//grab product
@@ -180,66 +178,7 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		if imageData == false {
-			product.URLs = nil
-			goto skipImageInsertion
-		}
-
-		for i, _ := range images {
-			image, err := images[i].Open()
-			defer image.Close()
-			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while decoding image Data")
-				response(rw, http.StatusBadRequest, errorResponse{
-					Error: messageObject{
-						Message: "Invalid Image !",
-					},
-				})
-				return
-			}
-
-			extensionRegex := regexp.MustCompile(`[.]+.*`)
-			extension := extensionRegex.Find([]byte(images[i].Filename))
-			if len(extension) < 2 || len(extension) > 5 {
-				err = fmt.Errorf("Couldn't get extension of file!")
-				logger.WithField("err", err.Error()).Error("Error while getting image Extension.")
-				response(rw, http.StatusInternalServerError, errorResponse{
-					Error: messageObject{
-						Message: "Re-check the image file extension!",
-					},
-				})
-				return
-			}
-
-			tempFile, err := ioutil.TempFile("assets/productImages", product.Name+"-*"+string(extension))
-			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
-				response(rw, http.StatusInternalServerError, errorResponse{
-					Error: messageObject{
-						Message: "Couldn't  create temporary storage!",
-					},
-				})
-				return
-			}
-			defer tempFile.Close()
-
-			imageBytes, err := ioutil.ReadAll(image)
-			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while reading image File")
-				response(rw, http.StatusInternalServerError, errorResponse{
-					Error: messageObject{
-						Message: "Couldn't read the image file!",
-					},
-				})
-				return
-			}
-			tempFile.Write(imageBytes)
-			product.URLs = append(product.URLs, tempFile.Name())
-		}
-
-	skipImageInsertion:
-
-		createdProductID, err := deps.Store.CreateProduct(req.Context(), product)
+		createdProductID, err := deps.Store.CreateProduct(req.Context(), product, images)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while inserting product")
 			response(rw, http.StatusBadRequest, errorResponse{
@@ -411,7 +350,7 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 
 		// grab the filename
 		contents := formdata.Value
-		images, imageData := formdata.File["images"]
+		images := formdata.File["images"]
 		//err = req.ParseForm()
 
 		//grab product
@@ -427,67 +366,9 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 			})
 			return
 		}
-		if imageData == false {
-			product.URLs = nil
-			goto skipImageUpdation
-		}
-
-		for i, _ := range images {
-			image, err := images[i].Open()
-			defer image.Close()
-			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while decoding image Data")
-				response(rw, http.StatusBadRequest, errorResponse{
-					Error: messageObject{
-						Message: "Invalid Image !",
-					},
-				})
-				return
-			}
-
-			extensionRegex := regexp.MustCompile(`[.]+.*`)
-			extension := extensionRegex.Find([]byte(images[i].Filename))
-			if len(extension) < 2 || len(extension) > 5 {
-				err = fmt.Errorf("Couldn't get extension of file!")
-				logger.WithField("err", err.Error()).Error("Error while getting image Extension.")
-				response(rw, http.StatusInternalServerError, errorResponse{
-					Error: messageObject{
-						Message: "Re-check the image file extension!",
-					},
-				})
-				return
-			}
-
-			tempFile, err := ioutil.TempFile("assets/productImages", product.Name+"-*"+string(extension))
-			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
-				response(rw, http.StatusInternalServerError, errorResponse{
-					Error: messageObject{
-						Message: "Couldn't  create temporary storage!",
-					},
-				})
-				return
-			}
-			defer tempFile.Close()
-
-			imageBytes, err := ioutil.ReadAll(image)
-			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while reading image File")
-				response(rw, http.StatusInternalServerError, errorResponse{
-					Error: messageObject{
-						Message: "Couldn't read the image file!",
-					},
-				})
-				return
-			}
-			tempFile.Write(imageBytes)
-			product.URLs = append(product.URLs, tempFile.Name())
-		}
-
-	skipImageUpdation:
 
 		var updatedProduct db.Product
-		updatedProduct, err = deps.Store.UpdateProductById(req.Context(), product, id)
+		updatedProduct, err = deps.Store.UpdateProductById(req.Context(), product, id, images)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
 			response(rw, http.StatusInternalServerError, errorResponse{
