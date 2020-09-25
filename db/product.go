@@ -24,19 +24,19 @@ const (
 )
 
 type Product struct {
-	Id           int            `db:"id" json:"id"`
-	Name         string         `db:"name" json:"product_title"`
-	Description  string         `db:"description" json:"description"`
-	Price        float32        `db:"price" json:"product_price"`
-	Discount     float32        `db:"discount" json:"discount"`
-	Tax          float32        `db:"tax" json:"tax"`
-	Quantity     int            `db:"quantity" json:"stock"`
-	CategoryId   int            `db:"cid" json:"category_id"`
-	CategoryName string         `db:"cname" json:"category",""`
-	Brand        string         `db:"brand" json:"brand"`
-	Color        *string        `db:"color" json:"color,*"`
-	Size         *string        `db:"size" json:"size,*"`
-	URLs         pq.StringArray `db:"image_urls" json:"image_urls,*" `
+	Id           int            `db:"id" json:"id" schema:"-"`
+	Name         string         `db:"name" json:"product_title" schema:"product_title"`
+	Description  string         `db:"description" json:"description" schema:"description"`
+	Price        float32        `db:"price" json:"product_price" schema:"product_price"`
+	Discount     float32        `db:"discount" json:"discount" schema:"discount"`
+	Tax          float32        `db:"tax" json:"tax" schema:"tax"`
+	Quantity     int            `db:"quantity" json:"stock" schema:"stock"`
+	CategoryId   int            `db:"cid" json:"category_id" schema:"category_id"`
+	CategoryName string         `db:"cname" json:"category" schema:"category"`
+	Brand        string         `db:"brand" json:"brand" schema:"brand"`
+	Color        *string        `db:"color" json:"color,*" schema:"color,*"`
+	Size         *string        `db:"size" json:"size,*" schema:"size,*"`
+	URLs         pq.StringArray `db:"image_urls" json:"image_urls,*"  schema:"-"`
 }
 
 // Pagination helps to return UI side with number of pages given a limitStr and pageStr number from Query Parameters

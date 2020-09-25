@@ -1,14 +1,16 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"joshsoftware/go-e-commerce/db"
 	"math"
 	"net/http"
+	"regexp"
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/schema"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -87,6 +89,8 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 	})
 }
 
+var decoder = schema.NewDecoder()
+
 // @ Title getProductById
 // @ Description get single product by its id
 // @ Router /product/product_id [get]
@@ -135,12 +139,36 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
 		var product db.Product
-		err := json.NewDecoder(req.Body).Decode(&product)
+
+		// Parse input, multipart/form-data
+		err := req.ParseMultipartForm(15 << 20) // 15 MB Max File Size
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while decoding product")
+			logger.WithField("err", err.Error()).Error("Error while parsing the Product form")
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Invalid json body",
+					Message: "Invalid Form Data!",
+				},
+			})
+			return
+		}
+
+		// Retrive file from posted data
+		formdata := req.MultipartForm
+
+		// grab the filename
+		contents := formdata.Value
+		images := formdata.File["images"]
+		//err = req.ParseForm()
+
+		//grab product
+		fmt.Println(contents)
+		err = decoder.Decode(&product, contents)
+		fmt.Println(product)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while decoding product data from the form")
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Invalid form contents",
 				},
 			})
 			return
@@ -152,6 +180,59 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
+		for i, _ := range images {
+			image, err := images[i].Open()
+			defer image.Close()
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error while decoding image Data")
+				response(rw, http.StatusBadRequest, errorResponse{
+					Error: messageObject{
+						Message: "Invalid Image !",
+					},
+				})
+				return
+			}
+
+			extensionRegex := regexp.MustCompile(`[.]+.*`)
+			extension := extensionRegex.Find([]byte(images[i].Filename))
+			if len(extension) < 2 || len(extension) > 5 {
+				err = fmt.Errorf("Couldn't get extension of file!")
+				logger.WithField("err", err.Error()).Error("Error while getting image Extension.")
+				response(rw, http.StatusInternalServerError, errorResponse{
+					Error: messageObject{
+						Message: "Re-check the image file extension!",
+					},
+				})
+				return
+			}
+
+			tempFile, err := ioutil.TempFile("assets", product.Name+"-*"+string(extension))
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
+				response(rw, http.StatusInternalServerError, errorResponse{
+					Error: messageObject{
+						Message: "Couldn't  create temporary storage!",
+					},
+				})
+				return
+			}
+			defer tempFile.Close()
+
+			imageBytes, err := ioutil.ReadAll(image)
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error while reading image File")
+				response(rw, http.StatusInternalServerError, errorResponse{
+					Error: messageObject{
+						Message: "Couldn't read the image file!",
+					},
+				})
+				return
+			}
+			tempFile.Write(imageBytes)
+			product.URLs = append(product.URLs, tempFile.Name())
+		}
+
+		//var createdProduct db.Product
 		createdProductID, err := deps.Store.CreateProduct(req.Context(), product)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while inserting product")
@@ -308,18 +389,90 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		var product db.Product
-		err = json.NewDecoder(req.Body).Decode(&product)
+
+		err = req.ParseMultipartForm(15 << 20) // 15 MB Max File Size
 		if err != nil {
-			rw.WriteHeader(http.StatusBadRequest)
-			logger.WithField("err", err.Error()).Error("Error while decoding user")
+			logger.WithField("err", err.Error()).Error("Error while parsing the Product form")
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Internal server error",
+					Message: "Invalid Form Data!",
+				},
+			})
+			return
+		}
+		// Retrive file from posted data
+		formdata := req.MultipartForm
+
+		// grab the filename
+		contents := formdata.Value
+		images := formdata.File["images"]
+		//err = req.ParseForm()
+
+		//grab product
+		fmt.Println(contents)
+		err = decoder.Decode(&product, contents)
+		fmt.Println(product)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while decoding product data from the form")
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Invalid form contents",
 				},
 			})
 			return
 		}
 
+		for i, _ := range images {
+			image, err := images[i].Open()
+			defer image.Close()
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error while decoding image Data")
+				response(rw, http.StatusBadRequest, errorResponse{
+					Error: messageObject{
+						Message: "Invalid Image !",
+					},
+				})
+				return
+			}
+
+			extensionRegex := regexp.MustCompile(`[.]+.*`)
+			extension := extensionRegex.Find([]byte(images[i].Filename))
+			if len(extension) < 2 || len(extension) > 5 {
+				err = fmt.Errorf("Couldn't get extension of file!")
+				logger.WithField("err", err.Error()).Error("Error while getting image Extension.")
+				response(rw, http.StatusInternalServerError, errorResponse{
+					Error: messageObject{
+						Message: "Re-check the image file extension!",
+					},
+				})
+				return
+			}
+
+			tempFile, err := ioutil.TempFile("assets", product.Name+"-*"+string(extension))
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
+				response(rw, http.StatusInternalServerError, errorResponse{
+					Error: messageObject{
+						Message: "Couldn't  create temporary storage!",
+					},
+				})
+				return
+			}
+			defer tempFile.Close()
+
+			imageBytes, err := ioutil.ReadAll(image)
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error while reading image File")
+				response(rw, http.StatusInternalServerError, errorResponse{
+					Error: messageObject{
+						Message: "Couldn't read the image file!",
+					},
+				})
+				return
+			}
+			tempFile.Write(imageBytes)
+			product.URLs = append(product.URLs, tempFile.Name())
+		}
 		var updatedProduct db.Product
 		updatedProduct, err = deps.Store.UpdateProductById(req.Context(), product, id)
 		if err != nil {
@@ -337,5 +490,3 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 		return
 	})
 }
-
-// TODO test case to delete category
