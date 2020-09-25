@@ -3,7 +3,6 @@ package service
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"joshsoftware/go-e-commerce/db"
 	"net/http"
 
@@ -62,27 +61,61 @@ func (suite *CartHandlerTestSuite) TestGetCartSuccess() {
 
 	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
 	assert.Equal(suite.T(), testCartProduct, actual)
+
 	suite.dbMock.AssertExpectations(suite.T())
 
 }
 
-func (suite *CartHandlerTestSuite) TestGetCartDbFailure() {
+func (suite *CartHandlerTestSuite) TestGetCartDbFailureFetchError() {
 	suite.dbMock.On("GetCart", mock.Anything, mock.Anything).Return(
 		[]db.CartProduct{},
-		errors.New("Error in fetching data"),
+		errors.New("Error fetching data from database"),
 	)
-	// suite.dbMock.On("GetCart", mock.Anything, mock.Anything).Return(
-	// 	[]db.CartProduct{},
-	// 	errors.New(""),
-	// )
-	recorder := makeHTTPCall(http.MethodGet,
+
+	recorder := makeHTTPCallWithJWTMiddleware(http.MethodGet,
 		"/cart",
 		"/cart",
 		"",
 		getCartHandler(Dependencies{Store: suite.dbMock}),
 	)
-	fmt.Println(recorder.Code)
+
 	assert.Equal(suite.T(), http.StatusInternalServerError, recorder.Code)
+	assert.Equal(suite.T(), `{"error":"Error fetching data from database"}`, recorder.Body.String())
 
 	suite.dbMock.AssertExpectations(suite.T())
 }
+
+func (suite *CartHandlerTestSuite) TestGetCartDbFailureJSONMarshallError() {
+	suite.dbMock.On("GetCart", mock.Anything, mock.Anything).Return(
+		[]db.CartProduct{},
+		// x.
+		errors.New("Error marshaling cart data"),
+	)
+	recorder := makeHTTPCallWithJWTMiddleware(http.MethodGet,
+		"/cart",
+		"/cart",
+		"",
+		getCartHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusInternalServerError, recorder.Code)
+	// assert.Equal(suite.T(), `{"error":"Error marshaling cart data"}`, recorder.Body.String())
+	suite.dbMock.AssertExpectations(suite.T())
+}
+
+// func (suite *CartHandlerTestSuite) TestGetCartDbFailureAuthorizationError() {
+// 	suite.dbMock.On("GetCart", mock.Anything, mock.Anything).Return(
+// 		[]db.CartProduct{},
+// 		errors.New("Error fetching data from token"),
+// 	)
+// 	recorder := makeHTTPCallWithJWTMiddleware(http.MethodGet,
+// 		"/cart",
+// 		"/cart",
+// 		"",
+// 		getCartHandler(Dependencies{Store: suite.dbMock}),
+// 	)
+// 	fmt.Println(recorder.Code, "Authooo", http.StatusUnauthorized)
+// 	assert.Equal(suite.T(), http.StatusUnauthorized, recorder.Code)
+
+// 	suite.dbMock.AssertExpectations(suite.T())
+// }
