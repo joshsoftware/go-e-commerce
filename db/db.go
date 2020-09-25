@@ -10,7 +10,7 @@ type Storer interface {
 	SearchProductsByText(context.Context, string, string, string) (int, []Product, error)
 	CreateProduct(context.Context, Product) (int, error)
 	DeleteProductById(context.Context, int) error
-	UpdateProductById(context.Context, Product, int, bool) (Product, error)
+	UpdateProductById(context.Context, Product, int) (Product, error)
 	UpdateProductStockById(context.Context, Product, int) (Product, error)
 	GetProductByID(context.Context, int) (Product, error)
 }

@@ -116,7 +116,7 @@ func (s *pgStore) GetProductByID(ctx context.Context, id int) (Product, error) {
 func (s *pgStore) ListProducts(ctx context.Context, limit int, offset int) (int, []Product, error) {
 
 	var totalRecords int
-	var product []Product
+	var products []Product
 
 	resultCount, err := s.db.Query(getProductCount)
 	if err != nil {
@@ -132,31 +132,32 @@ func (s *pgStore) ListProducts(ctx context.Context, limit int, offset int) (int,
 		}
 	}
 
-	err = s.db.Select(&product, getProductQuery, limit, offset)
+	if totalRecords-1 < offset {
+		err = fmt.Errorf("Page out of Range!")
+		logger.WithField("err", err.Error()).Error("Error Offset is greater than total records")
+		return 0, []Product{}, err
+
+	}
+
+	err = s.db.Select(&products, getProductQuery, limit, offset)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
 		return 0, []Product{}, err
 	}
 
-	if product == nil {
+	if products == nil {
 		err = fmt.Errorf("Desired page not found")
 		logger.WithField("err", err.Error()).Error("page Out Of range")
 		return 0, []Product{}, err
 	}
 
-	return totalRecords, product, nil
+	return totalRecords, products, nil
 }
 
 func (s *pgStore) CreateProduct(ctx context.Context, product Product) (int, error) {
 
-	tx, err := s.db.Beginx()
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error beginning product insert transaction in db, CreateProduct with Name: " + product.Name)
-		return 0, err
-	}
-
 	var row *sqlx.Rows
-	row, err = tx.NamedQuery(insertProductQuery, product)
+	row, err := s.db.NamedQuery(insertProductQuery, product)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error inserting product to database: " + product.Name)
 		return 0, err
@@ -169,36 +170,19 @@ func (s *pgStore) CreateProduct(ctx context.Context, product Product) (int, erro
 		}
 	}
 	row.Close()
-	err = tx.Commit()
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error commiting transaction inserting product into database: " + string(product.Name))
-		return 0, err
-	}
+
 	return product.Id, nil
 }
 
 func (s *pgStore) UpdateProductStockById(ctx context.Context, product Product, id int) (Product, error) {
 
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		logger.WithField("err:", err.Error()).Error("Error while initiating update transaction")
-		return Product{}, err
-	}
-
-	_, err = tx.Exec(updateProductStockQuery,
+	_, err := s.db.Exec(updateProductStockQuery,
 		product.Quantity,
 		id,
 	)
 	if err != nil {
 		// FAIL : Could not Update Product
 		logger.WithField("err", err.Error()).Error("Error updating product attribute(s) to database Records not Found:" + string(id))
-		return Product{}, err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		// FAIL : transaction commit failed. Will Automatically rollback
-		logger.WithField("err", err.Error()).Error("Error commiting transaction updating product into database: " + string(id))
 		return Product{}, err
 	}
 
@@ -222,7 +206,7 @@ func (s *pgStore) DeleteProductById(ctx context.Context, id int) error {
 	return nil
 }
 
-func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int, imageData bool) (Product, error) {
+func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int) (Product, error) {
 
 	var dbProduct Product
 	err := s.db.Get(&dbProduct, getProductByIDQuery, id)
@@ -231,33 +215,27 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 		return Product{}, err
 	}
 
-	if imageData {
+	if product.URLs != nil {
 		//fmt.Println("Db product name--->", dbProduct.Name)
 		var files []string
 
-		root := "./assets"
+		root := "./assets/productImages/"
 		err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 			files = append(files, path)
 			return nil
 		})
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("canot fetch products images in assets dir")
+			logger.WithField("err", err.Error()).Error("cannot fetch products images path from assets/productImages dir for updation")
 			return Product{}, err
 		}
 		for _, file := range files {
 			if strings.Index(file, dbProduct.Name) > 0 {
-				e := os.Remove(file)
-				if e != nil {
-					log.Fatal(e)
+				err := os.Remove(file)
+				if err != nil {
+					log.Fatal(err)
 				}
 			}
 		}
-	}
-
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		logger.WithField("err:", err.Error()).Error("Error while initiating update Product transaction")
-		return Product{}, err
 	}
 
 	if product.Name == "" {
@@ -299,7 +277,7 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 		return Product{}, fmt.Errorf("Product Validation failed. Invalid Fields present in the product e.g Discount is greater than Price")
 	}
 
-	_, err = tx.Exec(updateProductQuery,
+	_, err = s.db.Exec(updateProductQuery,
 		product.Name,
 		product.Description,
 		product.Price,
@@ -317,13 +295,6 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error updating product attribute(s) to database :" + string(id))
 		return Product{}, err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		// FAIL : transaction commit failed. Will Automatically rollback
-		logger.WithField("err", err.Error()).Error("Error commiting transaction updating product into database: " + string(id))
-		return Product{}, nil
 	}
 
 	product.Id = id

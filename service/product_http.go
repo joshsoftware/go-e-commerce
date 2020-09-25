@@ -157,7 +157,7 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 
 		// grab the filename
 		contents := formdata.Value
-		images := formdata.File["images"]
+		images, imageData := formdata.File["images"]
 		//err = req.ParseForm()
 
 		//grab product
@@ -178,6 +178,11 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 		if !valid {
 			response(rw, http.StatusBadRequest, errRes)
 			return
+		}
+
+		if imageData == false {
+			product.URLs = nil
+			goto skipImageInsertion
 		}
 
 		for i, _ := range images {
@@ -206,7 +211,7 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 				return
 			}
 
-			tempFile, err := ioutil.TempFile("assets", product.Name+"-*"+string(extension))
+			tempFile, err := ioutil.TempFile("assets/productImages", product.Name+"-*"+string(extension))
 			if err != nil {
 				logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
 				response(rw, http.StatusInternalServerError, errorResponse{
@@ -232,7 +237,8 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 			product.URLs = append(product.URLs, tempFile.Name())
 		}
 
-		//var createdProduct db.Product
+	skipImageInsertion:
+
 		createdProductID, err := deps.Store.CreateProduct(req.Context(), product)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while inserting product")
@@ -377,7 +383,6 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 
 		vars := mux.Vars(req)
 		var product db.Product
-		var imageData bool
 
 		id, err := strconv.Atoi(vars["product_id"])
 		if err != nil {
@@ -406,7 +411,7 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 
 		// grab the filename
 		contents := formdata.Value
-		images := formdata.File["images"]
+		images, imageData := formdata.File["images"]
 		//err = req.ParseForm()
 
 		//grab product
@@ -422,8 +427,9 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 			})
 			return
 		}
-		if images != nil {
-			imageData = true
+		if imageData == false {
+			product.URLs = nil
+			goto skipImageUpdation
 		}
 
 		for i, _ := range images {
@@ -452,7 +458,7 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 				return
 			}
 
-			tempFile, err := ioutil.TempFile("assets", product.Name+"-*"+string(extension))
+			tempFile, err := ioutil.TempFile("assets/productImages", product.Name+"-*"+string(extension))
 			if err != nil {
 				logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
 				response(rw, http.StatusInternalServerError, errorResponse{
@@ -478,8 +484,10 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 			product.URLs = append(product.URLs, tempFile.Name())
 		}
 
+	skipImageUpdation:
+
 		var updatedProduct db.Product
-		updatedProduct, err = deps.Store.UpdateProductById(req.Context(), product, id, imageData)
+		updatedProduct, err = deps.Store.UpdateProductById(req.Context(), product, id)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
 			response(rw, http.StatusInternalServerError, errorResponse{
