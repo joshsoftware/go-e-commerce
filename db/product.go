@@ -128,6 +128,13 @@ func (s *pgStore) ListProducts(ctx context.Context, limit int, offset int) (int,
 		}
 	}
 
+	if totalRecords-1 < offset {
+		err = fmt.Errorf("Page out of Range!")
+		logger.WithField("err", err.Error()).Error("Error Offset is greater than total records")
+		return 0, []Product{}, err
+
+	}
+
 	err = s.db.Select(&product, getProductQuery, limit, offset)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")

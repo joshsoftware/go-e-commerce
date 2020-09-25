@@ -4,21 +4,20 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	logger "github.com/sirupsen/logrus"
 )
 
 var (
-	filterProductCount = `SELECT                 
+	filterProductCount = `SELECT
 		COUNT(p.id)
 		FROM   products p
 		INNER JOIN category c
 		ON p.cid = c.cid`
 
-	filterProduct = `SELECT                 
-		p.id, p.name, p.description, p.price, p.discount, p.tax, p.quantity, 
-		p.cid, c.cname, p.brand, p.color, p.size, p.image_urls
+	filterProduct = `SELECT *
 		FROM   products p
 		INNER JOIN category c
 		ON p.cid = c.cid`
@@ -53,7 +52,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 	// helper will be used in making query dynamic.
 	// See how it's getting concatanation added in case a flag was Filter Flag is true
 	sqlRegexp := ``
-	isFiltered := ``
+	isFiltered := `   `
 	if filter.CategoryFlag == true {
 		isFiltered += ` c.cid = ` + filter.CategoryId + ` AND`
 		sqlRegexp += filter.CategoryId
@@ -101,21 +100,23 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 		break
 	}
 
+	offset, _ := strconv.Atoi(offsetStr)
+
+	if totalRecords-1 < offset {
+		err = fmt.Errorf("Page out of Range!")
+		logger.WithField("err", err.Error()).Error("Error Offset is greater than total records")
+		return 0, []Product{}, err
+
+	}
+
 	getFilterProduct := filterProduct + isFiltered
 
 	if filter.PriceFlag {
-		getFilterProduct += ` ORDER BY p.price ` + filter.Price
+		getFilterProduct += ` ORDER BY p.price ` + filter.Price + `, p.id LIMIT ` + limitStr + `  OFFSET  ` + offsetStr + `  ;`
+	} else {
+		getFilterProduct += ` ORDER BY p.id LIMIT ` + limitStr + `  OFFSET  ` + offsetStr + `  ;`
 	}
-
-	getFilterProduct = `SELECT * from products p
-	INNER JOIN category c 
-	ON p.cid = c.cid ` + isFiltered
-
-	if filter.PriceFlag == true {
-		getFilterProduct += ` ORDER BY price ` + filter.Price
-	}
-
-	getFilterProduct += ` ORDER BY p.id LIMIT ` + limitStr + `  OFFSET  ` + offsetStr + `  ;`
+	fmt.Println(getFilterProduct)
 
 	err = s.db.Select(&products, getFilterProduct)
 	if err != nil {
@@ -124,7 +125,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 	}
 	if products == nil {
 		err = fmt.Errorf("Desired page not found")
-		logger.WithField("err", err.Error()).Error("page Out Of range")
+		logger.WithField("err", err.Error()).Error("Products don't exist by such filters!")
 		return 0, []Product{}, err
 	}
 
@@ -171,7 +172,7 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 		ON p.cid = c.cid
 		WHERE `
 
-	isFiltered := ``
+	isFiltered := `  `
 
 	// iterate over all the textMap
 	for key, _ := range textMap {
@@ -202,6 +203,15 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 			return 0, []Product{}, err
 		}
 		break
+	}
+
+	offset, _ := strconv.Atoi(offsetStr)
+
+	if totalRecords-1 < offset {
+		err = fmt.Errorf("Page out of Range!")
+		logger.WithField("err", err.Error()).Error("Error Offset is greater than total records")
+		return 0, []Product{}, err
+
 	}
 
 	getSearchRecord := filterProduct + ` WHERE `
