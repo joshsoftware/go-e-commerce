@@ -19,12 +19,12 @@ const (
 	getProductQuery     = `SELECT * FROM products p INNER JOIN category c ON p.cid = c.cid ORDER BY p.id LIMIT $1 OFFSET $2 ;`
 	getProductByIDQuery = `SELECT * FROM products p INNER JOIN category c ON p.cid = c.cid WHERE p.id=$1`
 	insertProductQuery  = `INSERT INTO products ( name, description,
-		  price, discount, tax, quantity, cid, brand, color, size, image_urls) VALUES ( 
-		  :name, :description, :price, :discount, :tax, :quantity, :cid, :brand, :color, :size, :image_urls) RETURNING id;`
+                 price, discount, tax, quantity, cid, brand, color, size, image_urls) VALUES ( 
+                 :name, :description, :price, :discount, :tax, :quantity, :cid, :brand, :color, :size, :image_urls) RETURNING id;`
 	deleteProductIdQuery    = `DELETE FROM products WHERE id = $1`
 	updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2 `
 	updateProductQuery      = `UPDATE products SET name= $1, description=$2, price=$3, 
-			discount=$4, tax=$5, quantity=$6, cid=$7, brand=$8, color=$9, size=$10, image_urls=$11 WHERE id = $12`
+                       discount=$4, tax=$5, quantity=$6, cid=$7, brand=$8, color=$9, size=$10, image_urls=$11 WHERE id = $12`
 )
 
 type Product struct {
