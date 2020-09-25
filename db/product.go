@@ -132,13 +132,6 @@ func (s *pgStore) ListProducts(ctx context.Context, limit int, offset int) (int,
 		}
 	}
 
-	if totalRecords-1 < offset {
-		err = fmt.Errorf("Page out of Range!")
-		logger.WithField("err", err.Error()).Error("Error Offset is greater than total records")
-		return 0, []Product{}, err
-
-	}
-
 	err = s.db.Select(&product, getProductQuery, limit, offset)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
@@ -239,7 +232,7 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 	}
 
 	if imageData {
-		fmt.Println("Db product name--->", dbProduct.Name)
+		//fmt.Println("Db product name--->", dbProduct.Name)
 		var files []string
 
 		root := "./assets"
@@ -248,22 +241,17 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 			return nil
 		})
 		if err != nil {
-			panic(err)
+			logger.WithField("err", err.Error()).Error("canot fetch products images in assets dir")
+			return Product{}, err
 		}
 		for _, file := range files {
-			fmt.Println(file)
-			i := strings.Index(file, dbProduct.Name)
-			if i > 0 {
-				fmt.Println("dbProduct--->", dbProduct.Name)
-				fmt.Println("file---->", file)
+			if strings.Index(file, dbProduct.Name) > 0 {
 				e := os.Remove(file)
 				if e != nil {
 					log.Fatal(e)
 				}
 			}
-
 		}
-
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
