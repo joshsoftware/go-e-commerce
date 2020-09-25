@@ -27,14 +27,84 @@ func (suite *ProductsTestSuite) TearDownTest() {
 	suite.db.Close()
 }
 
-func (suite *ProductsTestSuite) TestCreateNewProductSuccess() {
+var urls = []string{"url1", "url2"}
+
+var testProduct = Product{
+	Id:           1,
+	Name:         "test organization",
+	Description:  "test@gmail.com",
+	Price:        12,
+	Discount:     1,
+	Tax:          0.5,
+	Quantity:     15,
+	CategoryId:   5,
+	CategoryName: "2",
+	Brand:        "IST",
+	Color:        "black",
+	Size:         "Medium",
+	URLs:         urls,
+}
+
+func (suite *ProductsTestSuite) TestValidateSuccess() {
+	product := Product{
+		Name:         "test product",
+		Description:  "test description",
+		Price:        123.0,
+		Discount:     10,
+		Tax:          0.5,
+		Quantity:     5,
+		CategoryId:   1,
+		CategoryName: "testing",
+		Brand:        "testing",
+		Color:        "test",
+		Size:         "test",
+		URLs:         []string{"url1", "url2"},
+	}
+
+	_, valid := product.Validate()
+
+	assert.True(suite.T(), valid)
+}
+
+func (suite *ProductsTestSuite) TestValidateFailure() {
+	product := Product{
+		Name:         "",
+		Description:  "test description",
+		Price:        123.0,
+		Discount:     999,
+		Tax:          0.5,
+		Quantity:     5,
+		CategoryId:   1,
+		CategoryName: "testing",
+		Brand:        "testing",
+		Color:        "test",
+		Size:         "test",
+		URLs:         []string{"url1", "url2"},
+	}
+
+	errRes, valid := product.Validate()
+
+	assert.Equal(suite.T(), map[string]ErrorResponse(map[string]ErrorResponse{
+		"error": ErrorResponse{
+			Code:    "Invalid_data",
+			Message: "Please Provide valid Product data",
+			Fields: map[string]string{
+				"discount":     "Can't be less than zero or more than Product's Price",
+				"product_name": "Can't be blank",
+			},
+		},
+	}), errRes)
+	assert.False(suite.T(), valid)
+}
+
+func (suite *ProductsTestSuite) TestCreateProductSuccess() {
 	product := Product{
 		Name:         "test user",
 		Description:  "test database",
-		Price:        123,
+		Price:        123.0,
 		Discount:     10,
 		Tax:          0.5,
-		Quantity:     5.0,
+		Quantity:     5,
 		CategoryId:   1,
 		CategoryName: "testing",
 		Brand:        "testing",
@@ -46,19 +116,19 @@ func (suite *ProductsTestSuite) TestCreateNewProductSuccess() {
 	suite.sqlmock.ExpectBegin()
 
 	suite.sqlmock.ExpectExec("INSERT INTO product").
-		WithArgs("test user", "test database", 123, 10, 0.5, 5.0, 1, "testing", "testing", "test", "heigh").
+		WithArgs("test user", "test database", 123, 10, 0.5, 5, 1, "testing", "testing", "test", `ARRAY["url1"]`).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	suite.sqlmock.ExpectCommit()
 
-	createdProduct, err := suite.dbStore.CreateNewProduct(context.Background(), product)
+	createdProduct, err := suite.dbStore.CreateProduct(context.Background(), product)
 
 	assert.Nil(suite.T(), suite.sqlmock.ExpectationsWereMet())
 	assert.Equal(suite.T(), createdProduct, product)
 	assert.Nil(suite.T(), err)
 }
 
-func (suite *ProductsTestSuite) TestCreateNewProductFailure() {
+func (suite *ProductsTestSuite) TestCreateProductFailure() {
 	product := Product{
 		Name:         "test user",
 		Description:  "test database",
@@ -82,7 +152,7 @@ func (suite *ProductsTestSuite) TestCreateNewProductFailure() {
 
 	suite.sqlmock.ExpectRollback()
 
-	_, err := suite.dbStore.CreateNewProduct(context.Background(), product)
+	_, err := suite.dbStore.CreateProduct(context.Background(), product)
 
 	assert.NotNil(suite.T(), err)
 }
@@ -134,3 +204,68 @@ func (suite *ProductsTestSuite) TestUpdateProductStockByIdFailure() {
 	assert.NotNil(suite.T(), err)
 }
 
+func (suite *ProductsTestSuite) TestDeleteProductByIdSuccess() {
+	suite.sqlmock.ExpectExec("DELETE").
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	err := suite.dbStore.DeleteProductById(context.Background(), testProduct.Id)
+
+	assert.Nil(suite.T(), err)
+}
+
+func (suite *ProductsTestSuite) TestUpdateProductByIdSuccess() {
+	product := Product{
+		Name:         "test user",
+		Description:  "test database",
+		Price:        123,
+		Discount:     10,
+		Tax:          0.5,
+		Quantity:     5.0,
+		CategoryId:   1,
+		CategoryName: "testing",
+		Brand:        "testing",
+		Color:        "test",
+		Size:         "heigh",
+		URLs:         []string{"url1", "url2"},
+	}
+
+	suite.sqlmock.ExpectBegin()
+
+	UpdatedProduct, err := suite.dbStore.UpdateProductById(context.Background(), product, 1)
+
+	assert.Nil(suite.T(), suite.sqlmock.ExpectationsWereMet())
+	assert.Equal(suite.T(), UpdatedProduct, product)
+	assert.Nil(suite.T(), err)
+}
+
+func (suite *ProductsTestSuite) TestUpdateProductByIdFailure() {
+	product := Product{
+		Name:         "test user",
+		Description:  "test database",
+		Price:        123,
+		Discount:     10,
+		Tax:          0.5,
+		Quantity:     5.0,
+		CategoryId:   1,
+		CategoryName: "testing",
+		Brand:        "testing",
+		Color:        "test",
+		Size:         "heigh",
+		URLs:         []string{"url1", "url2"},
+	}
+
+	suite.sqlmock.ExpectBegin()
+	updatedProduct, err := suite.dbStore.UpdateProductById(context.Background(), product, 1)
+	assert.NotEqual(suite.T(), updatedProduct, product)
+	assert.NotNil(suite.T(), err)
+}
+
+func (suite *ProductsTestSuite) TestListProductsSuccess() {
+	suite.sqlmock.ExpectQuery(getProductQuery).
+		WillReturnRows(mockedRows)
+
+	_, org, err := suite.dbStore.ListProducts(context.Background(), 1, 1)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), []Product{testProduct}, org)
+}

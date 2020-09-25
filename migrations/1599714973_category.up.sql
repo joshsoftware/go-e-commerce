@@ -1,6 +1,6 @@
 -- change datatype of description to text and remove not null
 CREATE TABLE IF NOT EXISTS category (
-	id 		SERIAL PRIMARY KEY,
-	name	varchar(50)   NOT NULL,
+	cid 		SERIAL PRIMARY KEY,
+	cname	varchar(50) UNIQUE NOT NULL,
 	description		varchar(200) NOT NULL
 );

@@ -71,12 +71,34 @@ func (suite *FilterHandlerTestSuite) TestFilteredRecordsWhenDBFailure() {
 
 func (suite *FilterHandlerTestSuite) TestGetProductBySearchSuccess() {
 
-	suite.dbMock.On("SearchRecords", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(1, []db.Product{}, nil)
+	var urls = []string{"url1", "url2"}
+	var color = "Black"
+	var size = "Medium"
+
+	suite.dbMock.On("SearchProductsByText", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(1,
+		[]db.Product{
+			db.Product{
+				Id:           1,
+				Name:         "test organization",
+				Description:  "test@gmail.com",
+				Price:        12,
+				Discount:     1,
+				Tax:          0.5,
+				Quantity:     15,
+				CategoryId:   5,
+				CategoryName: "2",
+				Brand:        "IST",
+				Color:        &color,
+				Size:         &size,
+				URLs:         urls,
+			},
+		},
+		nil)
 
 	recorder := makeHTTPCall(
 		http.MethodGet,
 		"/products/search",
-		"/products/search?limit=5&page=1&text=Apple",
+		"/products/search?limit=5&page=1&text=test",
 		"",
 		getProductBySearchHandler(Dependencies{Store: suite.dbMock}),
 	)
@@ -87,7 +109,7 @@ func (suite *FilterHandlerTestSuite) TestGetProductBySearchSuccess() {
 
 func (suite *FilterHandlerTestSuite) TestGetProductBySearchWhenDBFailure() {
 
-	suite.dbMock.On("SearchRecords", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(0, []db.Product{},
+	suite.dbMock.On("SearchProductsByText", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(0, []db.Product{},
 		errors.New("Couldn't find any matching search records or Page out of range"))
 
 	recorder := makeHTTPCall(

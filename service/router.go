@@ -53,8 +53,9 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	router.Handle("/user/update", jwtMiddleWare(userMiddleware(updateUserHandler(deps), deps), deps)).Methods(http.MethodPatch).Headers(versionHeader, v1)
 	router.Handle("/admin/update", jwtMiddleWare(adminMiddleware(updateUserHandler(deps), deps), deps)).Methods(http.MethodPatch).Headers(versionHeader, v1)
 
-	router.HandleFunc("/products", listProductsHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
+	// router.HandleFunc("/products", listProductsHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 
+	router.HandleFunc("/products", listProductsHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 	router.HandleFunc("/product/{product_id:[0-9]+}", getProductByIdHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 	router.Handle("/createProduct", jwtMiddleWare(adminMiddleware(createProductHandler(deps), deps), deps)).Methods(http.MethodPost).Headers(versionHeader, v1)
 	router.Handle("/product/{product_id:[0-9]+}", jwtMiddleWare(adminMiddleware(deleteProductByIdHandler(deps), deps), deps)).Methods(http.MethodDelete).Headers(versionHeader, v1)
@@ -74,6 +75,7 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 
 	router.HandleFunc("/country_data", countryDataHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 	router.PathPrefix("/static/products").Handler(http.StripPrefix("/static", http.FileServer(http.Dir("./assets/"))))
+	router.PathPrefix("/assets/").Handler(http.StripPrefix("/assets", http.FileServer(http.Dir("./assets/"))))
 
 	return
 }

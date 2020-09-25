@@ -3,12 +3,15 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"joshsoftware/go-e-commerce/db"
 	"math"
 	"net/http"
+	"regexp"
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/schema"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -21,45 +24,45 @@ import (
 func listProductsHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
-		limit := req.URL.Query().Get("limit")
-		page := req.URL.Query().Get("page")
+		limitStr := req.URL.Query().Get("limit")
+		pageStr := req.URL.Query().Get("page")
 
-		if limit == "" {
-			limit = "5"
+		if limitStr == "" {
+			limitStr = "5"
 		}
 
-		if page == "" {
-			page = "1"
+		if pageStr == "" {
+			pageStr = "1"
 		}
 
-		ls, err := strconv.Atoi(limit)
+		limit, err := strconv.Atoi(limitStr)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while converting limit to int")
 			rw.Header().Add("Content-Type", "application/json")
 			rw.WriteHeader(http.StatusInternalServerError)
 			responses(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
-					Message: "Error while converting limit to int",
+					Message: "Error while converting limitStr to int",
 				},
 			})
 			return
 		}
 
-		ps, err := strconv.Atoi(page)
+		page, err := strconv.Atoi(pageStr)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while converting page to int")
 			rw.Header().Add("Content-Type", "application/json")
 			rw.WriteHeader(http.StatusInternalServerError)
 			responses(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
-					Message: "Error while converting page to int",
+					Message: "Error while converting pageStr to int",
 				},
 			})
 			return
 		}
 
 		// Avoid divide by zero exception and -ve values for page and limit
-		if ls <= 0 || ps <= 0 {
+		if limit <= 0 || page <= 0 {
 			err = fmt.Errorf("limit or page are non-positive")
 			logger.WithField("err", err.Error()).Error("Error limit or page contained invalid value")
 			rw.Header().Add("Content-Type", "application/json")
@@ -86,7 +89,7 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		var pagination db.Pagination
-		pagination.TotalPages = int(math.Ceil(float64(count) / float64(ls)))
+		pagination.TotalPages = int(math.Ceil(float64(count) / float64(limit)))
 
 		pagination.Products = products
 
@@ -108,6 +111,8 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 		rw.Write(respBytes)
 	})
 }
+
+var decoder = schema.NewDecoder()
 
 // @ Title getProductById
 // @ Description get single product by its id
@@ -173,12 +178,36 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
 		var product db.Product
-		err := json.NewDecoder(req.Body).Decode(&product)
+
+		// Parse input, multipart/form-data
+		err := req.ParseMultipartForm(15 << 20) // 15 MB Max File Size
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while parsing the Product form")
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Invalid Form Data!",
+				},
+			})
+			return
+		}
+
+		// Retrive file from posted data
+		formdata := req.MultipartForm
+
+		// grab the filename
+		contents := formdata.Value
+		images := formdata.File["images"]
+		//err = req.ParseForm()
+
+		//grab product
+		fmt.Println(contents)
+		err = decoder.Decode(&product, contents)
+		fmt.Println(product)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while decoding product")
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Invalid json body",
+					Message: "Invalid form contents",
 				},
 			})
 			return
@@ -200,8 +229,60 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
+		for i, _ := range images {
+			image, err := images[i].Open()
+			defer image.Close()
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error while decoding image Data")
+				responses(rw, http.StatusBadRequest, errorResponse{
+					Error: messageObject{
+						Message: "Invalid Image !",
+					},
+				})
+				return
+			}
+
+			extensionRegex := regexp.MustCompile(`[.]+.*`)
+			extension := extensionRegex.Find([]byte(images[i].Filename))
+			if len(extension) < 2 || len(extension) > 5 {
+				err = fmt.Errorf("Couldn't get extension of file!")
+				logger.WithField("err", err.Error()).Error("Error while getting image Extension.")
+				responses(rw, http.StatusInternalServerError, errorResponse{
+					Error: messageObject{
+						Message: "Re-check the image file extension!",
+					},
+				})
+				return
+			}
+
+			tempFile, err := ioutil.TempFile("assets/products", product.Name+"-*"+string(extension))
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
+				responses(rw, http.StatusInternalServerError, errorResponse{
+					Error: messageObject{
+						Message: "Couldn't  create temporary storage!",
+					},
+				})
+				return
+			}
+			defer tempFile.Close()
+
+			imageBytes, err := ioutil.ReadAll(image)
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error while reading image File")
+				responses(rw, http.StatusInternalServerError, errorResponse{
+					Error: messageObject{
+						Message: "Couldn't read the image file!",
+					},
+				})
+				return
+			}
+			tempFile.Write(imageBytes)
+			product.URLs = append(product.URLs, tempFile.Name())
+		}
+
 		var createdProduct db.Product
-		createdProduct, err = deps.Store.CreateNewProduct(req.Context(), product)
+		createdProduct, err = deps.Store.CreateProduct(req.Context(), product)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while inserting product")
 			rw.Header().Add("Content-Type", "application/json")
@@ -397,22 +478,15 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		errRes, valid := product.PartialValidate()
-		if !valid {
-			responses(rw, http.StatusBadRequest, errRes)
-			return
-		}
-
 		var updatedProduct db.Product
 		updatedProduct, err = deps.Store.UpdateProductById(req.Context(), product, id)
 		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
+			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
 			responses(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
 					Message: "Internal server error",
 				},
 			})
-			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
 			return
 		}
 
@@ -421,3 +495,5 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 		return
 	})
 }
+
+// TODO test case to delete category

@@ -47,40 +47,34 @@ func (m *DBMockStore) GetCart(ctx context.Context, user_id int) (products []Prod
 }
 
 // ListUsers - test mock
-func (m *DBMockStore) ListProducts(ctx context.Context, limit string, page string) (count int, product []Product, err error) {
-	args := m.Called(ctx, limit, page)
+func (m *DBMockStore) ListProducts(ctx context.Context, limitStr int, pageStr int) (count int, product []Product, err error) {
+	args := m.Called(ctx, limitStr, pageStr)
 	return args.Get(0).(int), args.Get(1).([]Product), args.Error(2)
 }
 
-func (m *DBMockStore) CreateNewProduct(ctx context.Context, p Product) (product Product, err error) {
-	args := m.Called(ctx, p)
+func (m *DBMockStore) CreateProduct(ctx context.Context, product Product) (createdProduct Product, err error) {
+	args := m.Called(ctx, product)
 	return args.Get(0).(Product), args.Error(1)
 }
 
-func (m *DBMockStore) FilteredProducts(ctx context.Context, f Filter, limit string, page string) (count int, product []Product, err error) {
-	args := m.Called(ctx, f, limit, page)
+func (m *DBMockStore) FilteredProducts(ctx context.Context, filter Filter, limitStr string, pageStr string) (count int, product []Product, err error) {
+	args := m.Called(ctx, filter, limitStr, pageStr)
 	return args.Get(0).(int), args.Get(1).([]Product), args.Error(2)
 }
 
-func (m *DBMockStore) SearchRecords(ctx context.Context, text string, limit string, page string) (count int, product []Product, err error) {
-	args := m.Called(ctx, text, limit, page)
+func (m *DBMockStore) SearchProductsByText(ctx context.Context, text string, limitStr string, pageStr string) (count int, product []Product, err error) {
+	args := m.Called(ctx, text, limitStr, pageStr)
 	return args.Get(0).(int), args.Get(1).([]Product), args.Error(2)
 }
 
-// DeleteCoreValue - Deletes the core value of the organization
 func (m *DBMockStore) DeleteProductById(ctx context.Context, id int) (err error) {
 	args := m.Called(ctx, id)
 	return args.Error(0)
 }
 
-func (m *DBMockStore) UpdateProductStockById(ctx context.Context, p Product, id int) (product Product, err error) {
-	args := m.Called(ctx, p, id)
+func (m *DBMockStore) UpdateProductStockById(ctx context.Context, product Product, id int) (updatedProduct Product, err error) {
+	args := m.Called(ctx, product, id)
 	return args.Get(0).(Product), args.Error(1)
-}
-
-func (m *DBMockStore) GetProductImagesByID(ctx context.Context, id int) (productimage []ProductImage, err error) {
-	args := m.Called(ctx, id)
-	return args.Get(0).([]ProductImage), args.Error(1)
 }
 
 func (m *DBMockStore) GetProductByID(ctx context.Context, id int) (product Product, err error) {
@@ -88,20 +82,16 @@ func (m *DBMockStore) GetProductByID(ctx context.Context, id int) (product Produ
 	return args.Get(0).(Product), args.Error(1)
 }
 
-/* func (m *DBMockStore) FilteredRecords(ctx context.Context, filter Filter, limit string, page string) (product []Product, err error) {
-	args := m.Called(ctx, filter, limit, page)
-	return args.Get(0).([]Product), args.Error(1)
-}
-
-func (m *DBMockStore) FilteredRecordsCount(ctx context.Context, filter Filter) (count int, err error) {
-	args := m.Called(ctx, filter)
-	return args.Get(0).(int), args.Error(1)
+func (m *DBMockStore) UpdateProductById(ctx context.Context, product Product, id int) (updatedProduct Product, err error) {
+	args := m.Called(ctx, product, id)
+	return args.Get(0).(Product), args.Error(1)
 }
 
 func (m *DBMockStore) TotalRecords(ctx context.Context) (count int, err error) {
 	args := m.Called(ctx)
 	return args.Get(0).(int), args.Error(1)
-} */
+}
+
 func (m *DBMockStore) UpdateUserByID(ctx context.Context, user User, id int) (err error) {
 	args := m.Called(ctx)
 	return args.Error(0)
