@@ -21,7 +21,7 @@ const (
 	insertProductQuery  = `INSERT INTO products ( name, description,
                  price, discount, tax, quantity, cid, brand, color, size, image_urls) VALUES ( 
                  :name, :description, :price, :discount, :tax, :quantity, :cid, :brand, :color, :size, :image_urls) RETURNING id;`
-	deleteProductIdQuery    = `DELETE FROM products WHERE id = $1`
+	deleteProductIdQuery    = `DELETE FROM products WHERE id = $1 RETURNING image_urls`
 	updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2 `
 	updateProductQuery      = `UPDATE products SET name= $1, description=$2, price=$3, 
                        discount=$4, tax=$5, quantity=$6, cid=$7, brand=$8, color=$9, size=$10, image_urls=$11 WHERE id = $12`
@@ -234,19 +234,40 @@ func (s *pgStore) UpdateProductStockById(ctx context.Context, product Product, i
 
 func (s *pgStore) DeleteProductById(ctx context.Context, id int) error {
 
-	rows, err := s.db.Exec(deleteProductIdQuery, id)
+	var files pq.StringArray
+	result, err := s.db.Queryx(deleteProductIdQuery, id)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error deleting product" + string(id))
 		return err
 	}
 
-	rows_affected, err := rows.RowsAffected()
-	// if there is an error then roes_affected will by default be 0, so err != nil need not be handled separately
-	if rows_affected == 0 {
+	if result.Next() {
+		err = result.Scan(&files)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error scanning image_urls into files variable")
+			return err
+		}
+	} else {
 		err = fmt.Errorf("Product doesn't exist in db, goodluck deleting it")
 		return err
 	}
+
+	// Update images only after validations
 	// try deleting images, don't throw an error
+	if files != nil {
+
+		root := "./assets/productImages/"
+
+		for _, file := range files {
+			file = root + file
+			fmt.Println(file)
+			err := os.Remove(file)
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error Couldn't remove the file!")
+			}
+		}
+	}
+
 	return nil
 }
 
