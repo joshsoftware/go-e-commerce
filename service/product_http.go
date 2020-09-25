@@ -152,7 +152,6 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		//var createdProduct db.Product
 		createdProductID, err := deps.Store.CreateProduct(req.Context(), product)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while inserting product")

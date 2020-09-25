@@ -220,17 +220,6 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		/* if (count - 1) < (limit * (int(page) - 1)) {
-			err = fmt.Errorf("Desired Page not found")
-			logger.WithField("err", err.Error()).Error("Error as page is out of range")
-			response(rw, http.StatusBadRequest, errorResponse{
-				Error: messageObject{
-					Message: "Desired Page not found",
-				},
-			})
-			return
-		} */
-
 	Skip:
 		var pagination db.Pagination
 		pagination.TotalPages = int(math.Ceil(float64(totalRecords) / float64(limit)))

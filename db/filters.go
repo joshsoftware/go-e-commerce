@@ -86,6 +86,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 
 	getFilterProductCount := filterProductCount + isFiltered + `;`
 	resultCount, err := s.db.Query(getFilterProductCount)
+
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error getting Count of Filtered Products from database")
 		return 0, []Product{}, err
@@ -115,7 +116,6 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 	}
 
 	getFilterProduct += ` ORDER BY p.id LIMIT ` + limitStr + `  OFFSET  ` + offsetStr + `  ;`
-	fmt.Println("getFilterProduct---->", getFilterProduct)
 
 	err = s.db.Select(&products, getFilterProduct)
 	if err != nil {
