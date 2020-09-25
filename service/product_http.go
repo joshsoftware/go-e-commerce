@@ -376,6 +376,9 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
 		vars := mux.Vars(req)
+		var product db.Product
+		var imageData bool
+
 		id, err := strconv.Atoi(vars["product_id"])
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error id key is missing")
@@ -387,8 +390,6 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 			})
 			return
 		}
-
-		var product db.Product
 
 		err = req.ParseMultipartForm(15 << 20) // 15 MB Max File Size
 		if err != nil {
@@ -420,6 +421,9 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 				},
 			})
 			return
+		}
+		if images != nil {
+			imageData = true
 		}
 
 		for i, _ := range images {
@@ -473,8 +477,9 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 			tempFile.Write(imageBytes)
 			product.URLs = append(product.URLs, tempFile.Name())
 		}
+
 		var updatedProduct db.Product
-		updatedProduct, err = deps.Store.UpdateProductById(req.Context(), product, id)
+		updatedProduct, err = deps.Store.UpdateProductById(req.Context(), product, id, imageData)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
 			response(rw, http.StatusInternalServerError, errorResponse{

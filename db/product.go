@@ -3,6 +3,10 @@ package db
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -218,13 +222,41 @@ func (s *pgStore) DeleteProductById(ctx context.Context, id int) error {
 	return nil
 }
 
-func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int) (Product, error) {
+func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int, imageData bool) (Product, error) {
 
 	var dbProduct Product
 	err := s.db.Get(&dbProduct, getProductByIDQuery, id)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error while fetching product ")
 		return Product{}, err
+	}
+
+	if imageData {
+		fmt.Println("Db product name--->", dbProduct.Name)
+		var files []string
+
+		root := "./assets"
+		err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+			files = append(files, path)
+			return nil
+		})
+		if err != nil {
+			panic(err)
+		}
+		for _, file := range files {
+			fmt.Println(file)
+			i := strings.Index(file, dbProduct.Name)
+			if i > 0 {
+				fmt.Println("dbProduct--->", dbProduct.Name)
+				fmt.Println("file---->", file)
+				e := os.Remove(file)
+				if e != nil {
+					log.Fatal(e)
+				}
+			}
+
+		}
+
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
