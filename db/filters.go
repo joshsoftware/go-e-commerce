@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	filterProductCount = `SELECT
+	productCount = `SELECT
 		COUNT(p.id)
 		FROM   products p
 		INNER JOIN category c
@@ -83,7 +83,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 		isFiltered = ` WHERE ` + isFiltered[:len(isFiltered)-3]
 	}
 
-	getFilterProductCount := filterProductCount + isFiltered + `;`
+	getFilterProductCount := productCount + isFiltered + `;`
 	resultCount, err := s.db.Query(getFilterProductCount)
 
 	if err != nil {
@@ -167,10 +167,7 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 	}
 
 	// Query to help us get count of all such results
-	getSearchCount := `SELECT COUNT(p.id) from products p
-		INNER JOIN category c 
-		ON p.cid = c.cid
-		WHERE `
+	getSearchCount := productCount + ` WHERE `
 
 	isFiltered := `  `
 
@@ -228,7 +225,7 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 
 	if products == nil {
 		err = fmt.Errorf("Desired page not found")
-		logger.WithField("err", err.Error()).Error("page Out Of range")
+		logger.WithField("err", err.Error()).Error("Products don't exist by such filters!")
 		return 0, []Product{}, err
 	}
 	return totalRecords, products, nil
