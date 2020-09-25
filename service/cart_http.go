@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -24,34 +25,33 @@ func getCartHandler(deps Dependencies) http.HandlerFunc {
 
 		userID, _, err := getDataFromToken(authToken)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error fetching data")
-			responses(rw, http.StatusUnauthorized, errorResponse{
-				Error: messageObject{
-					Message: "Invalid Credentials",
-				},
-			})
+			logger.WithField("err", err.Error()).Error("Error fetching data from token")
+			error := errorResponse{
+				Error: "Error fetching data from token",
+			}
+			responses(rw, http.StatusUnauthorized, error)
 			return
 		}
 
 		cart_products, err := deps.Store.GetCart(req.Context(), int(userID))
+		fmt.Println(cart_products)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error fetching data")
-			responses(rw, http.StatusInternalServerError, errorResponse{
-				Error: messageObject{
-					Message: "Failure in getting data from database",
-				},
-			})
+			logger.WithField("err", err.Error()).Error("Error fetching data from database")
+			error := errorResponse{
+				Error: "Error fetching data from database",
+			}
+			responses(rw, http.StatusInternalServerError, error)
 			return
 		}
 
 		respBytes, err := json.Marshal(cart_products)
+		fmt.Println("Marshal error ? ", err)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error marshaling cart data")
-			responses(rw, http.StatusInternalServerError, errorResponse{
-				Error: messageObject{
-					Message: "Failure in marshalling data",
-				},
-			})
+			error := errorResponse{
+				Error: "Error marshaling cart data",
+			}
+			responses(rw, http.StatusInternalServerError, error)
 			return
 		}
 
