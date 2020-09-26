@@ -248,6 +248,14 @@ func handleAuth(deps Dependencies) http.HandlerFunc {
 		// Checking if user is already registered if registered then generate JWT token for him
 		check, existingUser, err := deps.Store.CheckUserByEmail(req.Context(), u.Email)
 		if check {
+			if existingUser.IsDisabled {
+				responses(rw, http.StatusForbidden, errorResponse{
+					Error: messageObject{
+						Message: "User Forbidden from login",
+					},
+				})
+				return
+			}
 			token, err := generateJwt(existingUser.ID, false)
 			if err != nil {
 				logger.WithField("err", err.Error()).Error("Unknown/unexpected error while creating JWT for " + existingUser.Email)
