@@ -3,6 +3,10 @@ package db
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -102,7 +106,6 @@ func (s *pgStore) GetProductByID(ctx context.Context, id int) (Product, error) {
 		logger.WithField("err", err.Error()).Error("Error selecting product from database by id: " + string(id))
 		return Product{}, err
 	}
-
 	return product, nil
 }
 
@@ -110,10 +113,10 @@ func (s *pgStore) GetProductByID(ctx context.Context, id int) (Product, error) {
 // @Description Get limited number of Products of particular pageStr
 // @Params req.Context , limitStr, pageStr
 // @Returns Count of Records, error if any
-func (s *pgStore) ListProducts(ctx context.Context, limit int, page int) (int, []Product, error) {
+func (s *pgStore) ListProducts(ctx context.Context, limit int, offset int) (int, []Product, error) {
 
-	var count = 0
-	var products []Product
+	var totalRecords int
+	var product []Product
 
 	resultCount, err := s.db.Query(getProductCount)
 	if err != nil {
@@ -122,65 +125,47 @@ func (s *pgStore) ListProducts(ctx context.Context, limit int, page int) (int, [
 	}
 
 	if resultCount.Next() {
-		err = resultCount.Scan(&count)
+		err = resultCount.Scan(&totalRecords)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error scanning Count Of Product into integer variable")
 			return 0, []Product{}, err
 		}
 	}
 
-	if count == 0 {
-		err = fmt.Errorf("No records present")
-		logger.WithField("err", err.Error()).Error("No Products were present in database")
-		return 0, []Product{}, err
-	}
-
-	offset := (page - 1) * limit
-	if (count - 1) < (limit * (page - 1)) {
-		err = fmt.Errorf("Desired pageStr not found")
-		logger.WithField("err", err.Error()).Error("pageStr Out Of range")
-		return 0, []Product{}, err
-	}
-
-	result, err := s.db.Queryx(getProductQuery, limit, offset)
-	fmt.Println(getProductQuery, limit, offset)
+	err = s.db.Select(&product, getProductQuery, limit, offset)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
 		return 0, []Product{}, err
 	}
 
-	for result.Next() {
-		var product Product
-		err = result.StructScan(&product)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Couldn't Scan Resulted Product")
-			return 0, []Product{}, err
-		}
-		products = append(products, product)
+	if product == nil {
+		err = fmt.Errorf("Desired page not found")
+		logger.WithField("err", err.Error()).Error("page Out Of range")
+		return 0, []Product{}, err
 	}
 
-	return count, products, nil
+	return totalRecords, product, nil
 }
 
-func (s *pgStore) CreateProduct(ctx context.Context, product Product) (Product, error) {
+func (s *pgStore) CreateProduct(ctx context.Context, product Product) (int, error) {
 
 	tx, err := s.db.Beginx()
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error beginning product insert transaction in db, CreateProduct with Name: " + product.Name)
-		return Product{}, err
+		return 0, err
 	}
 
 	var row *sqlx.Rows
 	row, err = tx.NamedQuery(insertProductQuery, product)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error inserting product to database: " + product.Name)
-		return Product{}, err
+		return 0, err
 	}
 	if row.Next() {
 		err = row.Scan(&product.Id)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error scanning product id from database: " + product.Name)
-			return Product{}, err
+			return 0, err
 		}
 	}
 
@@ -188,10 +173,9 @@ func (s *pgStore) CreateProduct(ctx context.Context, product Product) (Product, 
 	err = tx.Commit()
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error commiting transaction inserting product into database: " + string(product.Name))
-		return Product{}, err
+		return 0, err
 	}
-
-	return product, nil
+	return product.Id, nil
 }
 
 func (s *pgStore) UpdateProductStockById(ctx context.Context, product Product, id int) (Product, error) {
@@ -239,13 +223,36 @@ func (s *pgStore) DeleteProductById(ctx context.Context, id int) error {
 	return nil
 }
 
-func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int) (Product, error) {
+func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int, imageData bool) (Product, error) {
 
 	var dbProduct Product
 	err := s.db.Get(&dbProduct, getProductByIDQuery, id)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error while fetching product ")
 		return Product{}, err
+	}
+
+	if imageData {
+		//fmt.Println("Db product name--->", dbProduct.Name)
+		var files []string
+
+		root := "./assets/products"
+		err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+			files = append(files, path)
+			return nil
+		})
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("canot fetch products images in assets dir")
+			return Product{}, err
+		}
+		for _, file := range files {
+			if strings.Index(file, dbProduct.Name) > 0 {
+				e := os.Remove(file)
+				if e != nil {
+					log.Fatal(e)
+				}
+			}
+		}
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)

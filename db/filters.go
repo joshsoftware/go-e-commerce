@@ -10,6 +10,19 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
+var (
+	productCount = `SELECT
+		COUNT(p.id)
+		FROM   products p
+		INNER JOIN category c
+		ON p.cid = c.cid`
+
+	filterProduct = `SELECT *
+		FROM   products p
+		INNER JOIN category c
+		ON p.cid = c.cid`
+)
+
 type Filter struct {
 	// Below fields are what we may receive as Parameters in request body
 	CategoryId string
@@ -30,64 +43,56 @@ type Filter struct {
 // @Accept	request.Context, Filter struct's object
 // @Success total= (count of filtered products), error=nil
 // @Failure total=0, error= "Some Error"
-func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr string, pageStr string) (int, []Product, error) {
-	// We will be checking for SQL Injection as well in this Method only
-	// found flag will help us find out if any of Filter flags were true
+func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr string, offsetStr string) (int, []Product, error) {
 
 	var found bool
-	var count int
+	var totalRecords int
 	var products []Product
 
 	// helper will be used in making query dynamic.
 	// See how it's getting concatanation added in case a flag was Filter Flag is true
-	injection := `  `
-	helper := `  `
+	sqlRegexp := ``
+	isFiltered := `   `
 	if filter.CategoryFlag == true {
-		helper += ` cid = ` + filter.CategoryId + ` AND`
-		injection += filter.CategoryId
+		isFiltered += ` c.cid = ` + filter.CategoryId + ` AND`
+		sqlRegexp += filter.CategoryId
 		found = true
 	}
-	if filter.BrandFlag == true {
-		// Since ' existed, we had to use ` instead of " , as compiler gave error otherwise
-		helper += ` LOWER(brand) = LOWER('` + filter.Brand + `') AND`
-		injection += filter.Brand
+	if filter.BrandFlag {
+		isFiltered += ` LOWER(p.brand) = LOWER('` + filter.Brand + `') AND`
+		sqlRegexp += filter.Brand
 		found = true
 	}
-	if filter.SizeFlag == true {
-		helper += ` LOWER(size) = LOWER('` + filter.Size + `') AND`
-		injection += filter.Size
+	if filter.SizeFlag {
+		isFiltered += ` LOWER(p.size) = LOWER('` + filter.Size + `') AND`
+		sqlRegexp += filter.Size
 		found = true
 	}
-	if filter.ColorFlag == true {
-		helper += ` LOWER(color) =LOWER('` + filter.Color + `') AND`
-		injection += filter.Color
+	if filter.ColorFlag {
+		isFiltered += ` LOWER(p.color) =LOWER('` + filter.Color + `') AND`
+		sqlRegexp += filter.Color
 		found = true
 	}
-	if found == true {
-		// check for SQL Injection
-		// Only allow words characters like [a-z0-9A-Z] and a space [ ]
+	if found {
 		var validParameters = regexp.MustCompile(`^[\w ]+$`)
-		// if There are other chracters than word and space
-		if validParameters.MatchString(injection) == false {
+		if !validParameters.MatchString(sqlRegexp) {
 			err := fmt.Errorf("Possible SQL Injection Attack.")
 			logger.WithField("err", err.Error()).Error("Error In Parameters, special Characters are present.")
 			return 0, []Product{}, err
 		}
-		// remove that last AND as it will make query invalid
-		helper = ` WHERE ` + helper[:len(helper)-3]
+		isFiltered = ` WHERE ` + isFiltered[:len(isFiltered)-3]
 	}
 
-	getFilterProductCount := `SELECT COUNT(id) FROM products ` + helper + `;`
-
+	getFilterProductCount := productCount + isFiltered + `;`
 	resultCount, err := s.db.Query(getFilterProductCount)
+
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error getting Count of Filtered Products from database")
 		return 0, []Product{}, err
 	}
 
-	// resultCount set should have only 1 record
 	for resultCount.Next() {
-		err = resultCount.Scan(&count)
+		err = resultCount.Scan(&totalRecords)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching count of getFilterProductCount from database")
 			return 0, []Product{}, err
@@ -95,54 +100,36 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 		break
 	}
 
-	if count == 0 {
-		err = fmt.Errorf("No records present")
-		logger.WithField("err", err.Error()).Error("No records were in db for Products")
+	offset, _ := strconv.Atoi(offsetStr)
+
+	if totalRecords-1 < offset {
+		err = fmt.Errorf("Page out of Range!")
+		logger.WithField("err", err.Error()).Error("Error Offset is greater than total records")
 		return 0, []Product{}, err
+
 	}
 
-	// error already handled in filters_http
-	limit, _ := strconv.Atoi(limitStr)
-	page, _ := strconv.Atoi(pageStr)
+	getFilterProduct := filterProduct + isFiltered
 
-	if (count - 1) < (int(limit) * (int(page) - 1)) {
-		err = fmt.Errorf("Desired Page not found")
-		logger.WithField("err", err.Error()).Error("Page Out Of range")
-		return 0, []Product{}, err
+	if filter.PriceFlag {
+		getFilterProduct += ` ORDER BY p.price ` + filter.Price + `, p.id LIMIT ` + limitStr + `  OFFSET  ` + offsetStr + `  ;`
+	} else {
+		getFilterProduct += ` ORDER BY p.id LIMIT ` + limitStr + `  OFFSET  ` + offsetStr + `  ;`
 	}
+	fmt.Println(getFilterProduct)
 
-	getFilterProduct := `SELECT * from products p
-	INNER JOIN category c 
-	ON p.cid = c.cid ` + helper
-
-	if filter.PriceFlag == true {
-		getFilterProduct += ` ORDER BY price ` + filter.Price
-	}
-
-	offset := (page - 1) * limit
-	offsetStr := strconv.Itoa(offset)
-
-	getFilterProduct += ` ORDER BY p.id LIMIT ` + limitStr + `  OFFSET  ` + offsetStr + `  ;`
-	// fmt.Println("getFilterProduct---->", getFilterProduct)
-
-	result, err := s.db.Queryx(getFilterProduct)
+	err = s.db.Select(&products, getFilterProduct)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
 		return 0, []Product{}, err
 	}
-
-	for result.Next() {
-		var product Product
-		err = result.StructScan(&product)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Couldn't Scan Resulted Product")
-			return 0, []Product{}, err
-		}
-		products = append(products, product)
+	if products == nil {
+		err = fmt.Errorf("Desired page not found")
+		logger.WithField("err", err.Error()).Error("Products don't exist by such filters!")
+		return 0, []Product{}, err
 	}
 
-	return count, products, nil
-
+	return totalRecords, products, nil
 }
 
 // @Title SearchRecords
@@ -150,10 +137,9 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 // @Accept	request.Context, text as string, limitStr, pageStr
 // @Success total= (count of search qualifying records), error=nil
 // @Failure total=0, error= "Some Error"
-func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitStr string, pageStr string) (int, []Product, error) {
-	// check for SQL Injection
-	// Only allow words characters like [a-z0-9A-Z] and a space [ ]
-	var count int
+func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitStr string, offsetStr string) (int, []Product, error) {
+
+	var totalRecords int
 	var products []Product
 	var validParameters = regexp.MustCompile(`^[\w ]+$`)
 
@@ -181,27 +167,25 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 	}
 
 	// Query to help us get count of all such results
-	getSearchCount := `SELECT COUNT(p.id) from products p
-		INNER JOIN category c 
-		ON p.cid = c.cid
-		WHERE `
+	getSearchCount := productCount + ` WHERE `
 
-	helper := `  `
+	isFiltered := `  `
 
 	// iterate over all the textMap
 	for key, _ := range textMap {
-		helper += ` 
+		isFiltered += ` 
 		LOWER(p.name) LIKE LOWER('%` + key + `%') OR 
 		LOWER(p.brand) LIKE LOWER('%` + key + `%') OR 
 		LOWER(c.cname) LIKE LOWER('%` + key + `%') OR`
 	}
 
 	// remove that last OR
-	helper = helper[:len(helper)-2]
+	isFiltered = isFiltered[:len(isFiltered)-2]
 
-	getSearchCount += helper + ` ;`
+	getSearchCount += isFiltered + ` ;`
+	fmt.Println("getsearchProduct---->", getSearchCount)
+
 	countResult, err := s.db.Query(getSearchCount)
-
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching count of getSearchCount from database")
 		return 0, []Product{}, err
@@ -210,7 +194,7 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 	// countResult set should have only 1 record
 	// It counts the number of records with the search results.
 	for countResult.Next() {
-		err = countResult.Scan(&count)
+		err = countResult.Scan(&totalRecords)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching count of getSearchCount from database")
 			return 0, []Product{}, err
@@ -218,57 +202,31 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 		break
 	}
 
-	fmt.Println(count)
+	offset, _ := strconv.Atoi(offsetStr)
 
-	if count == 0 {
-		err = fmt.Errorf("No records  present")
-		logger.WithField("err", err.Error()).Error("No records were present for that search keyword")
+	if totalRecords-1 < offset {
+		err = fmt.Errorf("Page out of Range!")
+		logger.WithField("err", err.Error()).Error("Error Offset is greater than total records")
 		return 0, []Product{}, err
+
 	}
 
-	// error already handled in filters_http
-	limit, _ := strconv.Atoi(limitStr)
-	page, _ := strconv.Atoi(pageStr)
+	getSearchRecord := filterProduct + ` WHERE `
+	getSearchRecord += isFiltered
+	getSearchRecord += ` LIMIT ` + limitStr + ` OFFSET  ` + offsetStr + ` ;`
 
-	if (count - 1) < (int(limit) * (int(page) - 1)) {
-		err = fmt.Errorf("Desired Page not found")
-		logger.WithField("err", err.Error()).Error("Page Out Of range")
-		return 0, []Product{}, err
-	}
+	fmt.Println("getsearchRecords---->", getSearchRecord)
 
-	// Query to return Id's of Products where we may find a match in
-	// product's name, description, brand, size, color or in
-	// the category of that products category's name or description
-	getSearchRecordIds := `SELECT * from products p
-		INNER JOIN category c 
-		ON p.cid = c.cid
-		WHERE 
-		`
-
-	getSearchRecordIds += helper
-	offset := (page - 1) * limit
-	offsetStr := strconv.Itoa(offset)
-
-	getSearchRecordIds += `  ORDER BY p.id LIMIT ` + limitStr + ` OFFSET  ` + offsetStr + ` ;`
-
-	// fmt.Println("getSearchRecordIds---->", getSearchRecordIds)
-
-	result, err := s.db.Queryx(getSearchRecordIds)
+	err = s.db.Select(&products, getSearchRecord)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Product Results from database")
 		return 0, []Product{}, err
 	}
 
-	for result.Next() {
-		var product Product
-		err = result.StructScan(&product)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Couldn't Scan Resulted Product")
-			return 0, []Product{}, err
-		}
-		products = append(products, product)
+	if products == nil {
+		err = fmt.Errorf("Desired page not found")
+		logger.WithField("err", err.Error()).Error("Products don't exist by such filters!")
+		return 0, []Product{}, err
 	}
-
-	return count, products, nil
-
+	return totalRecords, products, nil
 }
