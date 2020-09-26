@@ -200,9 +200,7 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 		//err = req.ParseForm()
 
 		//grab product
-		fmt.Println(contents)
 		err = decoder.Decode(&product, contents)
-		fmt.Println(product)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while decoding product")
 			responses(rw, http.StatusBadRequest, errorResponse{
@@ -487,9 +485,7 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 		//err = req.ParseForm()
 
 		//grab product
-		fmt.Println(contents)
 		err = decoder.Decode(&product, contents)
-		fmt.Println(product)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while decoding product data from the form")
 			responses(rw, http.StatusBadRequest, errorResponse{
@@ -539,6 +535,7 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 				})
 				return
 			}
+
 			defer tempFile.Close()
 
 			imageBytes, err := ioutil.ReadAll(image)

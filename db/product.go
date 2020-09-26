@@ -38,8 +38,8 @@ type Product struct {
 	CategoryID   int            `db:"cid" json:"category_id" schema:"category_id"`
 	CategoryName string         `db:"cname" json:"category" schema:"category"`
 	Brand        string         `db:"brand" json:"brand" schema:"brand"`
-	Color        *string        `db:"color" json:"color,*" schema:"color,*"`
-	Size         *string        `db:"size" json:"size,*" schema:"size,*"`
+	Color        string         `db:"color" json:"color,*" schema:"color,*"`
+	Size         string         `db:"size" json:"size,*" schema:"size,*"`
 	URLs         pq.StringArray `db:"image_urls" json:"image_urls,*"  schema:"-"`
 }
 
@@ -254,13 +254,11 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 			}
 		}
 	}
-
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		logger.WithField("err:", err.Error()).Error("Error while initiating update Product transaction")
 		return Product{}, err
 	}
-
 	if product.Name == "" {
 		product.Name = dbProduct.Name
 	}
@@ -285,11 +283,11 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 	if product.Brand == "" {
 		product.Brand = dbProduct.Brand
 	}
-	if product.Color == nil || *product.Color == "" {
-		*product.Color = *dbProduct.Color
+	if product.Color == "" {
+		product.Color = dbProduct.Color
 	}
-	if product.Size == nil || *product.Color == "" {
-		*product.Size = *dbProduct.Size
+	if product.Size == "" {
+		product.Size = dbProduct.Size
 	}
 	if product.URLs == nil {
 		product.URLs = dbProduct.URLs
@@ -314,11 +312,6 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 		product.URLs,
 		id,
 	)
-
-	// if len(product.URLs) != 0 {
-	// 	_, err = tx.Exec(updateProductImageQuery, product.URLs[0], Id)
-
-	// }
 
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error updating product attribute(s) to database :" + string(id))

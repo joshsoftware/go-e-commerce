@@ -2,6 +2,9 @@ package db
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/lib/pq"
 
 	"github.com/jmoiron/sqlx"
 	logger "github.com/sirupsen/logrus"
@@ -14,14 +17,15 @@ type Cart struct {
 }
 
 type Products struct {
-	Id          int     `db:"id" json:"id"`
-	Name        string  `db:"name" json:"name"`
-	Description string  `db:"description" json:"description"`
-	Price       float32 `db:"price" json:"price"`
-	Discount    float32 `db:"discount" json:"discount"`
-	Tax         float32 `db:"tax" json:""tax`
-	Quantity    int     `db:"quantity" json:"quantity"`
-	CategoryId  int     `db:"category_id" json:"category_id"`
+	Id          int            `db:"id" json:"id"`
+	Name        string         `db:"name" json:"name"`
+	Description string         `db:"description" json:"description"`
+	Price       float32        `db:"price" json:"price"`
+	Discount    float32        `db:"discount" json:"discount"`
+	Tax         float32        `db:"tax" json:""tax`
+	Quantity    int            `db:"quantity" json:"quantity"`
+	CategoryId  int            `db:"cid" json:"category_id"`
+	Images      pq.StringArray `db:"image_urls" json:"image_urls"`
 }
 
 // CartProduct is rquirement of frontend as json response
@@ -40,15 +44,15 @@ type CartProduct struct {
 const (
 	getCartQuery         = `SELECT product_id  FROM cart WHERE id=$1`
 	getCartQuantityQuery = `SELECT quantity FROM cart WHERE id=$1`
-	getProductsQuery     = `SELECT id,name,description,price,discount,tax,quantity,category_id FROM products WHERE id IN (?)`
-	getCategoryQuery     = `SELECT name from category where id=$1`
+	getProductsQuery     = `SELECT id,name,description,price,discount,tax,quantity,cid, image_urls FROM products WHERE id IN (?)`
+	getCategoryQuery     = `SELECT cname from category where cid=$1`
 	getProductImageQuery = `SELECT url from productimages where product_id=$1`
 )
 
 func (s *pgStore) GetCart(ctx context.Context, user_id int) (cart_products []CartProduct, err error) {
 	var pids []interface{}
 	var quantities []int
-	var category, image_url []string
+	var category []string
 	var products []Products
 
 	err = s.db.Select(&pids, getCartQuery, user_id)
@@ -69,9 +73,11 @@ func (s *pgStore) GetCart(ctx context.Context, user_id int) (cart_products []Car
 
 	for _, product := range products {
 		err = s.db.Select(&category, getCategoryQuery, product.CategoryId)
-		err = s.db.Select(&image_url, getProductImageQuery, product.Id)
 	}
 
+	fmt.Println("Products : ", products)
+	fmt.Println("Categorys : ", category)
+	fmt.Println("quantities : ", quantities)
 	for index, product := range products {
 		cart_products = append(
 			cart_products,
@@ -81,7 +87,7 @@ func (s *pgStore) GetCart(ctx context.Context, user_id int) (cart_products []Car
 				Category:    category[index],
 				Price:       product.Price,
 				Description: product.Description,
-				ImageUrl:    image_url[index],
+				ImageUrl:    product.Images[0],
 				Name:        product.Name,
 				Discount:    product.Discount,
 				Tax:         product.Tax,
