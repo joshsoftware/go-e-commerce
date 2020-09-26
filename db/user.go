@@ -33,9 +33,10 @@ const (
 
 	getUserQuery = `SELECT * from users where id=$1`
 
-	deleteUserQuery  = `DELETE FROM users WHERE id=$1`
-	disableUserQuery = `UPDATE users SET isdisabled =$1 WHERE id=$2`
-	enableUserQuery  = `UPDATE users SET isdisabled =$1 WHERE id=$2`
+	deleteUserQuery       = `DELETE FROM users WHERE id=$1`
+	disableUserQuery      = `UPDATE users SET isdisabled =$1 WHERE id=$2`
+	enableUserQuery       = `UPDATE users SET isdisabled =$1 WHERE id=$2`
+	deleteUsersTokenQuery = `DELETE FROM user_blacklisted_tokens WHERE user_id=$1`
 )
 
 //User Struct for declaring attributes of User
@@ -286,6 +287,7 @@ func (s *pgStore) EnableUserByID(ctx context.Context, userID int) (err error) {
 }
 
 func (s *pgStore) DeleteUserByID(ctx context.Context, userID int) (err error) {
+	_, err = s.db.Exec(deleteUsersTokenQuery, userID)
 	_, err = s.db.Exec(deleteUserQuery, userID)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error Deleting User")
