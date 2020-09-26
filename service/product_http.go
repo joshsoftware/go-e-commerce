@@ -7,8 +7,9 @@ import (
 	"joshsoftware/go-e-commerce/db"
 	"math"
 	"net/http"
-	"regexp"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
@@ -240,12 +241,13 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 				return
 			}
 
-			extensionRegex := regexp.MustCompile(`[.]+.*`)
-			extension := extensionRegex.Find([]byte(images[i].Filename))
+			// extensionRegex := regexp.MustCompile(`[.]+.*`)
+			// extension := extensionRegex.Find([]byte(images[i].Filename))
+			extension := filepath.Ext(images[i].Filename)
 			if len(extension) < 2 || len(extension) > 5 {
 				err = fmt.Errorf("Couldn't get extension of file!")
 				logger.WithField("err", err.Error()).Error("Error while getting image Extension.")
-				responses(rw, http.StatusInternalServerError, errorResponse{
+				responses(rw, http.StatusBadRequest, errorResponse{
 					Error: messageObject{
 						Message: "Re-check the image file extension!",
 					},
@@ -253,7 +255,8 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 				return
 			}
 
-			tempFile, err := ioutil.TempFile("assets/products", product.Name+"-*"+string(extension))
+			fileName := strings.ReplaceAll(product.Name, " ", "")
+			tempFile, err := ioutil.TempFile("assets/products", fileName+"-*"+string(extension))
 			if err != nil {
 				logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
 				responses(rw, http.StatusInternalServerError, errorResponse{
@@ -512,20 +515,21 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 				return
 			}
 
-			extensionRegex := regexp.MustCompile(`[.]+.*`)
-			extension := extensionRegex.Find([]byte(images[i].Filename))
+			// extensionRegex := regexp.MustCompile(`[.]+.*`)
+			// extension := extensionRegex.Find([]byte(images[i].Filename))
+			extension := filepath.Ext(images[i].Filename)
 			if len(extension) < 2 || len(extension) > 5 {
 				err = fmt.Errorf("Couldn't get extension of file!")
 				logger.WithField("err", err.Error()).Error("Error while getting image Extension.")
-				responses(rw, http.StatusInternalServerError, errorResponse{
+				responses(rw, http.StatusBadRequest, errorResponse{
 					Error: messageObject{
 						Message: "Re-check the image file extension!",
 					},
 				})
 				return
 			}
-
-			tempFile, err := ioutil.TempFile("assets/products", product.Name+"-*"+string(extension))
+			fileName := strings.ReplaceAll(product.Name, " ", "")
+			tempFile, err := ioutil.TempFile("assets/products", fileName+"-*"+string(extension))
 			if err != nil {
 				logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
 				responses(rw, http.StatusInternalServerError, errorResponse{
