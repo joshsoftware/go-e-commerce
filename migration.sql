@@ -8,7 +8,7 @@ INSERT INTO category (cname, description) VALUES('Sports','Shoes are for regular
 
 
 INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, size, image_urls) VALUES('Polo Shirt', 'Benetton Men  Classic Fit Polo Shirt',511, 10, 5, 10, 1 ,'Polo','Sky Blue', 'Medium', ARRAY ['poloshit1.jpeg','poloshirt2.jpeg', 'poloshirt3.jpeg']);
-INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, size, image_urls) VALUES('Wrangler', 'Men  Slim Fit Jeans', 600, 20, 5, 12, 1 , 'Armani','Charcoal Black','Large', ARRAY ['Wrangler2','Wrangler3']);
+INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, size, image_urls) VALUES('Wrangler', 'Men  Slim Fit Jeans', 600, 20, 5, 12, 1 , 'Armani','Charcoal Black','Large', ARRAY ['Wrangler2.jpeg','Wrangler3.jpeg']);
 INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, size, image_urls) VALUES('Dragon Jacket','Made from the skin of one of the dragons', 700, 40, 5, 9, 1 ,'Veteran','Black','Extra Large', ARRAY ['DragonJacket1.jpeg','DragonJacket2.jpeg', 'DragonJacket3.jpeg']);
 INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, image_urls) VALUES('HD Ready Android LED TV ', 'Resolution: HD Ready Android TV (1366x768)', 1200, 20, 10, 12, 2 ,'Samsung','Black', ARRAY ['AndroidLEDTV1.jpeg', 'AndroidLEDTV2.jpeg','AndroidLEDTV3.jpeg']);
 INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, image_urls) VALUES('Sony DSC W830 Cyber-Shot 20.1 MP ', 'Shoot Camera (Black) with 8X ', 1500, 50, 15, 8, 2 , 'Samsung','Blue', ARRAY ['SonyDSC1.jpeg','SonyDSC2.jpeg', 'SonyDSC3.jpeg']);

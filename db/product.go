@@ -38,8 +38,8 @@ type Product struct {
 	CategoryId   int            `db:"cid" json:"category_id" schema:"category_id"`
 	CategoryName string         `db:"cname" json:"category" schema:"category"`
 	Brand        string         `db:"brand" json:"brand" schema:"brand"`
-	Color        *string        `db:"color" json:"color,*" schema:"color,*"`
-	Size         *string        `db:"size" json:"size,*" schema:"size,*"`
+	Color        string         `db:"color" json:"color,*" schema:"color,*"`
+	Size         string         `db:"size" json:"size,*" schema:"size,*"`
 	URLs         pq.StringArray `db:"image_urls" json:"image_urls,*"  schema:"-"`
 }
 
@@ -92,6 +92,61 @@ func (product *Product) Validate() (map[string]ErrorResponse, bool) {
 	}
 
 	return errorResponse, false
+}
+
+func deleteImages(files pq.StringArray) error {
+
+	root := "./assets/productImages/"
+	for _, file := range files {
+		file = root + file
+		fmt.Println(file)
+		err := os.Remove(file)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error Couldn't remove the file!")
+			return err
+		}
+	}
+	return nil
+}
+
+func imagesStore(images []*multipart.FileHeader, product *Product) error {
+
+	for i, _ := range images {
+		image, err := images[i].Open()
+		defer image.Close()
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while decoding image Data, probably invalid image")
+			return err
+		}
+
+		extensionRegex := regexp.MustCompile(`[.]+.*`)
+		extension := extensionRegex.Find([]byte(images[i].Filename))
+		// normally our extensions be like .jpg, .jpeg, .png etc
+		if len(extension) < 2 || len(extension) > 5 {
+			err = fmt.Errorf("Couldn't get extension of file!")
+			logger.WithField("err", err.Error()).Error("Error while getting image Extension. Re-check the image file extension!")
+
+			return err
+		}
+
+		directoryPath := "assets/productImages"
+
+		tempFile, err := ioutil.TempFile(directoryPath, (*product).Name+"-*"+string(extension))
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
+			return err
+		}
+		defer tempFile.Close()
+
+		imageBytes, err := ioutil.ReadAll(image)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while reading image File")
+			return err
+		}
+		tempFile.Write(imageBytes)
+		(*product).URLs = append(product.URLs, tempFile.Name()[len(directoryPath)+1:])
+	}
+	return nil
 }
 
 // @Title GetProductByID
@@ -154,50 +209,10 @@ func (s *pgStore) ListProducts(ctx context.Context, limit int, offset int) (int,
 	return totalRecords, products, nil
 }
 
-func imagesStore(images []*multipart.FileHeader, product *Product, imageName string) error {
-
-	for i, _ := range images {
-		image, err := images[i].Open()
-		defer image.Close()
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while decoding image Data, probably invalid image")
-			return err
-		}
-
-		extensionRegex := regexp.MustCompile(`[.]+.*`)
-		extension := extensionRegex.Find([]byte(images[i].Filename))
-		// normally our extensions be like .jpg, .jpeg, .png etc
-		if len(extension) < 2 || len(extension) > 5 {
-			err = fmt.Errorf("Couldn't get extension of file!")
-			logger.WithField("err", err.Error()).Error("Error while getting image Extension. Re-check the image file extension!")
-
-			return err
-		}
-
-		directoryPath := "assets/productImages"
-
-		tempFile, err := ioutil.TempFile(directoryPath, imageName+"-*"+string(extension))
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
-			return err
-		}
-		defer tempFile.Close()
-
-		imageBytes, err := ioutil.ReadAll(image)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while reading image File")
-			return err
-		}
-		tempFile.Write(imageBytes)
-		(*product).URLs = append(product.URLs, tempFile.Name()[len(directoryPath)+1:])
-	}
-	return nil
-}
-
 func (s *pgStore) CreateProduct(ctx context.Context, product Product, images []*multipart.FileHeader) (Product, error) {
 
 	if images != nil {
-		err := imagesStore(images, &product, product.Name)
+		err := imagesStore(images, &product)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error inserting images in assets: " + product.Name)
 			return Product{}, err
@@ -208,7 +223,6 @@ func (s *pgStore) CreateProduct(ctx context.Context, product Product, images []*
 	row, err := s.db.NamedQuery(insertProductQuery, product)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error inserting product to database: " + product.Name)
-		// handle removing image files
 		return Product{}, err
 	}
 	if row.Next() {
@@ -257,11 +271,11 @@ func (s *pgStore) DeleteProductById(ctx context.Context, id int) error {
 		return err
 	}
 
+	// do not throw error as deletion of Product data was successful.
 	if files != nil {
 		err = deleteImages(files)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error Couldn't remove the images file!")
-			return err
 		}
 	}
 
@@ -275,14 +289,6 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error while fetching product ")
 		return Product{}, err
-	}
-
-	if images != nil {
-		err = imagesStore(images, &product, dbProduct.Name)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error inserting images in assets: " + product.Name)
-			return Product{}, err
-		}
 	}
 
 	if product.Name == "" {
@@ -312,16 +318,24 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 	if product.Brand == "" {
 		product.Brand = dbProduct.Brand
 	}
-	if product.Color == nil || *product.Color == "" {
+	if product.Color == "" {
 		product.Color = dbProduct.Color
 	}
-	if product.Size == nil || *product.Size == "" {
+	if product.Size == "" {
 		product.Size = dbProduct.Size
 	}
 
 	_, valid := product.Validate()
 	if !valid {
 		return Product{}, fmt.Errorf("Product Validation failed. Invalid Fields present in the product e.g Discount is greater than Price")
+	}
+
+	if images != nil {
+		err = imagesStore(images, &product)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error inserting images in assets: " + product.Name)
+			return Product{}, err
+		}
 	}
 
 	// Update images only after validations
@@ -357,19 +371,4 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 	}
 	product.Id = id
 	return product, nil
-}
-
-func deleteImages(files pq.StringArray) error {
-
-	root := "./assets/productImages/"
-	for _, file := range files {
-		file = root + file
-		fmt.Println(file)
-		err := os.Remove(file)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error Couldn't remove the file!")
-			return err
-		}
-	}
-	return nil
 }
