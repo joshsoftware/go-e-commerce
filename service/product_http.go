@@ -177,8 +177,7 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 			response(rw, http.StatusBadRequest, errRes)
 			return
 		}
-
-		createdProductID, err := deps.Store.CreateProduct(req.Context(), product, images)
+		createdProduct, err := deps.Store.CreateProduct(req.Context(), product, images)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while inserting product")
 			response(rw, http.StatusBadRequest, errorResponse{
@@ -188,7 +187,7 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 			})
 			return
 		}
-		response(rw, http.StatusOK, successResponse{Data: createdProductID})
+		response(rw, http.StatusOK, successResponse{Data: createdProduct})
 		return
 	})
 }
