@@ -24,5 +24,9 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	v1 := fmt.Sprintf("application/vnd.%s.v1", config.AppName())
 
 	router.HandleFunc("/users", listUsersHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
+
+	//TODO :- use JWT authentication
+	router.HandleFunc("/user", getUserHandler(deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
+	router.HandleFunc("/user/update", updateUserHandler(deps)).Methods(http.MethodPatch).Headers(versionHeader, v1)
 	return
 }
