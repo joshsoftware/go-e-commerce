@@ -3,6 +3,7 @@ module joshsoftware/go-e-commerce
 go 1.14
 
 require (
+	github.com/bxcodec/faker v2.0.1+incompatible
 	github.com/gorilla/mux v1.8.0
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.8.0

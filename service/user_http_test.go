@@ -1,13 +1,15 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"joshsoftware/go-e-commerce/db"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"testing"
 
+	"github.com/bxcodec/faker"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -26,27 +28,32 @@ func (suite *UsersHandlerTestSuite) SetupTest() {
 	suite.dbMock = &db.DBMockStore{}
 }
 
-func TestExampleTestSuite(t *testing.T) {
-	suite.Run(t, new(UsersHandlerTestSuite))
-}
-
 func (suite *UsersHandlerTestSuite) TestListUsersSuccess() {
-	suite.dbMock.On("ListUsers", mock.Anything).Return(
-		[]db.User{
-			db.User{Name: "test-user", Age: 18},
-		},
-		nil,
-	)
+	fakeUser := db.User{}
+	faker.FakeData(&fakeUser)
+
+	// Declare an array of db.User and append the fakeUser onto it for use on the dbMock
+	fakeUsers := []db.User{}
+	fakeUsers = append(fakeUsers, fakeUser)
+
+	suite.dbMock.On("ListUsers", mock.Anything).Return(fakeUsers, nil)
 
 	recorder := makeHTTPCall(
 		http.MethodGet,
+		"/users",
 		"/users",
 		"",
 		listUsersHandler(Dependencies{Store: suite.dbMock}),
 	)
 
+	var users []db.User
+	err := json.Unmarshal(recorder.Body.Bytes(), &users)
+	if err != nil {
+		log.Fatal("Error converting HTTP body from listUsersHandler into User object in json.Unmarshal")
+	}
+
 	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
-	assert.Equal(suite.T(), `[{"full_name":"test-user","age":18}]`, recorder.Body.String())
+	assert.NotNil(suite.T(), users[0].ID)
 	suite.dbMock.AssertExpectations(suite.T())
 }
 
@@ -59,6 +66,7 @@ func (suite *UsersHandlerTestSuite) TestListUsersWhenDBFailure() {
 	recorder := makeHTTPCall(
 		http.MethodGet,
 		"/users",
+		"/users",
 		"",
 		listUsersHandler(Dependencies{Store: suite.dbMock}),
 	)
@@ -67,7 +75,148 @@ func (suite *UsersHandlerTestSuite) TestListUsersWhenDBFailure() {
 	suite.dbMock.AssertExpectations(suite.T())
 }
 
-func makeHTTPCall(method, path, body string, handlerFunc http.HandlerFunc) (recorder *httptest.ResponseRecorder) {
+func (suite *UsersHandlerTestSuite) TestGetUserSuccess() {
+
+}
+
+func (suite *UsersHandlerTestSuite) TestDeleteUserSuccess() {
+
+	suite.dbMock.On("GetUser", mock.Anything, 1).Return(
+		db.User{
+			ID:        1,
+			FirstName: "TestUser",
+			LastName:  "TestUser",
+			Email:     "TestEmail",
+			Mobile:    "TestMobile",
+			Address:   "Testaddress",
+			Password:  "TestPass",
+			Country:   "TestCountry",
+			State:     "TestState",
+			City:      "TestCity",
+			IsAdmin:   false,
+		}, nil,
+	)
+
+	suite.dbMock.On("DeleteUserByID", mock.Anything, 1).Return(
+		nil,
+	)
+
+	recorder := makeHTTPCall(http.MethodDelete,
+		"/user/{id:[0-9]+}",
+		"/user/1",
+		"",
+		deleteUserHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
+
+	suite.dbMock.AssertExpectations(suite.T())
+}
+
+func (suite *UsersHandlerTestSuite) TestDeleteUserDbFailure() {
+
+	suite.dbMock.On("GetUser", mock.Anything, 1).Return(
+		db.User{
+			ID:        1,
+			FirstName: "TestUser",
+			LastName:  "TestUser",
+			Email:     "TestEmail",
+			Mobile:    "TestMobile",
+			Address:   "Testaddress",
+			Password:  "TestPass",
+			Country:   "TestCountry",
+			State:     "TestState",
+			City:      "TestCity",
+			IsAdmin:   false,
+		}, nil,
+	)
+
+	suite.dbMock.On("DeleteUserByID", mock.Anything, 1).Return(
+		errors.New("Error while deleting user"),
+	)
+
+	recorder := makeHTTPCall(http.MethodDelete,
+		"/user/{id:[0-9]+}",
+		"/user/1",
+		"",
+		deleteUserHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusNotFound, recorder.Code)
+
+	suite.dbMock.AssertExpectations(suite.T())
+}
+
+func (suite *UsersHandlerTestSuite) TestDisableUserSuccess() {
+
+	suite.dbMock.On("GetUser", mock.Anything, 1).Return(
+		db.User{
+			ID:         1,
+			FirstName:  "TestUser",
+			LastName:   "TestUser",
+			Email:      "TestEmail",
+			Mobile:     "TestMobile",
+			Address:    "Testaddress",
+			Password:   "TestPass",
+			Country:    "TestCountry",
+			State:      "TestState",
+			City:       "TestCity",
+			IsAdmin:    false,
+			IsDisabled: false,
+		}, nil,
+	)
+
+	suite.dbMock.On("DisableUserByID", mock.Anything, 1).Return(
+		nil,
+	)
+
+	recorder := makeHTTPCall(http.MethodPatch,
+		"/user/{id:[0-9]+}",
+		"/user/1",
+		"",
+		deleteUserHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
+
+	suite.dbMock.AssertExpectations(suite.T())
+}
+
+func (suite *UsersHandlerTestSuite) TestDisableUserDbFailure() {
+
+	suite.dbMock.On("GetUser", mock.Anything, 1).Return(
+		db.User{
+			ID:         1,
+			FirstName:  "TestUser",
+			LastName:   "TestUser",
+			Email:      "TestEmail",
+			Mobile:     "TestMobile",
+			Address:    "Testaddress",
+			Password:   "TestPass",
+			Country:    "TestCountry",
+			State:      "TestState",
+			City:       "TestCity",
+			IsAdmin:    false,
+			IsDisabled: false,
+		}, nil,
+	)
+
+	suite.dbMock.On("DisableUserByID", mock.Anything, 1).Return(
+		errors.New("Error while deleting user"),
+	)
+
+	recorder := makeHTTPCall(http.MethodPatch,
+		"/user/{id:[0-9]+}",
+		"/user/1",
+		"",
+		deleteUserHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusNotFound, recorder.Code)
+
+	suite.dbMock.AssertExpectations(suite.T())
+}
+func makeHTTPCall(method, path, requestURL, body string, handlerFunc http.HandlerFunc) (recorder *httptest.ResponseRecorder) {
 	// create a http request using the given parameters
 	req, _ := http.NewRequest(method, path, strings.NewReader(body))
 
