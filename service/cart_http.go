@@ -187,7 +187,7 @@ func updateIntoCartHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		success := successResponse{
+		success := successResponse {
 			Data : "Quantity updated successfully", 
 		}
 		responses(rw, http.StatusOK, success)
