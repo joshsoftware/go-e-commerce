@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	insertUserQuery = `INSERT INTO users (first_name, last_name, email, mobile, country, state, city, address, password) 
-	VALUES (:first_name, :last_name, :email, :mobile, :country, :state, :city, :address, :password)`
+	insertUserQuery = `INSERT INTO users (first_name, last_name, email, mobile, country, state, city, address, password, profile_image) 
+	VALUES (:first_name, :last_name, :email, :mobile, :country, :state, :city, :address, :password, :profile_image)`
 
 	getUserByEmailQuery = `SELECT * FROM users WHERE email=$1 LIMIT 1`
 	updateUserQuery     = `UPDATE users SET (
@@ -31,7 +31,8 @@ const (
 		) = 
 		($1, $2, $3, $4, $5, $6 ,$7,$8) where id = $9 `
 
-	getUserQuery = `SELECT * from users where id=$1`
+	getUserQuery  = `SELECT * FROM users where id=$1`
+	getUsersQuery = `SELECT * FROM users ORDER BY id ASC`
 
 	deleteUserQuery       = `DELETE FROM users WHERE id=$1`
 	disableUserQuery      = `UPDATE users SET isdisabled =$1 WHERE id=$2`
@@ -41,24 +42,42 @@ const (
 
 //User Struct for declaring attributes of User
 type User struct {
-	ID         int       `db:"id" json:"id"`
-	FirstName  string    `db:"first_name" json:"first_name"`
-	LastName   string    `db:"last_name" json:"last_name"`
-	Email      string    `db:"email" json:"email"`
-	Mobile     string    `db:"mobile" json:"mobile"`
-	Address    string    `db:"address" json:"address"`
-	Password   string    `db:"password" json:"password"`
-	Country    string    `db:"country" json:"country"`
-	State      string    `db:"state" json:"state"`
-	City       string    `db:"city" json:"city"`
-	IsAdmin    bool      `db:"isadmin" json:"isAdmin"`
-	IsDisabled bool      `db:"isdisabled" json:"isDisabled"`
-	CreatedAt  time.Time `db:"created_at" json:"created_at"`
+	ID           int       `db:"id" json:"id" schema:"-"`
+	FirstName    string    `db:"first_name" json:"first_name" schema:"first_name"`
+	LastName     string    `db:"last_name" json:"last_name" schema:"last_name"`
+	Email        string    `db:"email" json:"email" schema:"email"`
+	Mobile       string    `db:"mobile" json:"mobile" schema:"mobile"`
+	Address      string    `db:"address" json:"address" schema:"address"`
+	Password     string    `db:"password" json:"password" schema:"password"`
+	Country      string    `db:"country" json:"country" schema:"country"`
+	State        string    `db:"state" json:"state" schema:"state"`
+	City         string    `db:"city" json:"city" schema:"city"`
+	ProfileImage string    `db:"profile_image" json:"profile_image" schema:"-"`
+	IsAdmin      bool      `db:"isadmin" json:"isAdmin" schema:"-"`
+	IsDisabled   bool      `db:"isdisabled" json:"isDisabled" schema:"-"`
+	CreatedAt    time.Time `db:"created_at" json:"created_at" schema:"-"`
+}
+
+func (user *User) Validate() (err error) {
+	if user.FirstName == "" {
+		err = fmt.Errorf("First name can't be blank")
+		return
+	}
+	if user.Email == "" {
+		err = fmt.Errorf("email can't be blank")
+		return
+	}
+	if user.Password == "" {
+		err = fmt.Errorf("password can't be blank")
+		return
+	}
+	return
 }
 
 //ListUsers function to fetch all Users From Database
 func (s *pgStore) ListUsers(ctx context.Context) (users []User, err error) {
-	err = s.db.Select(&users, "SELECT * FROM users ORDER BY id ASC")
+	err = s.db.Select(&users, getUsersQuery)
+
 	if err != nil {
 		logger.WithField("err", err.Error()).Error(fmt.Errorf("error selecting users from database"))
 		return
@@ -77,21 +96,12 @@ func (s *pgStore) GetUser(ctx context.Context, id int) (user User, err error) {
 
 // CreateNewUser = creates a new user in database
 func (s *pgStore) CreateNewUser(ctx context.Context, u User) (newUser User, err error) {
-	tx, err := s.db.Beginx()
+	_, err = s.db.NamedExec(insertUserQuery, u)
 	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error in beginning user insert transaction")
+		logger.WithField("err", err.Error()).Error("Error while creating user")
 		return
 	}
-	_, err = tx.NamedExec(insertUserQuery, u)
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error while inserting user into database")
-		return
-	}
-	err = tx.Commit()
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error while commiting transaction inserting user")
-		return
-	}
+
 	_, newUser, err = s.CheckUserByEmail(ctx, u.Email)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error selecting user from database with email: " + u.Email)

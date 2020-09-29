@@ -3,12 +3,16 @@ package service
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"joshsoftware/go-e-commerce/db"
 	"net/http"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/schema"
 	logger "github.com/sirupsen/logrus"
 
 	"golang.org/x/crypto/bcrypt"
@@ -43,25 +47,111 @@ func listUsersHandler(deps Dependencies) http.HandlerFunc {
 // @Title registerUser
 // @Description registers new user
 // @Router /register [post]
-// @Accept  json
+// @Accept  mulipart/form-data
 // @Success 201 {object}
 // @Failure 400 {object}
 func registerUserHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
-		// reading data from body
-		reqBody, err := ioutil.ReadAll(req.Body)
+		var user db.User
+		var decoder = schema.NewDecoder()
+
+		err := req.ParseMultipartForm(15 << 20) // 15 MB Max File Size
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error in reading request body")
-			rw.WriteHeader(http.StatusInternalServerError)
+			logger.WithField("err", err.Error()).Error("Error while parsing the Product form")
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Invalid Form Data!",
+				},
+			})
 			return
 		}
-		user := db.User{}
-		err = json.Unmarshal(reqBody, &user)
+
+		// Retrive file from posted data
+		formdata := req.MultipartForm
+
+		// grab the filename
+		contents := formdata.Value
+		images := formdata.File["profile_image"]
+
+		//grab product
+		err = decoder.Decode(&user, contents)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while Unmarshalling request json")
-			rw.WriteHeader(http.StatusInternalServerError)
+			logger.WithField("err", err.Error()).Error("Error while decoding product")
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Invalid form contents",
+				},
+			})
 			return
+		}
+
+		err = user.Validate()
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Some data missing in request")
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: err.Error(),
+				},
+			})
+			return
+		}
+
+		// check if profile image is present or not
+		if len(images) > 0 {
+			image, err := images[0].Open()
+
+			defer image.Close()
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error while decoding image Data")
+				responses(rw, http.StatusBadRequest, errorResponse{
+					Error: messageObject{
+						Message: "Invalid Image !",
+					},
+				})
+				return
+			}
+
+			extension := filepath.Ext(images[0].Filename)
+
+			if len(extension) < 2 || len(extension) > 5 {
+				err = fmt.Errorf("Couldn't get extension of file!")
+				logger.WithField("err", err.Error()).Error("Error while getting image Extension.")
+				responses(rw, http.StatusBadRequest, errorResponse{
+					Error: messageObject{
+						Message: "Re-check the image file extension!",
+					},
+				})
+				return
+			}
+
+			fileName := strings.ReplaceAll(user.FirstName, " ", "")
+			tempFile, err := ioutil.TempFile("assets/users", fileName+"-*"+string(extension))
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
+				responses(rw, http.StatusInternalServerError, errorResponse{
+					Error: messageObject{
+						Message: "Couldn't  create temporary storage!",
+					},
+				})
+				return
+			}
+			defer tempFile.Close()
+
+			imageBytes, err := ioutil.ReadAll(image)
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error while reading image File")
+				responses(rw, http.StatusInternalServerError, errorResponse{
+					Error: messageObject{
+						Message: "Couldn't read the image file!",
+					},
+				})
+				return
+			}
+			tempFile.Write(imageBytes)
+
+			user.ProfileImage = tempFile.Name()
+
 		}
 
 		// For checking if user already registered
@@ -166,27 +256,33 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 		var user db.User
+		var decoder = schema.NewDecoder()
 
-		err = json.NewDecoder(req.Body).Decode(&user)
-
+		err = req.ParseMultipartForm(15 << 20) // 15 MB Max File Size
 		if err != nil {
-			rw.WriteHeader(http.StatusBadRequest)
-			logger.WithField("err", err.Error()).Error("error while decoding user")
+			logger.WithField("err", err.Error()).Error("Error while parsing the Product form")
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "invalid json body",
+					Message: "Invalid Form Data!",
 				},
 			})
 			return
 		}
 
-		if user.Email != "" {
+		// Retrive file from posted data
+		formdata := req.MultipartForm
 
-			rw.WriteHeader(http.StatusBadRequest)
-			logger.WithField("err", "cannot update email")
+		// grab the filename
+		contents := formdata.Value
+		images := formdata.File["profile_image"]
+
+		//grab product
+		err = decoder.Decode(&user, contents)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while decoding product")
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "cannot update email id !!",
+					Message: "Invalid form contents",
 				},
 			})
 			return
@@ -203,6 +299,76 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 			})
 			return
 		}
+
+		// check if profile image is present or not
+		if len(images) > 0 {
+			image, err := images[0].Open()
+
+			defer image.Close()
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error while decoding image Data")
+				responses(rw, http.StatusBadRequest, errorResponse{
+					Error: messageObject{
+						Message: "Invalid Image !",
+					},
+				})
+				return
+			}
+
+			extension := filepath.Ext(images[0].Filename)
+
+			if len(extension) < 2 || len(extension) > 5 {
+				err = fmt.Errorf("Couldn't get extension of file!")
+				logger.WithField("err", err.Error()).Error("Error while getting image Extension.")
+				responses(rw, http.StatusBadRequest, errorResponse{
+					Error: messageObject{
+						Message: "Re-check the image file extension!",
+					},
+				})
+				return
+			}
+
+			fileName := strings.ReplaceAll(user.FirstName, " ", "")
+			tempFile, err := ioutil.TempFile("assets/users", fileName+"-*"+string(extension))
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
+				responses(rw, http.StatusInternalServerError, errorResponse{
+					Error: messageObject{
+						Message: "Couldn't  create temporary storage!",
+					},
+				})
+				return
+			}
+			defer tempFile.Close()
+
+			imageBytes, err := ioutil.ReadAll(image)
+			if err != nil {
+				logger.WithField("err", err.Error()).Error("Error while reading image File")
+				responses(rw, http.StatusInternalServerError, errorResponse{
+					Error: messageObject{
+						Message: "Couldn't read the image file!",
+					},
+				})
+				return
+			}
+			tempFile.Write(imageBytes)
+
+			dbUser.ProfileImage = tempFile.Name()
+
+		}
+
+		if user.Email != "" {
+
+			rw.WriteHeader(http.StatusBadRequest)
+			logger.WithField("err", "cannot update email")
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "cannot update email id !!",
+				},
+			})
+			return
+		}
+
 		err = dbUser.ValidatePatchParams(user)
 		if err != nil {
 			rw.WriteHeader(http.StatusInternalServerError)
