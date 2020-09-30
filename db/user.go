@@ -27,9 +27,10 @@ const (
 		password,
 		country,
 		state,
-		city
+		city,
+		profile_image
 		) = 
-		($1, $2, $3, $4, $5, $6 ,$7,$8) where id = $9 `
+		($1, $2, $3, $4, $5, $6 ,$7,$8, $9) where id = $10 `
 
 	getUserQuery  = `SELECT * FROM users where id=$1`
 	getUsersQuery = `SELECT * FROM users ORDER BY id ASC`
@@ -234,6 +235,7 @@ func (s *pgStore) UpdateUserByID(ctx context.Context, user User, userID int) (er
 		user.Country,
 		user.State,
 		user.City,
+		user.ProfileImage,
 		userID,
 	)
 	if err != nil {
@@ -274,6 +276,9 @@ func (user *User) ValidatePatchParams(u User) (err error) {
 	}
 	if u.City != "" {
 		user.City = u.City
+	}
+	if u.ProfileImage != "" {
+		user.ProfileImage = u.ProfileImage
 	}
 	return
 }
