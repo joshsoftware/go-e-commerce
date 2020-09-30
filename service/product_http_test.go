@@ -176,14 +176,16 @@ func makeHttpCalls(url string, method string, payload *bytes.Buffer, writer *mul
 	body, err := ioutil.ReadAll(res.Body)
 	return res, body, nil
 }
+
 func (suite *ProductsHandlerTestSuite) TestCreateProductSuccess() {
 
 	//suite.dbMock.On("CreateProduct", mock.Anything, mock.Anything, mock.Anything).Return(testProduct, nil)
-	url := "http://localhost:33001/createProduct"
-	method := "POST"
+	//url := "http://localhost:33001/createProduct"
+	//method := "POST"
+
 	payload := &bytes.Buffer{}
 	writer := multipart.NewWriter(payload)
-	_ = writer.WriteField("product_title", "test organizationwe")
+	_ = writer.WriteField("product_title", "test organization")
 	_ = writer.WriteField("description", "test@gmail.com")
 	_ = writer.WriteField("product_price", "12")
 	_ = writer.WriteField("discount", "1")
@@ -194,39 +196,40 @@ func (suite *ProductsHandlerTestSuite) TestCreateProductSuccess() {
 	_ = writer.WriteField("color", "Black")
 	_ = writer.WriteField("size", "Medium")
 	_ = writer.WriteField("brand", "IST")
-	err := writer.Close()
-	if err != nil {
-		fmt.Println(err)
-	}
-	res, body, err := makeHttpCalls(url, method, payload, writer)
 
-	/* body := `{product_title: "test organization",
-	        descriptrion: "test@gmail.com",
-	        product_price: 12.8,
-			discount: 1,
-			tax: 0.5,
-	        stock: 15,
-			category_id: 5,
-			category:"2",
-			brand:"IST",
-			color:"Black",
-			size:"Medium",
-	        image_urls: [
-	            "url1",
-	            "url2"
-	        ]
-		}` */
+	body := payload.String()
+	fmt.Println("body: ", body)
 
-	/* recorder := makeHTTPCall(
+	suite.dbMock.On("CreateProduct", mock.Anything, mock.Anything, mock.Anything).Return(
+		db.Product{
+			Id:           1,
+			Name:         "test organization",
+			Description:  "test@gmail.com",
+			Price:        12,
+			Discount:     1,
+			Tax:          0.5,
+			Quantity:     15,
+			CategoryId:   5,
+			CategoryName: "2",
+			Brand:        "IST",
+			Color:        "Black",
+			Size:         "Medium",
+			URLs:         urls,
+		},
+		nil,
+	)
+
+	recorder := makeHTTPCallWithHeader(
 		http.MethodPost,
 		"/createProduct",
 		"/createProduct",
-		body,
+		writer,
+		payload,
 		createProductHandler(Dependencies{Store: suite.dbMock}),
 	)
-	*/
-	assert.Equal(suite.T(), http.StatusOK, res.StatusCode)
-	assert.Equal(suite.T(), `{"data":{"id":71,"product_title":"test organizationwe","description":"test@gmail.com","product_price":12,"discount":1,"tax":0.5,"stock":15,"category_id":5,"category":"2","brand":"IST","color":"Black","size":"Medium","image_urls":null}}`, string(body))
+
+	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
+	assert.Equal(suite.T(), `{"data":{"id":1,"product_title":"test organization","description":"test@gmail.com","product_price":12,"discount":1,"tax":0.5,"stock":15,"category_id":5,"category":"2","brand":"IST","color":"Black","size":"Medium","image_urls":["url1","url2"]}}`, recorder.Body.String())
 	suite.dbMock.AssertExpectations(suite.T())
 }
 
