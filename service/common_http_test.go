@@ -44,7 +44,7 @@ func makeHTTPCallWithHeader(method, path, requestURL string, writer *multipart.W
 
 	req, _ := http.NewRequest(method, requestURL, strings.NewReader(payload.String()))
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	fmt.Println(req)
+	//fmt.Println(req)
 
 	// test recorder created for capturing apiresponses
 	recorder = httptest.NewRecorder()

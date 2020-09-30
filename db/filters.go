@@ -172,7 +172,7 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 	isFiltered := `  `
 
 	// iterate over all the textMap
-	for key, _ := range textMap {
+	for key := range textMap {
 		isFiltered += ` 
 		LOWER(p.name) LIKE LOWER('%` + key + `%') OR 
 		LOWER(p.brand) LIKE LOWER('%` + key + `%') OR 
