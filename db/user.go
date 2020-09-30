@@ -53,7 +53,7 @@ type User struct {
 	Country      string    `db:"country" json:"country" schema:"country"`
 	State        string    `db:"state" json:"state" schema:"state"`
 	City         string    `db:"city" json:"city" schema:"city"`
-	ProfileImage string    `db:"profile_image" json:"profile_image" schema:"-"`
+	ProfileImage string    `db:"profile_image" json:"profile_image" schema:"profile_image"`
 	IsAdmin      bool      `db:"isadmin" json:"isAdmin" schema:"-"`
 	IsDisabled   bool      `db:"isdisabled" json:"isDisabled" schema:"-"`
 	CreatedAt    time.Time `db:"created_at" json:"created_at" schema:"-"`
