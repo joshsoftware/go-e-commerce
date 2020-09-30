@@ -36,6 +36,9 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	//Router for User Logout
 	router.Handle("/logout", jwtMiddleWare(userLogoutHandler(deps), deps)).Methods(http.MethodDelete).Headers(versionHeader, v1)
 
+	//Route for Inviting User
+	router.Handle("/invite", jwtMiddleWare(adminMiddleware(inviteUsersHandler(deps), deps), deps)).Methods(http.MethodPost).Headers(versionHeader, v1)
+
 	//Router for users operations
 	router.Handle("/user", jwtMiddleWare(userMiddleware(getUserHandler(deps), deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 	router.Handle("/admin", jwtMiddleWare(adminMiddleware(getUserHandler(deps), deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
