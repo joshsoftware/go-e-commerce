@@ -53,6 +53,18 @@ func JWTKey() []byte {
 	return []byte(ReadEnvString("JWT_SECRET"))
 }
 
+//MailerConfig - returns Configuration for mailer
+func MailerConfig() (host string, port int, email string, username string, password string) {
+
+	host = ReadEnvString("MAILER_HOST")
+	port = ReadEnvInt("MAILER_PORT")
+	email = ReadEnvString("MAILER_EMAIL")
+	username = ReadEnvString("MAILER_USERNAME")
+	password = ReadEnvString("MAILER_PASSWORD")
+
+	return host, port, email, username, password
+}
+
 // JWTExpiryDurationHours - returns duration for jwt expiry in int
 func JWTExpiryDurationHours() int {
 	return int(ReadEnvInt("JWT_EXPIRY_DURATION_HOURS"))
