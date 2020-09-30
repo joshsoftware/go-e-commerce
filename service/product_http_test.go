@@ -1,11 +1,12 @@
 package service
 
 import (
-	"database/sql"
-	"encoding/json"
+	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"joshsoftware/go-e-commerce/db"
+	"mime/multipart"
 	"net/http"
 	"testing"
 
@@ -42,8 +43,8 @@ func (suite *ProductsHandlerTestSuite) TestGetProductByIdHandlerSuccess() {
 			CategoryId:   1,
 			CategoryName: "testing",
 			Brand:        "new brand",
-			Color:        nil,
-			Size:         nil,
+			Color:        "Black",
+			Size:         "Larger",
 		}, nil,
 	)
 
@@ -56,7 +57,7 @@ func (suite *ProductsHandlerTestSuite) TestGetProductByIdHandlerSuccess() {
 	)
 
 	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
-	assert.Equal(suite.T(), `{"id":1,"product_title":"test","description":"test database","product_price":123,"discount":10,"tax":0.5,"stock":5,"category_id":1,"category":"testing","brand":"new brand","color":null,"size":null,"image_urls":null}`, recorder.Body.String())
+	assert.Equal(suite.T(), `{"id":1,"product_title":"test","description":"test database","product_price":123,"discount":10,"tax":0.5,"stock":5,"category_id":1,"category":"testing","brand":"new brand","color":"Black","size":"Larger","image_urls":null}`, recorder.Body.String())
 	suite.dbMock.AssertExpectations(suite.T())
 
 }
@@ -96,8 +97,8 @@ func (suite *ProductsHandlerTestSuite) TestListProductsSuccess() {
 				CategoryId:   5,
 				CategoryName: "2",
 				Brand:        "IST",
-				Color:        nil,
-				Size:         nil,
+				Color:        "Black",
+				Size:         "Larger",
 			},
 		},
 		nil,
@@ -112,7 +113,7 @@ func (suite *ProductsHandlerTestSuite) TestListProductsSuccess() {
 	)
 
 	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
-	assert.Equal(suite.T(), `{"products":[{"id":1,"product_title":"test organization","description":"test@gmail.com","product_price":12,"discount":1,"tax":0.5,"stock":15,"category_id":5,"category":"2","brand":"IST","color":null,"size":null,"image_urls":null}],"total_pages":1}`, recorder.Body.String())
+	assert.Equal(suite.T(), `{"products":[{"id":1,"product_title":"test organization","description":"test@gmail.com","product_price":12,"discount":1,"tax":0.5,"stock":15,"category_id":5,"category":"2","brand":"IST","color":"Black","size":"Larger","image_urls":null}],"total_pages":1}`, recorder.Body.String())
 	suite.dbMock.AssertExpectations(suite.T())
 }
 
@@ -150,110 +151,185 @@ var testProduct = db.Product{
 	CategoryId:   5,
 	CategoryName: "2",
 	Brand:        "IST",
-	Color:        &color,
-	Size:         &size,
+	Color:        "Black",
+	Size:         "Medium",
 	URLs:         urls,
 }
 
+func makeHttpCalls(url string, method string, payload *bytes.Buffer, writer *multipart.Writer) (*http.Response, []byte, error) {
+	fmt.Println(url, method, payload)
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, payload)
+
+	if err != nil {
+		fmt.Println(err)
+		return nil, nil, err
+	}
+	req.Header.Add("Accept", "application/vnd.e-commerce.v1")
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return nil, nil, err
+	}
+	defer res.Body.Close()
+	body, err := ioutil.ReadAll(res.Body)
+	return res, body, nil
+}
 func (suite *ProductsHandlerTestSuite) TestCreateProductSuccess() {
 
-	suite.dbMock.On("CreateProduct", mock.Anything, mock.Anything).Return(testProduct, nil)
+	//suite.dbMock.On("CreateProduct", mock.Anything, mock.Anything, mock.Anything).Return(testProduct, nil)
+	url := "http://localhost:33001/createProduct"
+	method := "POST"
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+	_ = writer.WriteField("product_title", "test organizationwe")
+	_ = writer.WriteField("description", "test@gmail.com")
+	_ = writer.WriteField("product_price", "12")
+	_ = writer.WriteField("discount", "1")
+	_ = writer.WriteField("tax", "0.5")
+	_ = writer.WriteField("stock", "15")
+	_ = writer.WriteField("category_id", "5")
+	_ = writer.WriteField("category", "2")
+	_ = writer.WriteField("color", "Black")
+	_ = writer.WriteField("size", "Medium")
+	_ = writer.WriteField("brand", "IST")
+	err := writer.Close()
+	if err != nil {
+		fmt.Println(err)
+	}
+	res, body, err := makeHttpCalls(url, method, payload, writer)
 
-	body := `{
-		"product_title": "test organization",
-        "description": "test@gmail.com",
-        "product_price": 12.8,
-		"discount": 1,
-		"tax": 0.5,
-        "stock": 15,
-		"category_id": 5,
-		"category":"2",
-		"brand":"IST",
-		"color":"Black",
-		"size":"Medium",
-        "image_urls": [
-            "url1",
-            "url2"
-        ]
-	}`
+	/* body := `{product_title: "test organization",
+	        descriptrion: "test@gmail.com",
+	        product_price: 12.8,
+			discount: 1,
+			tax: 0.5,
+	        stock: 15,
+			category_id: 5,
+			category:"2",
+			brand:"IST",
+			color:"Black",
+			size:"Medium",
+	        image_urls: [
+	            "url1",
+	            "url2"
+	        ]
+		}` */
 
-	recorder := makeHTTPCall(
+	/* recorder := makeHTTPCall(
 		http.MethodPost,
 		"/createProduct",
 		"/createProduct",
 		body,
 		createProductHandler(Dependencies{Store: suite.dbMock}),
 	)
-
-	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
-	assert.Equal(suite.T(), `{"data":{"id":1,"product_title":"test organization","description":"test@gmail.com","product_price":12,"discount":1,"tax":0.5,"stock":15,"category_id":5,"category":"2","brand":"IST","color":"Black","size":"Medium","image_urls":["url1","url2"]}}`, recorder.Body.String())
+	*/
+	assert.Equal(suite.T(), http.StatusOK, res.StatusCode)
+	assert.Equal(suite.T(), `{"data":{"id":71,"product_title":"test organizationwe","description":"test@gmail.com","product_price":12,"discount":1,"tax":0.5,"stock":15,"category_id":5,"category":"2","brand":"IST","color":"Black","size":"Medium","image_urls":null}}`, string(body))
 	suite.dbMock.AssertExpectations(suite.T())
 }
 
 func (suite *ProductsHandlerTestSuite) TestCreateProductFailure() {
 
-	suite.dbMock.On("CreateProduct", mock.Anything, mock.Anything).Return(db.Product{}, sql.ErrNoRows)
-	body := `{
-		"product_title": "Lancer new",
-        "description": "Mens Running Shoes",
-        "product_price": 150,
-		"discount": 15,
-		"Tax":          0.5,
-        "stock": 10,
-        "category_id": 6,
-        "category": "Sports",
-        "image_urls": [
-            "Lancer1.jpg",
-            "Lancer2.jpg",
-            "Lancer3.jpg"
-        ]
-	}`
+	/* suite.dbMock.On("CreateProduct", mock.Anything, mock.Anything).Return(db.Product{}, sql.ErrNoRows)
+		body := `{
+			"product_title": "Lancer new",
+	        "description": "Mens Running Shoes",
+	        "product_price": 150,
+			"discount": 15,
+			"Tax":          0.5,
+	        "stock": 10,
+	        "category_id": 6,
+	        "category": "Sports",
+	        "image_urls": [
+	            "Lancer1.jpg",
+	            "Lancer2.jpg",
+	            "Lancer3.jpg"
+	        ]
+		}`
 
-	recorder := makeHTTPCall(
-		http.MethodPost,
-		"/createProduct",
-		"/createProduct",
-		body,
-		createProductHandler(Dependencies{Store: suite.dbMock}),
-	)
+		recorder := makeHTTPCall(
+			http.MethodPost,
+			"/createProduct",
+			"/createProduct",
+			body,
+			createProductHandler(Dependencies{Store: suite.dbMock}),
+		) */
 
-	assert.Equal(suite.T(), `{"error":{"message":"Error inserting the product, product already exists"}}`, recorder.Body.String())
-	assert.Equal(suite.T(), http.StatusBadRequest, recorder.Code)
+	url := "http://localhost:33001/createProduct"
+	method := "POST"
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+	_ = writer.WriteField("product_title", "test organization6")
+	_ = writer.WriteField("description", "test@gmail.com")
+	_ = writer.WriteField("product_price", "12")
+	_ = writer.WriteField("discount", "1")
+	_ = writer.WriteField("tax", "0.5")
+	_ = writer.WriteField("stock", "15")
+	_ = writer.WriteField("category_id", "5")
+	_ = writer.WriteField("category", "2")
+	_ = writer.WriteField("color", "Black")
+	_ = writer.WriteField("size", "Medium")
+	_ = writer.WriteField("brand", "IST")
+	err := writer.Close()
+	if err != nil {
+		fmt.Println(err)
+	}
+	res, body, err := makeHttpCalls(url, method, payload, writer)
+
+	assert.Equal(suite.T(), `{"error":{"message":"Error inserting the product, product already exists"}}`, string(body))
+	assert.Equal(suite.T(), http.StatusBadRequest, res.StatusCode)
 }
 
 func (suite *ProductsHandlerTestSuite) TestCreateProductValidationFailure() {
 
-	body := `{
-		"product_title": "",
-        "description": "",
-        "product_price": 150,
-		"discount": 15,
-		"Tax":          0.5,
-        "stock": 10,
-        "category_id": 6,
-        "category": "Sports",
-        "image_url": [
-            "Lancer1.jpg",
-            "Lancer2.jpg",
-            "Lancer3.jpg"
-        ]
-	}`
+	/* body := `{
+			"product_title": "",
+	        "description": "",
+	        "product_price": 150,
+			"discount": 15,
+			"Tax":          0.5,
+	        "stock": 10,
+	        "category_id": 6,
+	        "category": "Sports",
+	        "image_url": [
+	            "Lancer1.jpg",
+	            "Lancer2.jpg",
+	            "Lancer3.jpg"
+	        ]
+		}`
 
-	recorder := makeHTTPCall(http.MethodPost,
-		"/createProduct",
-		"/createProduct",
-		body,
-		createProductHandler(Dependencies{Store: suite.dbMock}),
-	)
-
-	testProduct := db.Product{}
-	err := json.Unmarshal(recorder.Body.Bytes(), &testProduct)
+		recorder := makeHTTPCall(http.MethodPost,
+			"/createProduct",
+			"/createProduct",
+			body,
+			createProductHandler(Dependencies{Store: suite.dbMock}),
+		)
+	*/
+	url := "http://localhost:33001/createProduct"
+	method := "POST"
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+	_ = writer.WriteField("product_title", "test organization6")
+	_ = writer.WriteField("description", "")
+	_ = writer.WriteField("product_price", "12")
+	_ = writer.WriteField("discount", "1")
+	_ = writer.WriteField("tax", "0.5")
+	_ = writer.WriteField("stock", "15")
+	_ = writer.WriteField("category_id", "5")
+	_ = writer.WriteField("category", "2")
+	_ = writer.WriteField("color", "Black")
+	_ = writer.WriteField("size", "Medium")
+	_ = writer.WriteField("brand", "IST")
+	err := writer.Close()
 	if err != nil {
-		fmt.Println("Error Marshaling Product's data")
+		fmt.Println(err)
 	}
+	res, body, err := makeHttpCalls(url, method, payload, writer)
 
-	assert.Equal(suite.T(), http.StatusBadRequest, recorder.Code)
-	assert.Equal(suite.T(), `{"error":{"code":"Invalid_data","message":"Please Provide valid Product data","fields":{"product_description":"Can't be blank ","product_name":"Can't be blank"}}}`, recorder.Body.String())
+	assert.Equal(suite.T(), http.StatusBadRequest, res.StatusCode)
+	assert.Equal(suite.T(), `{"error":{"code":"Invalid_data","message":"Please Provide valid Product data","fields":{"product_description":"Can't be blank "}}}`, string(body))
 
 	suite.dbMock.AssertExpectations(suite.T())
 }

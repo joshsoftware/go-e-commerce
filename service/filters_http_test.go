@@ -72,8 +72,8 @@ func (suite *FilterHandlerTestSuite) TestFilteredRecordsWhenDBFailure() {
 func (suite *FilterHandlerTestSuite) TestGetProductBySearchSuccess() {
 
 	var urls = []string{"url1", "url2"}
-	var color = "Black"
-	var size = "Medium"
+	//var color = "Black"
+	//var size = "Medium"
 
 	suite.dbMock.On("SearchProductsByText", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(1,
 		[]db.Product{
@@ -88,8 +88,8 @@ func (suite *FilterHandlerTestSuite) TestGetProductBySearchSuccess() {
 				CategoryId:   5,
 				CategoryName: "2",
 				Brand:        "IST",
-				Color:        &color,
-				Size:         &size,
+				Color:        "&color",
+				Size:         "&size",
 				URLs:         urls,
 			},
 		},

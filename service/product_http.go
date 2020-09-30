@@ -152,6 +152,7 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 
 		// Retrive file from posted data
 		formdata := req.MultipartForm
+		fmt.Println("ForData--->", formdata)
 
 		// grab the filename
 		contents := formdata.Value

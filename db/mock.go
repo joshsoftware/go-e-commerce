@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"mime/multipart"
 
 	"github.com/stretchr/testify/mock"
 )
@@ -16,8 +17,8 @@ func (m *DBMockStore) ListProducts(ctx context.Context, limitStr int, pageStr in
 	return args.Get(0).(int), args.Get(1).([]Product), args.Error(2)
 }
 
-func (m *DBMockStore) CreateProduct(ctx context.Context, product Product) (createdProduct Product, err error) {
-	args := m.Called(ctx, product)
+func (m *DBMockStore) CreateProduct(ctx context.Context, product Product, images []*multipart.FileHeader) (createdProduct Product, err error) {
+	args := m.Called(ctx, product, images)
 	return args.Get(0).(Product), args.Error(1)
 }
 
@@ -46,7 +47,7 @@ func (m *DBMockStore) GetProductByID(ctx context.Context, id int) (product Produ
 	return args.Get(0).(Product), args.Error(1)
 }
 
-func (m *DBMockStore) UpdateProductById(ctx context.Context, product Product, id int) (updatedProduct Product, err error) {
-	args := m.Called(ctx, product, id)
+func (m *DBMockStore) UpdateProductById(ctx context.Context, product Product, id int, images []*multipart.FileHeader) (updatedProduct Product, err error) {
+	args := m.Called(ctx, product, id, images)
 	return args.Get(0).(Product), args.Error(1)
 }
