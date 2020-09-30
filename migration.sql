@@ -1,3 +1,13 @@
+INSERT INTO users (first_name,last_name,email,mobile,country,state,city,address,password,profile_image,isadmin) VALUES ('Mayur', 'Deshmukh', 'mayur.s.deshmukh1092@gmail.com', '8421985646', 'India', 'M.H', 'Pune', 'ABC', '$2a$08$ue93ZY.v07SRcASU9prhHukjuSiLUShLVB3TnbxSUIkJkX/EFXKAq','assets/users/image.png','t');
+
+
+INSERT INTO category (cname, description) VALUES ('Clothes','All wearable fabrics, ');
+INSERT INTO category (cname, description) VALUES('Electronics',' stores or generates electricity');
+INSERT INTO category (cname, description) VALUES('Mobile','The mobile phone can be used to communicate ');
+INSERT INTO category (cname, description) VALUES('Watch','A watch is a portable timepiece intended ');
+INSERT INTO category (cname, description) VALUES('Books','There are several things to consider in order');
+INSERT INTO category (cname, description) VALUES('Sports','Shoes are for regular comfort wear');
+
 -- INSERT INTO category (name, description) VALUES ('Clothes','All wearable fabrics, ');
 -- INSERT INTO category (name, description) VALUES('Electronics',' stores or generates electricity');
 -- INSERT INTO category (name, description) VALUES('Mobile','The mobile phone can be used to communicate ');
@@ -49,14 +59,14 @@
 
 
 
-INSERT INTO category (cname, description) VALUES ('Clothes','All wearable fabrics, ');
-INSERT INTO category (cname, description) VALUES('Electronics',' stores or generates electricity');
-INSERT INTO category (cname, description) VALUES('Mobile','The mobile phone can be used to communicate ');
-INSERT INTO category (cname, description) VALUES('Watch','A watch is a portable timepiece intended ');
-INSERT INTO category (cname, description) VALUES('Books','There are several things to consider in order');
-INSERT INTO category (cname, description) VALUES('Sports','Shoes are for regular comfort wear');
+-- INSERT INTO category (cname, description) VALUES ('Clothes','All wearable fabrics, ');
+-- INSERT INTO category (cname, description) VALUES('Electronics',' stores or generates electricity');
+-- INSERT INTO category (cname, description) VALUES('Mobile','The mobile phone can be used to communicate ');
+-- INSERT INTO category (cname, description) VALUES('Watch','A watch is a portable timepiece intended ');
+-- INSERT INTO category (cname, description) VALUES('Books','There are several things to consider in order');
+-- INSERT INTO category (cname, description) VALUES('Sports','Shoes are for regular comfort wear');
 
 
 
-INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, size, image_urls) VALUES('Polo Shirt', 'Benetton Men  Classic Fit Polo Shirt',511, 10, 5, 10, 1 ,'Polo','Sky Blue', 'Medium', ARRAY ['https://res.cloudinary.com/mayur-cloud/image/upload/v1599905019/poloshit1_gnzidq.jpg']);
-INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, size, image_urls) VALUES('Wrangler', 'Men  Slim Fit Jeans', 600, 20, 5, 12, 1 , 'Armani','Charcoal Black','Large', ARRAY ['https://res.cloudinary.com/mayur-cloud/image/upload/v1599905299/Wrangler2_l0acph.jpg']);
+-- INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, size, image_urls) VALUES('Polo Shirt', 'Benetton Men  Classic Fit Polo Shirt',511, 10, 5, 10, 1 ,'Polo','Sky Blue', 'Medium', ARRAY ['https://res.cloudinary.com/mayur-cloud/image/upload/v1599905019/poloshit1_gnzidq.jpg']);
+-- INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, size, image_urls) VALUES('Wrangler', 'Men  Slim Fit Jeans', 600, 20, 5, 12, 1 , 'Armani','Charcoal Black','Large', ARRAY ['https://res.cloudinary.com/mayur-cloud/image/upload/v1599905299/Wrangler2_l0acph.jpg']);
