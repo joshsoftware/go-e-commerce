@@ -17,8 +17,7 @@ var (
 // Load - loads all the environment variables and/or params in application.yml
 func Load() {
 	viper.SetDefault("APP_NAME", "e-commerce")
-	viper.SetDefault("APP_PORT", "8002")
-
+	viper.SetDefault("PORT", "8002")
 	viper.SetConfigName("application")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("./")
