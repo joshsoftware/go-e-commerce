@@ -111,7 +111,7 @@ func deleteImages(files pq.StringArray) error {
 
 func imagesStore(images []*multipart.FileHeader, product *Product) error {
 
-	for i, _ := range images {
+	for i := range images {
 		image, err := images[i].Open()
 		defer image.Close()
 		if err != nil {
