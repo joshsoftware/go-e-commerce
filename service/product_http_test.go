@@ -178,9 +178,9 @@ func makeHttpCalls(url string, method string, payload *bytes.Buffer, writer *mul
 }
 func (suite *ProductsHandlerTestSuite) TestCreateProductSuccess() {
 
-	//suite.dbMock.On("CreateProduct", mock.Anything, mock.Anything, mock.Anything).Return(testProduct, nil)
-	url := "http://localhost:33001/createProduct"
-	method := "POST"
+	suite.dbMock.On("CreateProduct", mock.Anything, mock.Anything, mock.Anything).Return(testProduct, nil)
+	//url := "http://localhost:33001/createProduct"
+	//method := "POST"
 	payload := &bytes.Buffer{}
 	writer := multipart.NewWriter(payload)
 	_ = writer.WriteField("product_title", "test organizationwe")
