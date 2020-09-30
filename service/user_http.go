@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"joshsoftware/go-e-commerce/db"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -299,6 +300,7 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 			})
 			return
 		}
+		previouFile := dbUser.ProfileImage
 
 		// check if profile image is present or not
 		if len(images) > 0 {
@@ -328,6 +330,9 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 				return
 			}
 
+			if user.FirstName == "" {
+				user.FirstName = dbUser.FirstName
+			}
 			fileName := strings.ReplaceAll(user.FirstName, " ", "")
 			tempFile, err := ioutil.TempFile("assets/users", fileName+"-*"+string(extension))
 			if err != nil {
@@ -391,6 +396,11 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 			})
 			logger.WithField("err", err.Error()).Error("error while updating user's profile")
 			return
+		}
+
+		err = os.Remove(previouFile)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("error while deleting the previous file of users profile image")
 		}
 
 		responses(rw, http.StatusOK, successResponse{Data: dbUser})
