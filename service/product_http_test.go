@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"joshsoftware/go-e-commerce/db"
 	"mime/multipart"
 	"net/http"
@@ -156,34 +155,15 @@ var testProduct = db.Product{
 	URLs:         urls,
 }
 
-func makeHttpCalls(url string, method string, payload *bytes.Buffer, writer *multipart.Writer) (*http.Response, []byte, error) {
-	fmt.Println(url, method, payload)
-	client := &http.Client{}
-	req, err := http.NewRequest(method, url, payload)
-
-	if err != nil {
-		fmt.Println(err)
-		return nil, nil, err
-	}
-	req.Header.Add("Accept", "application/vnd.e-commerce.v1")
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	res, err := client.Do(req)
-	if err != nil {
-		fmt.Println(err)
-		return nil, nil, err
-	}
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	return res, body, nil
-}
 func (suite *ProductsHandlerTestSuite) TestCreateProductSuccess() {
 
-	suite.dbMock.On("CreateProduct", mock.Anything, mock.Anything, mock.Anything).Return(testProduct, nil)
+	//suite.dbMock.On("CreateProduct", mock.Anything, mock.Anything, mock.Anything).Return(testProduct, nil)
 	//url := "http://localhost:33001/createProduct"
 	//method := "POST"
+
 	payload := &bytes.Buffer{}
 	writer := multipart.NewWriter(payload)
-	_ = writer.WriteField("product_title", "test organizationwe")
+	_ = writer.WriteField("product_title", "test organization")
 	_ = writer.WriteField("description", "test@gmail.com")
 	_ = writer.WriteField("product_price", "12")
 	_ = writer.WriteField("discount", "1")
@@ -198,35 +178,40 @@ func (suite *ProductsHandlerTestSuite) TestCreateProductSuccess() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	res, body, err := makeHttpCalls(url, method, payload, writer)
 
-	/* body := `{product_title: "test organization",
-	        descriptrion: "test@gmail.com",
-	        product_price: 12.8,
-			discount: 1,
-			tax: 0.5,
-	        stock: 15,
-			category_id: 5,
-			category:"2",
-			brand:"IST",
-			color:"Black",
-			size:"Medium",
-	        image_urls: [
-	            "url1",
-	            "url2"
-	        ]
-		}` */
+	body := payload.String()
+	fmt.Println("body: ", body)
 
-	/* recorder := makeHTTPCall(
+	suite.dbMock.On("CreateProduct", mock.Anything, mock.Anything, mock.Anything).Return(
+		db.Product{
+			Id:           1,
+			Name:         "test organization",
+			Description:  "test@gmail.com",
+			Price:        12,
+			Discount:     1,
+			Tax:          0.5,
+			Quantity:     15,
+			CategoryId:   5,
+			CategoryName: "2",
+			Brand:        "IST",
+			Color:        "Black",
+			Size:         "Medium",
+			URLs:         urls,
+		},
+		nil,
+	)
+
+	recorder := makeHTTPCallWithHeader(
 		http.MethodPost,
 		"/createProduct",
 		"/createProduct",
-		body,
+		writer,
+		payload,
 		createProductHandler(Dependencies{Store: suite.dbMock}),
 	)
-	*/
-	assert.Equal(suite.T(), http.StatusOK, res.StatusCode)
-	assert.Equal(suite.T(), `{"data":{"id":71,"product_title":"test organizationwe","description":"test@gmail.com","product_price":12,"discount":1,"tax":0.5,"stock":15,"category_id":5,"category":"2","brand":"IST","color":"Black","size":"Medium","image_urls":null}}`, string(body))
+
+	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
+	assert.Equal(suite.T(), `{"data":{"id":1,"product_title":"test organization","description":"test@gmail.com","product_price":12,"discount":1,"tax":0.5,"stock":15,"category_id":5,"category":"2","brand":"IST","color":"Black","size":"Medium","image_urls":["url1","url2"]}}`, recorder.Body.String())
 	suite.dbMock.AssertExpectations(suite.T())
 }
 
@@ -257,8 +242,9 @@ func (suite *ProductsHandlerTestSuite) TestCreateProductFailure() {
 			createProductHandler(Dependencies{Store: suite.dbMock}),
 		) */
 
-	url := "http://localhost:33001/createProduct"
-	method := "POST"
+	//url := "http://localhost:33001/createProduct"
+	//method := "POST"
+
 	payload := &bytes.Buffer{}
 	writer := multipart.NewWriter(payload)
 	_ = writer.WriteField("product_title", "test organization6")
@@ -276,10 +262,24 @@ func (suite *ProductsHandlerTestSuite) TestCreateProductFailure() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	res, body, err := makeHttpCalls(url, method, payload, writer)
 
-	assert.Equal(suite.T(), `{"error":{"message":"Error inserting the product, product already exists"}}`, string(body))
-	assert.Equal(suite.T(), http.StatusBadRequest, res.StatusCode)
+	body := payload.String()
+	fmt.Println("body: ", body)
+
+	suite.dbMock.On("CreateProduct", mock.Anything, mock.Anything, mock.Anything).Return(db.Product{},
+		errors.New("Error inserting the product, product already exists"))
+
+	recorder := makeHTTPCallWithHeader(
+		http.MethodPost,
+		"/createProduct",
+		"/createProduct",
+		writer,
+		payload,
+		createProductHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), `{"error":{"message":"Error inserting the product, product already exists"}}`, recorder.Body.String())
+	assert.Equal(suite.T(), http.StatusBadRequest, recorder.Code)
 }
 
 func (suite *ProductsHandlerTestSuite) TestCreateProductValidationFailure() {
@@ -306,9 +306,10 @@ func (suite *ProductsHandlerTestSuite) TestCreateProductValidationFailure() {
 			body,
 			createProductHandler(Dependencies{Store: suite.dbMock}),
 		)
-	*/
+
 	url := "http://localhost:33001/createProduct"
-	method := "POST"
+	method := "POST" */
+
 	payload := &bytes.Buffer{}
 	writer := multipart.NewWriter(payload)
 	_ = writer.WriteField("product_title", "test organization6")
@@ -326,12 +327,23 @@ func (suite *ProductsHandlerTestSuite) TestCreateProductValidationFailure() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	res, body, err := makeHttpCalls(url, method, payload, writer)
 
-	assert.Equal(suite.T(), http.StatusBadRequest, res.StatusCode)
-	assert.Equal(suite.T(), `{"error":{"code":"Invalid_data","message":"Please Provide valid Product data","fields":{"product_description":"Can't be blank "}}}`, string(body))
+	body := payload.String()
+	fmt.Println("body: ", body)
 
-	suite.dbMock.AssertExpectations(suite.T())
+	suite.dbMock.On("CreateProduct", mock.Anything, mock.Anything, mock.Anything).Return(db.Product{},
+		errors.New("Error inserting the product, product already exists"))
+
+	recorder := makeHTTPCallWithHeader(
+		http.MethodPost,
+		"/createProduct",
+		"/createProduct",
+		writer,
+		payload,
+		createProductHandler(Dependencies{Store: suite.dbMock}),
+	)
+	assert.Equal(suite.T(), http.StatusBadRequest, recorder.Code)
+	assert.Equal(suite.T(), `{"error":{"code":"Invalid_data","message":"Please Provide valid Product data","fields":{"product_description":"Can't be blank "}}}`, recorder.Body.String())
 }
 
 func (suite *ProductsHandlerTestSuite) TestDeleteProductByIdSuccess() {
