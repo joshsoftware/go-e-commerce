@@ -42,7 +42,7 @@ func AppName() string {
 // AppPort - returns application http port
 func AppPort() int {
 	if appPort == 0 {
-		appPort = ReadEnvInt("APP_PORT")
+		appPort = ReadEnvInt("PORT")
 	}
 	return appPort
 }
