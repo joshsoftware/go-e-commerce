@@ -20,7 +20,8 @@ const (
 	getProductByIDQuery = `SELECT * FROM products p INNER JOIN category c ON p.cid = c.cid WHERE p.id=$1`
 	insertProductQuery  = `INSERT INTO products ( name, description,
                  price, discount, tax, quantity, cid, brand, color, size, image_urls) VALUES ( 
-                 :name, :description, :price, :discount, :tax, :quantity, :cid, :brand, :color, :size, :image_urls) RETURNING id;`
+				 :name, :description, :price, :discount, :tax, :quantity, :cid, :brand, :color, :size, :image_urls) 
+				 RETURNING id, (SELECT cname from category as c where cid=:cid);`
 	deleteProductIdQuery    = `DELETE FROM products WHERE id = $1 RETURNING image_urls`
 	updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2 `
 	updateProductQuery      = `UPDATE products SET name= $1, description=$2, price=$3, 
@@ -214,12 +215,13 @@ func (s *pgStore) CreateProduct(ctx context.Context, product Product, images []*
 		return Product{}, err
 	}
 	if row.Next() {
-		err = row.Scan(&product.Id)
+		err = row.Scan(&product.Id, &product.CategoryName)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error scanning product id from database: " + product.Name)
 			return Product{}, err
 		}
 	}
+
 	row.Close()
 	return product, nil
 }
