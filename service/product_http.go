@@ -152,7 +152,7 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 
 		// Retrive file from posted data
 		formdata := req.MultipartForm
-		fmt.Println("ForData--->", formdata)
+		//fmt.Println("ForData--->", formdata)
 
 		// grab the filename
 		contents := formdata.Value
@@ -160,9 +160,9 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 		//err = req.ParseForm()
 
 		//grab product
-		fmt.Println(contents)
+		//fmt.Println(contents)
 		err = decoder.Decode(&product, contents)
-		fmt.Println(product)
+		//fmt.Println(product)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while decoding product data from the form")
 			response(rw, http.StatusBadRequest, errorResponse{
@@ -354,9 +354,7 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 		//err = req.ParseForm()
 
 		//grab product
-		fmt.Println(contents)
 		err = decoder.Decode(&product, contents)
-		fmt.Println(product)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while decoding product data from the form")
 			response(rw, http.StatusBadRequest, errorResponse{

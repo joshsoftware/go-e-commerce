@@ -66,13 +66,14 @@ func (product *Product) Validate() (map[string]ErrorResponse, bool) {
 	if !(product.Price > 0) {
 		fieldErrors["price"] = "Can't be blank  or less than zero"
 	}
-	if !(product.Discount >= 0 && product.Discount <= 100 ) {
+	if !(product.Discount >= 0 && product.Discount <= 100) {
 		fieldErrors["discount"] = "Can't be less than zero or more than 100 %"
 	}
-	if !(product.Tax >=0 && product.Tax <=100) {
+	if !(product.Tax >= 0 && product.Tax <= 100) {
 		fieldErrors["tax"] = "Can't be less than zero or more than 100 %"
 	}
 	// If Quantity gets's < 0 by UpdateProductStockById Method, this is what saves us
+	//TODO Product Quantity not greater than 100
 	if !(product.Quantity >= 0) {
 		fieldErrors["available_quantity"] = "Can't be blank or less than zero"
 	}
@@ -101,7 +102,7 @@ func deleteImages(files pq.StringArray) error {
 	root := "./assets/productImages/"
 	for _, file := range files {
 		file = root + file
-		fmt.Println(file)
+		//fmt.Println(file)
 		err := os.Remove(file)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error Couldn't remove the file!")
@@ -311,7 +312,7 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 	if product.Size == "" {
 		product.Size = dbProduct.Size
 	}
-		
+
 	_, valid := product.Validate()
 	if !valid {
 		return Product{}, fmt.Errorf("Product Validation failed. Invalid Fields present in the product. Check the limits. for e.g Discount shouldn't not be NaN.")
