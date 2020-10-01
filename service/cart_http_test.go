@@ -87,8 +87,17 @@ func (suite *CartHandlerTestSuite) TestGetCartDbFailureFetchError() {
 
 func (suite *CartHandlerTestSuite) TestGetCartDbFailureJSONMarshallError() {
 	suite.dbMock.On("GetCart", mock.Anything, mock.Anything).Return(
-		[]db.CartProduct{},
-		// x.
+		[]db.CartProduct{
+			db.CartProduct{
+				Id:          1,
+				Name:        "abc",
+				Quantity:    10,
+				Category:    "clothing",
+				Price:       2000,
+				Description: "abc",
+				ImageUrls:   "temp",
+			},
+		},
 		errors.New("Error marshaling cart data"),
 	)
 	recorder := makeHTTPCallWithJWTMiddleware(http.MethodGet,
@@ -99,23 +108,5 @@ func (suite *CartHandlerTestSuite) TestGetCartDbFailureJSONMarshallError() {
 	)
 
 	assert.Equal(suite.T(), http.StatusInternalServerError, recorder.Code)
-	// assert.Equal(suite.T(), `{"error":"Error marshaling cart data"}`, recorder.Body.String())
 	suite.dbMock.AssertExpectations(suite.T())
 }
-
-// func (suite *CartHandlerTestSuite) TestGetCartDbFailureAuthorizationError() {
-// 	suite.dbMock.On("GetCart", mock.Anything, mock.Anything).Return(
-// 		[]db.CartProduct{},
-// 		errors.New("Error fetching data from token"),
-// 	)
-// 	recorder := makeHTTPCallWithJWTMiddleware(http.MethodGet,
-// 		"/cart",
-// 		"/cart",
-// 		"",
-// 		getCartHandler(Dependencies{Store: suite.dbMock}),
-// 	)
-// 	fmt.Println(recorder.Code, "Authooo", http.StatusUnauthorized)
-// 	assert.Equal(suite.T(), http.StatusUnauthorized, recorder.Code)
-
-// 	suite.dbMock.AssertExpectations(suite.T())
-// }

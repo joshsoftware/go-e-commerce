@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
@@ -51,6 +52,7 @@ func (suite *CartTestSuite) TestGetCartSuccess() {
 		WillReturnRows(mockedRows)
 
 	cart, err := suite.dbStore.GetCart(context.Background(), expectedCart.Id)
+
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), []CartProduct{expectedCart}, cart)
 }
@@ -64,6 +66,7 @@ func (suite *CartTestSuite) TestCartFailure() {
 		WillReturnRows(mockedRows)
 
 	_, err := suite.dbStore.GetCart(context.Background(), expectedCart.Id)
-	assert.NotNil(suite.T(), err)
 
+	assert.NotNil(suite.T(), err)
+	assert.Equal(suite.T(), errors.New("sql: database is closed"), err)
 }

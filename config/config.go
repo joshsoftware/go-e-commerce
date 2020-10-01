@@ -19,7 +19,7 @@ func Load() {
 	viper.SetDefault("APP_NAME", "e-commerce")
 	viper.SetDefault("APP_PORT", "8002")
 
-	viper.SetConfigName("application")
+	viper.SetConfigName("application") // name of config file (without extension)
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("./")
 	viper.AddConfigPath("./..")

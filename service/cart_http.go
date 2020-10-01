@@ -2,7 +2,6 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -34,7 +33,6 @@ func getCartHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		cart_products, err := deps.Store.GetCart(req.Context(), int(userID))
-		fmt.Println(cart_products)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching data from database")
 			error := errorResponse{
@@ -45,7 +43,6 @@ func getCartHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		respBytes, err := json.Marshal(cart_products)
-		fmt.Println("Marshal error ? ", err)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error marshaling cart data")
 			error := errorResponse{
