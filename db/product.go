@@ -173,18 +173,10 @@ func (s *pgStore) ListProducts(ctx context.Context, limit int, offset int) (int,
 	var totalRecords int
 	var products []Product
 
-	resultCount, err := s.db.Query(getProductCount)
+	err := s.db.QueryRow(getProductCount).Scan(&totalRecords)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Count of Products from database")
 		return 0, []Product{}, err
-	}
-
-	if resultCount.Next() {
-		err = resultCount.Scan(&totalRecords)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error scanning Count Of Product into integer variable")
-			return 0, []Product{}, err
-		}
 	}
 
 	if totalRecords-1 < offset {
@@ -199,13 +191,6 @@ func (s *pgStore) ListProducts(ctx context.Context, limit int, offset int) (int,
 		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
 		return 0, []Product{}, err
 	}
-
-	if products == nil {
-		err = fmt.Errorf("Desired page not found")
-		logger.WithField("err", err.Error()).Error("page Out Of range")
-		return 0, []Product{}, err
-	}
-
 	return totalRecords, products, nil
 }
 
