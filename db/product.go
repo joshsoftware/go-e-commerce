@@ -61,17 +61,19 @@ func (product *Product) Validate() (map[string]ErrorResponse, bool) {
 	if product.Description == "" {
 		fieldErrors["product_description"] = "Can't be blank "
 	}
-	if product.Price <= 0 {
+	// complicated nots are used to handle NaN's
+	// Example :     product.Price > NaN     will return false and so will product.Price < NaN!
+	if !(product.Price > 0) {
 		fieldErrors["price"] = "Can't be blank  or less than zero"
 	}
-	if product.Discount < 0 || product.Discount > product.Price {
-		fieldErrors["discount"] = "Can't be less than zero or more than Product's Price"
+	if !(product.Discount >= 0 && product.Discount <= 100 ) {
+		fieldErrors["discount"] = "Can't be less than zero or more than 100 %"
 	}
-	if product.Tax < 0 {
-		fieldErrors["tax"] = "Can't be less than zero"
+	if !(product.Tax >=0 && product.Tax <=100) {
+		fieldErrors["tax"] = "Can't be less than zero or more than 100 %"
 	}
 	// If Quantity gets's < 0 by UpdateProductStockById Method, this is what saves us
-	if product.Quantity < 0 {
+	if !(product.Quantity >= 0) {
 		fieldErrors["available_quantity"] = "Can't be blank or less than zero"
 	}
 	if product.CategoryId == 0 {
@@ -296,9 +298,9 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 	}
 	if product.CategoryId == 0 {
 		product.CategoryId = dbProduct.CategoryId
-	}
-	if product.CategoryName == "" {
 		product.CategoryName = dbProduct.CategoryName
+	} else {
+		product.CategoryName = ""
 	}
 	if product.Brand == "" {
 		product.Brand = dbProduct.Brand
@@ -309,10 +311,10 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 	if product.Size == "" {
 		product.Size = dbProduct.Size
 	}
-
+		
 	_, valid := product.Validate()
 	if !valid {
-		return Product{}, fmt.Errorf("Product Validation failed. Invalid Fields present in the product e.g Discount is greater than Price")
+		return Product{}, fmt.Errorf("Product Validation failed. Invalid Fields present in the product. Check the limits. for e.g Discount shouldn't not be NaN.")
 	}
 
 	if images != nil {
