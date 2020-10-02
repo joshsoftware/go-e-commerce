@@ -21,11 +21,13 @@ const (
 	insertProductQuery  = `INSERT INTO products ( name, description,
                  price, discount, tax, quantity, cid, brand, color, size, image_urls) VALUES ( 
 				 :name, :description, :price, :discount, :tax, :quantity, :cid, :brand, :color, :size, :image_urls) 
-				 RETURNING id, (SELECT cname from category as c where cid=:cid);`
+				 RETURNING id, (SELECT cname from category where cid=:cid);`
 	deleteProductIdQuery    = `DELETE FROM products WHERE id = $1 RETURNING image_urls`
 	updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2 `
-	updateProductQuery      = `UPDATE products SET name= $1, description=$2, price=$3, 
-                       discount=$4, tax=$5, quantity=$6, cid=$7, brand=$8, color=$9, size=$10, image_urls=$11 WHERE id = $12`
+	updateProductQuery      = `UPDATE products SET name= :name, description=:description, price=:price, 
+					   discount=:discount, tax=:tax, quantity=:quantity, cid=:cid, brand=:brand, 
+					   color=:color, size=:size, image_urls=:image_urls WHERE id = :id
+					   RETURNING (SELECT cname from category where cid=:cid);`
 )
 
 type Product struct {
@@ -233,7 +235,7 @@ func (s *pgStore) UpdateProductStockById(ctx context.Context, product Product, i
 	)
 	if err != nil {
 		// FAIL : Could not Update Product
-		logger.WithField("err", err.Error()).Error("Error updating product attribute(s) to database Records not Found:" + string(id))
+		logger.WithField("err", err.Error()).Error("Error updating product Stock to database Records not Found:" + string(id))
 		return Product{}, err
 	}
 
@@ -339,25 +341,25 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 		product.URLs = dbProduct.URLs
 	}
 
-	_, err = s.db.Exec(updateProductQuery,
-		product.Name,
-		product.Description,
-		product.Price,
-		product.Discount,
-		product.Tax,
-		product.Quantity,
-		product.CategoryId,
-		product.Brand,
-		product.Color,
-		product.Size,
-		product.URLs,
-		id,
-	)
+	product.Id = id
 
+	var row *sqlx.Rows
+
+	row, err = s.db.NamedQuery(updateProductQuery, product)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error updating product attribute(s) to database :" + string(id))
 		return Product{}, err
 	}
-	product.Id = id
+
+	if row.Next() {
+		err = row.Scan(&product.CategoryName)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error scanning product Category Name from database: " + product.Name)
+			return Product{}, err
+		}
+	}
+
+	row.Close()
+
 	return product, nil
 }
