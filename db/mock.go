@@ -8,7 +8,6 @@ import (
 
 type DBMockStore struct {
 	mock.Mock
-	//how does it understands what is to be mocked
 }
 
 func (m *DBMockStore) ListUsers(ctx context.Context) (users []User, err error) {

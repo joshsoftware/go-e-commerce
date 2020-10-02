@@ -72,9 +72,6 @@ func startApp() (err error) {
 
 	deps := service.Dependencies{
 		Store: store,
-		// here value assigned to Store which is of type interface Storer ? and value of type &pgStore - *sql.DB
-		// 1st how are we able to create object of Store which is a interface
-		// 2nd how are we assigning it to variable of another type
 	}
 
 	// mux router

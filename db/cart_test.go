@@ -6,6 +6,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -17,6 +18,8 @@ type CartTestSuite struct {
 	sqlmock sqlmock.Sqlmock
 }
 
+var image_urls = pq.StringArray([]string{"url1", "url2"})
+
 var expectedCart = CartProduct{
 	Id:          1,
 	Name:        "laptop",
@@ -24,7 +27,9 @@ var expectedCart = CartProduct{
 	Category:    "electronics",
 	Price:       202,
 	Description: "description",
-	ImageUrls:   "urltemp",
+	ImageUrls:   image_urls,
+	Discount:    20,
+	Tax:         5,
 }
 
 func (suite *CartTestSuite) SetupTest() {
@@ -40,8 +45,8 @@ func (suite *CartTestSuite) TearDownTest() {
 }
 
 func (suite *CartTestSuite) getMockedRows() (mockedRows *sqlmock.Rows) {
-	mockedRows = suite.sqlmock.NewRows([]string{"product_id", "product_name", "quantity", "category_name", "price", "description", "url"}).
-		AddRow(1, "laptop", 1, "electronics", 202, "description", "urltemp")
+	mockedRows = suite.sqlmock.NewRows([]string{"product_id", "product_name", "quantity", "category_name", "price", "description", "image_urls", "discount", "tax"}).
+		AddRow(1, "laptop", 1, "electronics", 202, "description", image_urls, 20, 5)
 	return
 }
 

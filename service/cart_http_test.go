@@ -6,10 +6,13 @@ import (
 	"joshsoftware/go-e-commerce/db"
 	"net/http"
 
+	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
+
+var image_urls = pq.StringArray([]string{"url1", "url2"})
 
 var testCartProduct = []db.CartProduct{
 	{
@@ -19,13 +22,14 @@ var testCartProduct = []db.CartProduct{
 		Category:    "clothing",
 		Price:       2000,
 		Description: "abc",
-		ImageUrls:   "temp",
+		ImageUrls:   image_urls,
+		Discount:    20,
+		Tax:         5,
 	},
 }
 
 type CartHandlerTestSuite struct {
 	suite.Suite
-
 	dbMock *db.DBMockStore
 }
 
@@ -43,7 +47,9 @@ func (suite *CartHandlerTestSuite) TestGetCartSuccess() {
 				Category:    "clothing",
 				Price:       2000,
 				Description: "abc",
-				ImageUrls:   "temp",
+				ImageUrls:   image_urls,
+				Discount:    20,
+				Tax:         5,
 			},
 		},
 		nil,
@@ -95,7 +101,9 @@ func (suite *CartHandlerTestSuite) TestGetCartDbFailureJSONMarshallError() {
 				Category:    "clothing",
 				Price:       2000,
 				Description: "abc",
-				ImageUrls:   "temp",
+				ImageUrls:   image_urls,
+				Discount:    20,
+				Tax:         5,
 			},
 		},
 		errors.New("Error marshaling cart data"),

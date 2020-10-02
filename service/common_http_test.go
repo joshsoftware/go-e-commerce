@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware"
-	// "github.com/dgrijalva/jwt-go"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
