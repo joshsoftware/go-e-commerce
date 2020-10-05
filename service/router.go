@@ -40,7 +40,7 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	router.Handle("/invite", jwtMiddleWare(adminMiddleware(inviteUsersHandler(deps), deps), deps)).Methods(http.MethodPost).Headers(versionHeader, v1)
 
 	//Route for Verify User Account
-	router.Handle("/setPassword", jwtMiddleWare(verifyUserHandler(deps), deps)).Methods(http.MethodPatch).Headers(versionHeader, v1)
+	router.Handle("/verifyUser", jwtMiddleWare(verifyUserHandler(deps), deps)).Methods(http.MethodPatch).Headers(versionHeader, v1)
 
 	//Router for users operations
 	router.Handle("/user", jwtMiddleWare(userMiddleware(getUserHandler(deps), deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)

@@ -102,11 +102,11 @@ func inviteUsersHandler(deps Dependencies) http.HandlerFunc {
 			var verificationURL = "https://joshreact-e-commerce.herokuapp.com/verify?Token=" + token
 
 			temp.Execute(&body, struct {
-				Email           string
-				SetPasswordLink string
+				Email            string
+				VerificationLink string
 			}{
-				Email:           emailID,
-				SetPasswordLink: verificationURL,
+				Email:            emailID,
+				VerificationLink: verificationURL,
 			})
 
 			subject := "Registration Successful"
