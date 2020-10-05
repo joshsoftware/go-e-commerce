@@ -53,6 +53,7 @@ type User struct {
 	City       string    `db:"city" json:"city"`
 	IsAdmin    bool      `db:"isadmin" json:"isAdmin"`
 	IsDisabled bool      `db:"isdisabled" json:"isDisabled"`
+	IsVerified bool      `db:"isverified" json:"isVerified"`
 	CreatedAt  time.Time `db:"created_at" json:"created_at"`
 }
 
