@@ -279,7 +279,7 @@ func (suite *ProductsHandlerTestSuite) TestCreateProductValidationFailure() {
 	_ = writer.WriteField("product_title", "test organization")
 	_ = writer.WriteField("description", "test@gmail.com")
 	_ = writer.WriteField("product_price", "12")
-	_ = writer.WriteField("discount", "15")
+	_ = writer.WriteField("discount", "-15")
 	_ = writer.WriteField("tax", "0.5")
 	_ = writer.WriteField("stock", "15")
 	_ = writer.WriteField("category_id", "5")
@@ -298,7 +298,7 @@ func (suite *ProductsHandlerTestSuite) TestCreateProductValidationFailure() {
 	)
 
 	assert.Equal(suite.T(), http.StatusBadRequest, recorder.Code)
-	assert.Equal(suite.T(), `{"error":{"code":"Invalid_data","message":"Please Provide valid Product data","fields":{"discount":"Can't be less than zero or more than Product's Price"}}}`, recorder.Body.String())
+	assert.Equal(suite.T(), `{"error":{"code":"Invalid_data","message":"Please Provide valid Product data","fields":{"discount":"Can't be less than zero or more than 100 %"}}}`, recorder.Body.String())
 	suite.dbMock.AssertExpectations(suite.T())
 
 }
