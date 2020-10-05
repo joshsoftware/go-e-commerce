@@ -19,6 +19,8 @@ type Storer interface {
 	DeleteUserByID(ctx context.Context, id int) (err error)
 	DisableUserByID(ctx context.Context, id int) (err error)
 	EnableUserByID(ctx context.Context, id int) (err error)
+	VerifyUserByID(ctx context.Context, id int) (err error)
+	SetUserPasswordByID(ctx context.Context, password string, id int) (err error)
 
 	// product related
 	ListProducts(context.Context, int, int) (int, []Product, error)

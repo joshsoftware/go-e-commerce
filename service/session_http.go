@@ -14,10 +14,12 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
+// OAuthToken struct is used to store Oauth token
 type OAuthToken struct {
 	AccessToken string `json:"access_token"`
 }
 
+// OAuthUser struct is used to store payload data from Oauth
 type OAuthUser struct {
 	Email string `json:"email"`
 	Name  string `json: "name"`
@@ -29,7 +31,15 @@ type authBody struct {
 	IsAdmin bool   `json:"isAdmin"`
 }
 
-//generateJWT function generates and return a new JWT token
+// TokenBody struct is used to store token payload data
+type TokenBody struct {
+	Token          string
+	UserID         float64
+	IsAdmin        bool
+	ExpirationTime int64
+}
+
+//generateJWT function generates and return a new login JWT token
 func generateJwt(userID int, isAdmin bool) (tokenString string, err error) {
 	mySigningKey := config.JWTKey()
 	if mySigningKey == nil {
@@ -73,6 +83,15 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 		//checking if the user is authenticated or not
 		// by passing the credentials to the AuthenticateUser function
 		user, err = deps.Store.AuthenticateUser(req.Context(), user)
+		if !user.IsVerified || user.Password == "" {
+			responses(rw, http.StatusForbidden, errorResponse{
+				Error: messageObject{
+					Message: "Email Not Verified",
+				},
+			})
+			return
+		}
+
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Invalid Credentials")
 			responses(rw, http.StatusUnauthorized, errorResponse{
@@ -91,10 +110,6 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 			})
 			return
 		}
-		// authbody := authBody{
-		// 	Message: "Login Successfull",
-		// 	Token:   token,
-		// }
 
 		//Generate new JWT token if the user is authenticated
 		// and return the token in request header
@@ -128,7 +143,7 @@ func userLogoutHandler(deps Dependencies) http.Handler {
 		authToken := req.Header.Get("Token")
 
 		//fetching details from the token
-		userID, expirationTimeStamp, _, err := getDataFromToken(authToken)
+		payload, err := getDataFromToken(authToken)
 		if err != nil {
 			responses(rw, http.StatusUnauthorized, errorResponse{
 				Error: messageObject{
@@ -137,12 +152,12 @@ func userLogoutHandler(deps Dependencies) http.Handler {
 			})
 			return
 		}
-		expirationDate := time.Unix(expirationTimeStamp, 0)
+		expirationDate := time.Unix(payload.ExpirationTime, 0)
 
 		//create a BlacklistedToken to add in database
 		// To blacklist a user valid token
 		userBlackListedToken := db.BlacklistedToken{
-			UserID:         userID,
+			UserID:         payload.UserID,
 			ExpirationDate: expirationDate,
 			Token:          authToken,
 		}
@@ -166,7 +181,7 @@ func userLogoutHandler(deps Dependencies) http.Handler {
 	})
 }
 
-func getDataFromToken(Token string) (userID float64, expirationTime int64, isAdmin bool, err error) {
+func getDataFromToken(Token string) (payload TokenBody, err error) {
 	mySigningKey := config.JWTKey()
 
 	token, err := jwt.Parse(Token, func(token *jwt.Token) (interface{}, error) {
@@ -187,9 +202,9 @@ func getDataFromToken(Token string) (userID float64, expirationTime int64, isAdm
 		return
 	}
 
-	userID = claims["id"].(float64)
-	isAdmin = claims["isAdmin"].(bool)
-	expirationTime = int64(claims["exp"].(float64))
+	payload.UserID = claims["id"].(float64)
+	payload.IsAdmin = claims["isAdmin"].(bool)
+	payload.ExpirationTime = int64(claims["exp"].(float64))
 	return
 }
 
@@ -278,6 +293,7 @@ func handleAuth(deps Dependencies) http.HandlerFunc {
 		user := db.User{}
 		user.Email = u.Email
 		user.FirstName = u.Name
+		user.IsVerified = true
 		newUser, err := deps.Store.CreateNewUser(req.Context(), user)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error in inserting user in database")

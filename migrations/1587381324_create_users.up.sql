@@ -12,5 +12,6 @@ CREATE TABLE IF NOT EXISTS users (
   profile_image TEXT,
   isAdmin BOOLEAN DEFAULT FALSE,
   isDisabled BOOLEAN DEFAULT FALSE, 
+  isVerified BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'UTC')
 ); 

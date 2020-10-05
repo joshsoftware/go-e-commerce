@@ -7,16 +7,16 @@ import (
 	"fmt"
 	"github.com/kataras/go-mailer"
 	logger "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
+	// "golang.org/x/crypto/bcrypt"
 	"html/template"
 	"io/ioutil"
 	"joshsoftware/go-e-commerce/config"
 	"joshsoftware/go-e-commerce/db"
 	"log"
-	"math/rand"
+	// "math/rand"
 	"net/http"
-	"strings"
-	"time"
+	// "strings"
+	// "time"
 )
 
 //Email Struct
@@ -32,7 +32,11 @@ func inviteUsersHandler(deps Dependencies) http.HandlerFunc {
 		reqBody, err := ioutil.ReadAll(req.Body)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error in reading request body")
-			rw.WriteHeader(http.StatusInternalServerError)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal Server Error",
+				},
+			})
 			return
 		}
 
@@ -54,7 +58,8 @@ func inviteUsersHandler(deps Dependencies) http.HandlerFunc {
 
 		for _, emailID := range email.Email {
 			// For checking if user already registered
-			check, _, err := deps.Store.CheckUserByEmail(req.Context(), emailID)
+			var check bool
+			check, _, err = deps.Store.CheckUserByEmail(req.Context(), emailID)
 
 			// If check true then user is already registered
 			if check {
@@ -69,36 +74,39 @@ func inviteUsersHandler(deps Dependencies) http.HandlerFunc {
 				continue
 			}
 
-			randPassword := randomPassGenerator()
-			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(randPassword), 8)
-			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while creating hash of the password")
-				continue
-			}
+			// randPassword := randomPassGenerator()
+			// hashedPassword, err := bcrypt.GenerateFromPassword([]byte(randPassword), 8)
+			// if err != nil {
+			// 	logger.WithField("err", err.Error()).Error("Error while creating hash of the password")
+			// 	continue
+			// }
 
 			user := db.User{}
+			dbUser := db.User{}
 
 			user.Email = emailID
-			user.Password = string(hashedPassword)
 
-			_, err = deps.Store.CreateNewUser(req.Context(), user)
+			dbUser, err = deps.Store.CreateNewUser(req.Context(), user)
 			if err != nil {
 				logger.WithField("err", err.Error()).Error("Error in inserting user in database")
 				continue
 			}
+			token, err := generateJwt(dbUser.ID, dbUser.IsAdmin)
 
 			temp, err := template.ParseFiles("assets/templates/mail_invite.html")
 			if err != nil {
 				fmt.Println("****Error has occured****")
 			}
+
 			var body bytes.Buffer
+			var verificationURL = "https://joshreact-e-commerce.herokuapp.com/verify?Token=" + token
 
 			temp.Execute(&body, struct {
-				Email    string
-				Password string
+				Email            string
+				VerificationLink string
 			}{
-				Email:    emailID,
-				Password: randPassword,
+				Email:            emailID,
+				VerificationLink: verificationURL,
 			})
 
 			subject := "Registration Successful"
@@ -120,21 +128,6 @@ func inviteUsersHandler(deps Dependencies) http.HandlerFunc {
 		return
 
 	})
-}
-
-func randomPassGenerator() (password string) {
-	rand.Seed(time.Now().UnixNano())
-	chars := []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
-		"abcdefghijklmnopqrstuvwxyz" +
-		"0123456789")
-	length := 8
-	var b strings.Builder
-	for i := 0; i < length; i++ {
-		b.WriteRune(chars[rand.Intn(len(chars))])
-	}
-	password = b.String()
-
-	return password
 }
 
 func mail(subject string, content string, sendTo string) {
