@@ -7,6 +7,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
+//PingResponse Struct
 type PingResponse struct {
 	Message string `json:"message"`
 }
@@ -20,6 +21,6 @@ func pingHandler(rw http.ResponseWriter, req *http.Request) {
 		rw.WriteHeader(http.StatusInternalServerError)
 	}
 
-	rw.Header().Add("Content-Type", "application/json")
+	rw.Header().Set("Content-Type", "application/json")
 	rw.Write(respBytes)
 }
