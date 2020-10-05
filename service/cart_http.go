@@ -3,30 +3,9 @@ package service
 import (
 	"strings"
 	"strconv"
-	// "encoding/json"
 	"net/http"
 	logger "github.com/sirupsen/logrus"
 )
-
-// type successResponse struct {
-// 	Message string `json: "message"`
-// }
-
-// type errorResponse struct {
-// 	Error string `json: "error"`
-// }
-
-// func response(rw http.ResponseWriter, status int, responseData interface{}){
-// 	respBody, err := json.Marshal(responseData)
-// 	if err != nil {
-// 		logger.WithField("err", err.Error()).Error("error while marshling")
-// 		rw.WriteHeader(http.StatusInternalServerError)
-// 		return 
-// 	}
-// 	rw.Header().Add("Content-Type","application/json")
-// 	rw.WriteHeader(status)
-// 	rw.Write(respBody)
-// }
 
 func addToCartHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {

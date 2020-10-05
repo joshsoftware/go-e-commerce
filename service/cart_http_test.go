@@ -9,18 +9,6 @@ import(
 	"errors"
 )
 
-type Cart struct {
-	cartID int
-	productID int
-	quantity int
-}
-
-var testCart = Cart {
-	cartID: 1,
-	productID: 100,
-	quantity: 1,
-}
-
 type CartHandlerTestSuite struct {
 	suite.Suite
 	dbMock *db.DBMockStore

@@ -27,7 +27,6 @@ func (suite *CartTestSuite) TestAddToCartSuccess() {
 	suite.sqlmock.ExpectExec("INSERT INTO cart (id, product_id, quantity) VALUES ($1, $2, 1)").
 	WithArgs(1,100).
 	WillReturnResult(sqlmock.NewResult(1,1))
-	suite.sqlmock.ExpectCommit()
 
 	result, err := suite.dbStore.AddToCart(context.Background(), 1, 100)
 	assert.Nil(suite.T(), err)
@@ -39,7 +38,6 @@ func (suite *CartTestSuite) TestAddToCartFailure() {
 	suite.sqlmock.ExpectExec("INSERT INTO cart (id, product_id, quantity) VALUES ($1, $2, 1)").
 	WithArgs(1,100).
 	WillReturnResult(sqlmock.NewResult(1,1))
-	suite.sqlmock.ExpectCommit()
 
 	_, err := suite.dbStore.AddToCart(context.Background(), 1, 100)
 	assert.NotNil(suite.T(), err)
