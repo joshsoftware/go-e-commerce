@@ -31,11 +31,14 @@ const (
 		) = 
 		($1, $2, $3, $4, $5, $6 ,$7,$8) where id = $9 `
 
+	updateUserPasswordQuery = `UPDATE users SET password=$1 where id=$2`
+
 	getUserQuery = `SELECT * from users where id=$1`
 
 	deleteUserQuery       = `DELETE FROM users WHERE id=$1`
 	disableUserQuery      = `UPDATE users SET isdisabled =$1 WHERE id=$2`
 	enableUserQuery       = `UPDATE users SET isdisabled =$1 WHERE id=$2`
+	verifyUserQuery       = `UPDATE users SET isverified =$1 WHERE id=$2`
 	deleteUsersTokenQuery = `DELETE FROM user_blacklisted_tokens WHERE user_id=$1`
 )
 
@@ -124,7 +127,6 @@ func (s *pgStore) AuthenticateUser(ctx context.Context, u User) (user User, err 
 	}
 
 	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(u.Password)); err != nil {
-		// If the two passwords don't match, return a 401 status
 		logger.WithField("Error", err.Error())
 	}
 	return
@@ -282,6 +284,28 @@ func (s *pgStore) EnableUserByID(ctx context.Context, userID int) (err error) {
 	_, err = s.db.Exec(enableUserQuery, false, userID)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error enabling User")
+		return
+	}
+	return
+}
+
+func (s *pgStore) VerifyUserByID(ctx context.Context, userID int) (err error) {
+	_, err = s.db.Exec(verifyUserQuery, true, userID)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("Error verifing User")
+		return
+	}
+	return
+}
+
+func (s *pgStore) SetUserPasswordByID(ctx context.Context, password string, userID int) (err error) {
+	_, err = s.db.Exec(
+		updateUserPasswordQuery,
+		password,
+		userID,
+	)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("error updating user password")
 		return
 	}
 	return
