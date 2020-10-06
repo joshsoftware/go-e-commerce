@@ -376,11 +376,11 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 				},
 			})
 
-		case http.StatusInternalServerError:
-			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
-			response(rw, http.StatusInternalServerError, errorResponse{
+		case http.StatusConflict:
+			logger.WithField("err", err.Error()).Error("Product name Already exists or key value violates unique constraint")
+			response(rw, http.StatusConflict, errorResponse{
 				Error: messageObject{
-					Message: "Internal server error",
+					Message: "Product name Already exists or key value violates unique constraint",
 				},
 			})
 
