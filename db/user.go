@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	insertUserQuery = `INSERT INTO users (first_name, last_name, email, mobile, country, state, city, address, password, profile_image) 
-	VALUES (:first_name, :last_name, :email, :mobile, :country, :state, :city, :address, :password, :profile_image)`
+	insertUserQuery = `INSERT INTO users (first_name, last_name, email, mobile, country, state, city, address, password, profile_image, isverified) 
+	VALUES (:first_name, :last_name, :email, :mobile, :country, :state, :city, :address, :password, :profile_image, :isverified)`
 
 	getUserByEmailQuery = `SELECT * FROM users WHERE email=$1 LIMIT 1`
 	updateUserQuery     = `UPDATE users SET (

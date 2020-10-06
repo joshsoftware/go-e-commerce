@@ -94,6 +94,16 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 				})
 				return
 			}
+			if !user.IsVerified {
+				fmt.Println(user)
+				logger.WithField("err", err.Error()).Error("email not verified")
+				responses(rw, http.StatusForbidden, errorResponse{
+					Error: messageObject{
+						Message: "Email Not Verified",
+					},
+				})
+				return
+			}
 			logger.WithField("err", err.Error()).Error("Invalid Credentials")
 			responses(rw, http.StatusUnauthorized, errorResponse{
 				Error: messageObject{
@@ -107,16 +117,6 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 			responses(rw, http.StatusForbidden, errorResponse{
 				Error: messageObject{
 					Message: "User Forbidden From Accesing Data",
-				},
-			})
-			return
-		}
-
-		if !user.IsVerified {
-			logger.WithField("err", err.Error()).Error("Email not verified")
-			responses(rw, http.StatusForbidden, errorResponse{
-				Error: messageObject{
-					Message: "Email Not Verified",
 				},
 			})
 			return

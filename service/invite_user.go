@@ -100,7 +100,7 @@ func inviteUsersHandler(deps Dependencies) http.HandlerFunc {
 			}
 
 			var body bytes.Buffer
-			var verificationURL = "https://joshreact-e-commerce.herokuapp.com/verify?Token=" + token
+			var verificationURL = "https://joshreact-e-commerce.herokuapp.com/verifyUser?Token=" + token
 
 			temp.Execute(&body, struct {
 				Email            string
