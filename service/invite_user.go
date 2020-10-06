@@ -65,7 +65,7 @@ func inviteUsersHandler(deps Dependencies) http.HandlerFunc {
 			if check {
 				existFlag = true
 				existingUsers = append(existingUsers, emailID)
-				log.Printf("\nuser with e-mail id %d already exists", emailID)
+				log.Printf("\nuser with e-mail id %v already exists", emailID)
 				continue
 			}
 			// For checking error occured while looking already registered user

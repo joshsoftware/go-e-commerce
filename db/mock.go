@@ -41,9 +41,36 @@ func (m *DBMockStore) UpdateUser(ctx context.Context, user User, id int) (update
 	return args.Get(0).(User), args.Error(1)
 }
 
-func (m *DBMockStore) GetCart(ctx context.Context, user_id int) (products []Product, err error) {
+//SetUserPasswordByID mock method
+func (m *DBMockStore) SetUserPasswordByID(ctx context.Context, userPassword string, id int) (err error) {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+//DeleteUserByID mock method
+func (m *DBMockStore) DeleteUserByID(ctx context.Context, id int) (err error) {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+func (m *DBMockStore) DisableUserByID(ctx context.Context, id int) (err error) {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+func (m *DBMockStore) EnableUserByID(ctx context.Context, id int) (err error) {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+func (m *DBMockStore) VerifyUserByID(ctx context.Context, id int) (err error) {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+func (m *DBMockStore) GetCart(ctx context.Context, user_id int) (products []CartProduct, err error) {
 	args := m.Called(ctx, user_id)
-	return args.Get(0).([]Product), args.Error(1)
+	return args.Get(0).([]CartProduct), args.Error(1)
 }
 
 // ListUsers - test mock
@@ -52,9 +79,9 @@ func (m *DBMockStore) ListProducts(ctx context.Context, limitStr int, pageStr in
 	return args.Get(0).(int), args.Get(1).([]Product), args.Error(2)
 }
 
-func (m *DBMockStore) CreateProduct(ctx context.Context, product Product) (createdProduct Product, err error) {
+func (m *DBMockStore) CreateProduct(ctx context.Context, product Product) (productID int, err error) {
 	args := m.Called(ctx, product)
-	return args.Get(0).(Product), args.Error(1)
+	return args.Get(0).(int), args.Error(1)
 }
 
 func (m *DBMockStore) FilteredProducts(ctx context.Context, filter Filter, limitStr string, pageStr string) (count int, product []Product, err error) {
@@ -82,7 +109,7 @@ func (m *DBMockStore) GetProductByID(ctx context.Context, id int) (product Produ
 	return args.Get(0).(Product), args.Error(1)
 }
 
-func (m *DBMockStore) UpdateProductById(ctx context.Context, product Product, id int) (updatedProduct Product, err error) {
+func (m *DBMockStore) UpdateProductById(ctx context.Context, product Product, id int, imageData bool) (updatedProduct Product, err error) {
 	args := m.Called(ctx, product, id)
 	return args.Get(0).(Product), args.Error(1)
 }
@@ -95,4 +122,34 @@ func (m *DBMockStore) TotalRecords(ctx context.Context) (count int, err error) {
 func (m *DBMockStore) UpdateUserByID(ctx context.Context, user User, id int) (err error) {
 	args := m.Called(ctx)
 	return args.Error(0)
+}
+
+func (m *DBMockStore) AddToCart(ctx context.Context, cartID, productID int) (rowsAffected int64, err error) {
+	args := m.Called(ctx, cartID, productID)
+	return int64(args.Int(0)), args.Error(1)
+}
+
+func (m *DBMockStore) DeleteFromCart(ctx context.Context, cartID int, productID int) (rowsAffected int64, err error) {
+	args := m.Called(ctx, cartID, productID)
+	return int64(args.Int(0)), args.Error(1)
+}
+
+func (m *DBMockStore) UpdateIntoCart(ctx context.Context, quantity int, cartID int, productID int) (rowsAffected int64, err error) {
+	args := m.Called(ctx, cartID, productID, quantity)
+	return int64(args.Int(0)), args.Error(1)
+}
+
+func (m *DBMockStore) AuthenticateUser(ctx context.Context, user User) (validUser User, err error) {
+	args := m.Called(ctx, user)
+	return args.Get(0).(User), args.Error(1)
+}
+
+func (m *DBMockStore) CreateBlacklistedToken(ctx context.Context, token BlacklistedToken) (err error) {
+	args := m.Called(ctx, token)
+	return args.Error(0)
+}
+
+func (m *DBMockStore) CheckBlacklistedToken(ctx context.Context, token string) (status bool, number int) {
+	args := m.Called(ctx, token)
+	return args.Bool(0), args.Int(1)
 }

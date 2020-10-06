@@ -7,4 +7,3 @@ APP_PORT: "33001"
 
 # Postgres
 DB_URI: "postgresql://user:password@localhost:5432/dbname?sslmode=disable"
-

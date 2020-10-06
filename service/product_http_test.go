@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"joshsoftware/go-e-commerce/db"
 	"net/http"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -24,10 +23,6 @@ func (suite *ProductsHandlerTestSuite) SetupTest() {
 	suite.dbMock = &db.DBMockStore{}
 }
 
-func TestExampleTestSuite(t *testing.T) {
-	suite.Run(t, new(ProductsHandlerTestSuite))
-}
-
 func (suite *ProductsHandlerTestSuite) TestGetProductByIdHandlerSuccess() {
 
 	suite.dbMock.On("GetProductByID", mock.Anything, mock.Anything).Return(
@@ -39,11 +34,11 @@ func (suite *ProductsHandlerTestSuite) TestGetProductByIdHandlerSuccess() {
 			Discount:     10,
 			Tax:          0.5,
 			Quantity:     5.0,
-			CategoryId:   1,
+			CategoryID:   1,
 			CategoryName: "testing",
 			Brand:        "new brand",
-			Color:        nil,
-			Size:         nil,
+			Color:        "",
+			Size:         "",
 		}, nil,
 	)
 
@@ -93,11 +88,11 @@ func (suite *ProductsHandlerTestSuite) TestListProductsSuccess() {
 				Discount:     1,
 				Tax:          0.5,
 				Quantity:     15,
-				CategoryId:   5,
+				CategoryID:   5,
 				CategoryName: "2",
 				Brand:        "IST",
-				Color:        nil,
-				Size:         nil,
+				Color:        "",
+				Size:         "",
 			},
 		},
 		nil,
@@ -147,11 +142,11 @@ var testProduct = db.Product{
 	Discount:     1,
 	Tax:          0.5,
 	Quantity:     15,
-	CategoryId:   5,
+	CategoryID:   5,
 	CategoryName: "2",
 	Brand:        "IST",
-	Color:        &color,
-	Size:         &size,
+	Color:        color,
+	Size:         size,
 	URLs:         urls,
 }
 

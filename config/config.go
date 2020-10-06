@@ -26,7 +26,6 @@ func Load() {
 	viper.AddConfigPath("./../..")
 	viper.ReadInConfig()
 	viper.AutomaticEnv()
-
 	// Check for the presence of JWT_KEY and JWT_EXPIRY_DURATION_HOURS
 	JWTKey()
 	JWTExpiryDurationHours()

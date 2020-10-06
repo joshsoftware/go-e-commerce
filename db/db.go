@@ -10,6 +10,7 @@ type Storer interface {
 	CreateNewUser(context.Context, User) (User, error)
 	UpdateUser(context.Context, User, int) (User, error)
 	CheckUserByEmail(context.Context, string) (bool, User, error)
+
 	AuthenticateUser(context.Context, User) (User, error)
 	CreateBlacklistedToken(context.Context, BlacklistedToken) error
 	CheckBlacklistedToken(context.Context, string) (bool, int)
@@ -35,6 +36,6 @@ type Storer interface {
 	// cart related
 	GetCart(context.Context, int) ([]CartProduct, error)
 	AddToCart(context.Context, int, int) (int64, error)
-	RemoveFromCart(context.Context, int, int) (int64, error)
+	DeleteFromCart(context.Context, int, int) (int64, error)
 	UpdateIntoCart(context.Context, int, int, int) (int64, error)
 }

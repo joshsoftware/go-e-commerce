@@ -39,7 +39,7 @@ var testProduct = Product{
 	Discount:     1,
 	Tax:          0.5,
 	Quantity:     15,
-	CategoryId:   5,
+	CategoryID:   5,
 	CategoryName: "2",
 	Brand:        "IST",
 	Color:        "black",
@@ -55,7 +55,7 @@ func (suite *ProductsTestSuite) TestValidateSuccess() {
 		Discount:     10,
 		Tax:          0.5,
 		Quantity:     5,
-		CategoryId:   1,
+		CategoryID:   1,
 		CategoryName: "testing",
 		Brand:        "testing",
 		Color:        "test",
@@ -76,7 +76,7 @@ func (suite *ProductsTestSuite) TestValidateFailure() {
 		Discount:     999,
 		Tax:          0.5,
 		Quantity:     5,
-		CategoryId:   1,
+		CategoryID:   1,
 		CategoryName: "testing",
 		Brand:        "testing",
 		Color:        "test",
@@ -107,12 +107,12 @@ func (suite *ProductsTestSuite) TestCreateProductSuccess() {
 		Discount:     10.0,
 		Tax:          0.5,
 		Quantity:     5,
-		CategoryId:   1,
+		CategoryID:   1,
 		CategoryName: "testing",
 		Brand:        "testing",
 		Color:        "testing",
 		Size:         "testing",
-		//URLs:         []string{"url1", "url2"},
+		URLs:         []string{"url1", "url2"},
 	}
 
 	/* suite.sqlmock.ExpectBegin()
@@ -138,19 +138,17 @@ func (suite *ProductsTestSuite) TestCreateProductFailure() {
 		Discount:     10,
 		Tax:          0.5,
 		Quantity:     5.0,
-		CategoryId:   1,
+		CategoryID:   1,
 		CategoryName: "testing",
 		Brand:        "testing",
 		Color:        "test",
 		Size:         "heigh",
-		URLs:         []string{"url1", "url2"},
+		// URLs:         []string{"url1", "url2"},
 	}
 
 	suite.db.Close()
 	suite.sqlmock.ExpectBegin()
-	suite.sqlmock.ExpectExec("INSERT INTO product").
-		WithArgs("test user", "test database", 123, 10, 0.5, 5.0, 1, "testing", "testing", "test", "heigh").
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	suite.sqlmock.ExpectExec("INSERT INTO product").WithArgs("test user", "test database", 123, 10, 0.5, 5.0, 1, "testing", "testing", "test", "heigh").WillReturnResult(sqlmock.NewResult(1, 1))
 
 	suite.sqlmock.ExpectRollback()
 
@@ -167,7 +165,7 @@ func (suite *ProductsTestSuite) TestUpdateProductStockByIdSuccess() {
 		Discount:     10,
 		Tax:          0.5,
 		Quantity:     5.0,
-		CategoryId:   1,
+		CategoryID:   1,
 		CategoryName: "testing",
 		Brand:        "testing",
 		Color:        "test",
@@ -192,7 +190,7 @@ func (suite *ProductsTestSuite) TestUpdateProductStockByIdFailure() {
 		Discount:     10,
 		Tax:          0.5,
 		Quantity:     5.0,
-		CategoryId:   1,
+		CategoryID:   1,
 		CategoryName: "testing",
 		Brand:        "testing",
 		Color:        "test",
@@ -261,7 +259,7 @@ func (suite *ProductsTestSuite) TestUpdateProductByIdFailure() {
 		Discount:     10,
 		Tax:          0.5,
 		Quantity:     5.0,
-		CategoryId:   1,
+		CategoryID:   1,
 		CategoryName: "testing",
 		Brand:        "testing",
 		Color:        "test",
@@ -270,7 +268,7 @@ func (suite *ProductsTestSuite) TestUpdateProductByIdFailure() {
 	}
 
 	suite.sqlmock.ExpectBegin()
-	updatedProduct, err := suite.dbStore.UpdateProductById(context.Background(), product, 1)
+	updatedProduct, err := suite.dbStore.UpdateProductById(context.Background(), product, 1, false)
 	assert.NotEqual(suite.T(), updatedProduct, product)
 	assert.NotNil(suite.T(), err)
 }
