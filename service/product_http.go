@@ -369,10 +369,10 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 		updatedProduct, err, errCode := deps.Store.UpdateProductById(req.Context(), product, id, images)
 		switch errCode {
 		case http.StatusBadRequest:
-			logger.WithField("err", err.Error()).Error("Error while fetching product, product doesn't exist!")
+			logger.WithField("err", err.Error()).Error("Error Product doesn't exist Or User inputs are Invalid!")
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Error while fetching product, product doesn't exist with that id!",
+					Message: "Either product doesn't exist with that id or Please Check your Inputs. e.g Price Can't be negative, tax Can't be more than 100% etc.",
 				},
 			})
 
@@ -385,10 +385,10 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 			})
 
 		case http.StatusConflict:
-			logger.WithField("err", err.Error()).Error("Already exits product name")
+			logger.WithField("err", err.Error()).Error("Already exits product name, or Constraints in DB were not met!")
 			response(rw, http.StatusConflict, errorResponse{
 				Error: messageObject{
-					Message: "Already exits product name",
+					Message: "Either Product Name Already exists or Database Constraints were violated by your data.",
 				},
 			})
 
