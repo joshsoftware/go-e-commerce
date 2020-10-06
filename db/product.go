@@ -40,7 +40,7 @@ type Product struct {
 	Brand        string         `db:"brand" json:"brand" schema:"brand"`
 	Color        string         `db:"color" json:"color,*" schema:"color,*"`
 	Size         string         `db:"size" json:"size,*" schema:"size,*"`
-	URLs         pq.StringArray `db:"image_urls" json:"image_urls,*"  schema:"-"`
+	URLs         pq.StringArray `db:"image_urls" json:"image_urls,*"  schema:"images"`
 }
 
 // Pagination helps to return UI side with number of pages given a limitStr and pageStr number from Query Parameters
