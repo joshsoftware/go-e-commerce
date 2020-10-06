@@ -368,12 +368,21 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 		var updatedProduct db.Product
 		updatedProduct, err = deps.Store.UpdateProductById(req.Context(), product, id, images)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
-			response(rw, http.StatusInternalServerError, errorResponse{
-				Error: messageObject{
-					Message: "Internal server error",
-				},
-			})
+			if err.Error() == "pq: duplicate key value violates unique constraint \"products_name_key\"" {
+				logger.WithField("err", err.Error()).Error("Already exits product name")
+				response(rw, http.StatusConflict, errorResponse{
+					Error: messageObject{
+						Message: "Already exits product name",
+					},
+				})
+			} else {
+				logger.WithField("err", err.Error()).Error("Error while updating product attribute")
+				response(rw, http.StatusInternalServerError, errorResponse{
+					Error: messageObject{
+						Message: "Internal server error",
+					},
+				})
+			}
 			return
 		}
 

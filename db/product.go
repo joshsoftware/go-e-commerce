@@ -150,7 +150,7 @@ func imagesStore(images []*multipart.FileHeader, product *Product) error {
 			return err
 		}
 		tempFile.Write(imageBytes)
-		(*product).URLs = append(product.URLs, tempFile.Name()[len(directoryPath)+1:])
+		(*product).URLs = append(product.URLs, tempFile.Name())
 	}
 	return nil
 }
