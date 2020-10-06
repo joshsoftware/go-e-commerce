@@ -332,7 +332,7 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 	}
 
 	// Update images only after validations
-	if product.URLs != nil {
+	if product.URLs != nil && len(product.URLs) != 0 {
 		files := dbProduct.URLs
 		err = deleteImages(files)
 		if err != nil {
