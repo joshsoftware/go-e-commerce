@@ -116,7 +116,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 	} else {
 		getFilterProduct += ` ORDER BY p.id LIMIT ` + limitStr + `  OFFSET  ` + offsetStr + `  ;`
 	}
-	fmt.Println(getFilterProduct)
+	//fmt.Println(getFilterProduct)
 
 	err = s.db.Select(&products, getFilterProduct)
 	if err != nil {
@@ -172,7 +172,7 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 	isFiltered := `  `
 
 	// iterate over all the textMap
-	for key, _ := range textMap {
+	for key := range textMap {
 		isFiltered += ` 
 		LOWER(p.name) LIKE LOWER('%` + key + `%') OR 
 		LOWER(p.brand) LIKE LOWER('%` + key + `%') OR 
@@ -183,7 +183,7 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 	isFiltered = isFiltered[:len(isFiltered)-2]
 
 	getSearchCount += isFiltered + ` ;`
-	fmt.Println("getsearchProduct---->", getSearchCount)
+	//fmt.Println("getsearchProduct---->", getSearchCount)
 
 	countResult, err := s.db.Query(getSearchCount)
 	if err != nil {
@@ -215,7 +215,7 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 	getSearchRecord += isFiltered
 	getSearchRecord += ` LIMIT ` + limitStr + ` OFFSET  ` + offsetStr + ` ;`
 
-	fmt.Println("getsearchRecords---->", getSearchRecord)
+	//fmt.Println("getsearchRecords---->", getSearchRecord)
 
 	err = s.db.Select(&products, getSearchRecord)
 	if err != nil {

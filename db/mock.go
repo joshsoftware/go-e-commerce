@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"mime/multipart"
 
 	"github.com/stretchr/testify/mock"
 )
@@ -80,9 +81,9 @@ func (m *DBMockStore) ListProducts(ctx context.Context, limitStr int, pageStr in
 	return args.Get(0).(int), args.Get(1).([]Product), args.Error(2)
 }
 
-func (m *DBMockStore) CreateProduct(ctx context.Context, product Product) (productID int, err error) {
-	args := m.Called(ctx, product)
-	return args.Get(0).(int), args.Error(1)
+func (m *DBMockStore) CreateProduct(ctx context.Context, product Product, images []*multipart.FileHeader) (createdProduct Product, err error) {
+	args := m.Called(ctx, product, images)
+	return args.Get(0).(Product), args.Error(1)
 }
 
 func (m *DBMockStore) FilteredProducts(ctx context.Context, filter Filter, limitStr string, pageStr string) (count int, product []Product, err error) {
@@ -110,9 +111,9 @@ func (m *DBMockStore) GetProductByID(ctx context.Context, id int) (product Produ
 	return args.Get(0).(Product), args.Error(1)
 }
 
-func (m *DBMockStore) UpdateProductById(ctx context.Context, product Product, id int, imageData bool) (updatedProduct Product, err error) {
-	args := m.Called(ctx, product, id)
-	return args.Get(0).(Product), args.Error(1)
+func (m *DBMockStore) UpdateProductById(ctx context.Context, product Product, id int, images []*multipart.FileHeader) (updatedProduct Product, err error, errCode int) {
+	args := m.Called(ctx, product, id, images)
+	return args.Get(0).(Product), args.Error(1), args.Int(2)
 }
 
 func (m *DBMockStore) TotalRecords(ctx context.Context) (count int, err error) {
