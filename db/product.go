@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -44,7 +45,7 @@ type Product struct {
 	Brand        string         `db:"brand" json:"brand" schema:"brand"`
 	Color        string         `db:"color" json:"color,*" schema:"color,*"`
 	Size         string         `db:"size" json:"size,*" schema:"size,*"`
-	URLs         pq.StringArray `db:"image_urls" json:"image_urls,*"  schema:"-"`
+	URLs         pq.StringArray `db:"image_urls" json:"image_urls,*"  schema:"images"`
 }
 
 // Pagination helps to return UI side with number of pages given a limitStr and pageStr number from Query Parameters
@@ -137,8 +138,8 @@ func imagesStore(images []*multipart.FileHeader, product *Product) error {
 		}
 
 		directoryPath := "assets/productImages"
-
-		tempFile, err := ioutil.TempFile(directoryPath, (*product).Name+"-*"+string(extension))
+		fileName := strings.ReplaceAll((*product).Name, " ", "")
+		tempFile, err := ioutil.TempFile(directoryPath, fileName+"-*"+string(extension))
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
 			return err
@@ -332,7 +333,7 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 	}
 
 	// Update images only after validations
-	if product.URLs != nil {
+	if product.URLs != nil && len(product.URLs) != 0 {
 		files := dbProduct.URLs
 		err = deleteImages(files)
 		if err != nil {
