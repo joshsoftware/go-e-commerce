@@ -401,6 +401,7 @@ func (suite *ProductsHandlerTestSuite) TestUpdateProductByIdSuccess() {
 			URLs:         urls,
 		},
 		nil,
+		http.StatusOK,
 	)
 
 	recorder := makeHTTPCallWithHeader(
@@ -430,6 +431,7 @@ func (suite *ProductsHandlerTestSuite) TestUpdateProductByIdFailure() {
 	suite.dbMock.On("UpdateProductById", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(
 		db.Product{},
 		fmt.Errorf("Product Couldn't get updated! Internal Error."),
+		http.StatusInternalServerError,
 	)
 
 	recorder := makeHTTPCallWithHeader(
