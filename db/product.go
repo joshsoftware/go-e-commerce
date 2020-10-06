@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"mime/multipart"
+	"net/http"
 	"os"
 	"regexp"
 
@@ -274,13 +275,13 @@ func (s *pgStore) DeleteProductById(ctx context.Context, id int) error {
 	return nil
 }
 
-func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int, images []*multipart.FileHeader) (Product, error) {
+func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int, images []*multipart.FileHeader) (Product, error, int) {
 
 	var dbProduct Product
 	err := s.db.Get(&dbProduct, getProductByIDQuery, id)
 	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error while fetching product ")
-		return Product{}, err
+		logger.WithField("err", err.Error()).Error("Error while fetching product, product doesn't exist! ")
+		return Product{}, err, http.StatusBadRequest
 	}
 
 	if product.Name == "" {
@@ -319,14 +320,14 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 
 	_, valid := product.Validate()
 	if !valid {
-		return Product{}, fmt.Errorf("Product Validation failed. Invalid Fields present in the product. Check the limits. for e.g Discount shouldn't not be NaN.")
+		return Product{}, fmt.Errorf("Product Validation failed. Invalid Fields present in the product. Check the limits. for e.g Discount shouldn't not be NaN."), http.StatusBadRequest
 	}
 
 	if images != nil {
 		err = imagesStore(images, &product)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error inserting images in assets: " + product.Name)
-			return Product{}, err
+			logger.WithField("err", err.Error()).Error("Error inserting images in assets/productImages: " + product.Name)
+			return Product{}, err, http.StatusInternalServerError
 		}
 	}
 
@@ -336,7 +337,7 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 		err = deleteImages(files)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error Couldn't remove the images file!")
-			return Product{}, err
+			return Product{}, err, http.StatusInternalServerError
 		}
 	} else {
 		product.URLs = dbProduct.URLs
@@ -349,18 +350,18 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 	row, err = s.db.NamedQuery(updateProductQuery, product)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error updating product attribute(s) to database :" + string(id))
-		return Product{}, err
+		return Product{}, err, http.StatusConflict
 	}
 
 	if row.Next() {
 		err = row.Scan(&product.CategoryName)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error scanning product Category Name from database: " + product.Name)
-			return Product{}, err
+			return Product{}, err, http.StatusInternalServerError
 		}
 	}
 
 	row.Close()
 
-	return product, nil
+	return product, nil, http.StatusOK
 }
