@@ -102,7 +102,7 @@ func (product *Product) Validate() (map[string]ErrorResponse, bool) {
 
 func deleteImages(files pq.StringArray) error {
 
-	root := "./assets/productImages/"
+	root := "./"
 	for _, file := range files {
 		file = root + file
 		//fmt.Println(file)
