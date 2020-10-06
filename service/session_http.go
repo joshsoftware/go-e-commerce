@@ -1,6 +1,7 @@
 package service
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -83,16 +84,26 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 		//checking if the user is authenticated or not
 		// by passing the credentials to the AuthenticateUser function
 		user, err = deps.Store.AuthenticateUser(req.Context(), user)
-		if !user.IsVerified || user.Password == "" {
-			responses(rw, http.StatusForbidden, errorResponse{
-				Error: messageObject{
-					Message: "Email Not Verified",
-				},
-			})
-			return
-		}
-
 		if err != nil {
+			if err == sql.ErrNoRows {
+				logger.WithField("err", err.Error()).Error("No user found")
+				responses(rw, http.StatusNotFound, errorResponse{
+					Error: messageObject{
+						Message: "No user found",
+					},
+				})
+				return
+			}
+			if !user.IsVerified {
+				fmt.Println(user)
+				logger.WithField("err", err.Error()).Error("email not verified")
+				responses(rw, http.StatusForbidden, errorResponse{
+					Error: messageObject{
+						Message: "Email Not Verified",
+					},
+				})
+				return
+			}
 			logger.WithField("err", err.Error()).Error("Invalid Credentials")
 			responses(rw, http.StatusUnauthorized, errorResponse{
 				Error: messageObject{

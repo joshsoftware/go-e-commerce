@@ -3,13 +3,10 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"joshsoftware/go-e-commerce/db"
 	"math"
 	"net/http"
-	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
@@ -198,7 +195,6 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 		// grab the filename
 		contents := formdata.Value
 		images := formdata.File["images"]
-		//err = req.ParseForm()
 
 		//grab product
 		err = decoder.Decode(&product, contents)
@@ -228,62 +224,7 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		for i, _ := range images {
-			image, err := images[i].Open()
-			defer image.Close()
-			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while decoding image Data")
-				responses(rw, http.StatusBadRequest, errorResponse{
-					Error: messageObject{
-						Message: "Invalid Image !",
-					},
-				})
-				return
-			}
-
-			// extensionRegex := regexp.MustCompile(`[.]+.*`)
-			// extension := extensionRegex.Find([]byte(images[i].Filename))
-			extension := filepath.Ext(images[i].Filename)
-			if len(extension) < 2 || len(extension) > 5 {
-				err = fmt.Errorf("Couldn't get extension of file!")
-				logger.WithField("err", err.Error()).Error("Error while getting image Extension.")
-				responses(rw, http.StatusBadRequest, errorResponse{
-					Error: messageObject{
-						Message: "Re-check the image file extension!",
-					},
-				})
-				return
-			}
-
-			fileName := strings.ReplaceAll(product.Name, " ", "")
-			tempFile, err := ioutil.TempFile("assets/products", fileName+"-*"+string(extension))
-			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
-				responses(rw, http.StatusInternalServerError, errorResponse{
-					Error: messageObject{
-						Message: "Couldn't  create temporary storage!",
-					},
-				})
-				return
-			}
-			defer tempFile.Close()
-
-			imageBytes, err := ioutil.ReadAll(image)
-			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while reading image File")
-				responses(rw, http.StatusInternalServerError, errorResponse{
-					Error: messageObject{
-						Message: "Couldn't read the image file!",
-					},
-				})
-				return
-			}
-			tempFile.Write(imageBytes)
-			product.URLs = append(product.URLs, tempFile.Name())
-		}
-
-		//var createdProduct db.Product
-		createdProductID, err := deps.Store.CreateProduct(req.Context(), product)
+		createdProduct, err := deps.Store.CreateProduct(req.Context(), product, images)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while inserting product")
 			rw.Header().Add("Content-Type", "application/json")
@@ -295,7 +236,7 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 			})
 			return
 		}
-		responses(rw, http.StatusOK, successResponse{Data: createdProductID})
+		responses(rw, http.StatusOK, successResponse{Data: createdProduct})
 		return
 	})
 }
@@ -454,7 +395,6 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 
 		vars := mux.Vars(req)
 		var product db.Product
-		var imageData bool
 
 		id, err := strconv.Atoi(vars["product_id"])
 		if err != nil {
@@ -498,77 +438,37 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 			})
 			return
 		}
-		if images != nil {
-			imageData = true
-		}
-
-		for i, _ := range images {
-			image, err := images[i].Open()
-			defer image.Close()
-			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while decoding image Data")
-				responses(rw, http.StatusBadRequest, errorResponse{
-					Error: messageObject{
-						Message: "Invalid Image !",
-					},
-				})
-				return
-			}
-
-			// extensionRegex := regexp.MustCompile(`[.]+.*`)
-			// extension := extensionRegex.Find([]byte(images[i].Filename))
-			extension := filepath.Ext(images[i].Filename)
-			if len(extension) < 2 || len(extension) > 5 {
-				err = fmt.Errorf("Couldn't get extension of file!")
-				logger.WithField("err", err.Error()).Error("Error while getting image Extension.")
-				responses(rw, http.StatusBadRequest, errorResponse{
-					Error: messageObject{
-						Message: "Re-check the image file extension!",
-					},
-				})
-				return
-			}
-			fileName := strings.ReplaceAll(product.Name, " ", "")
-			tempFile, err := ioutil.TempFile("assets/products", fileName+"-*"+string(extension))
-			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
-				responses(rw, http.StatusInternalServerError, errorResponse{
-					Error: messageObject{
-						Message: "Couldn't  create temporary storage!",
-					},
-				})
-				return
-			}
-
-			defer tempFile.Close()
-
-			imageBytes, err := ioutil.ReadAll(image)
-			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while reading image File")
-				responses(rw, http.StatusInternalServerError, errorResponse{
-					Error: messageObject{
-						Message: "Couldn't read the image file!",
-					},
-				})
-				return
-			}
-			tempFile.Write(imageBytes)
-			product.URLs = append(product.URLs, tempFile.Name())
-		}
 
 		var updatedProduct db.Product
-		updatedProduct, err = deps.Store.UpdateProductById(req.Context(), product, id, imageData)
-		if err != nil {
+		updatedProduct, err, errCode := deps.Store.UpdateProductById(req.Context(), product, id, images)
+		switch errCode {
+		case http.StatusBadRequest:
+			logger.WithField("err", err.Error()).Error("Error Product doesn't exist Or User inputs are Invalid!")
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Either product doesn't exist with that id or Please Check your Inputs. e.g Price Can't be negative, tax Can't be more than 100% etc.",
+				},
+			})
+
+		case http.StatusConflict:
+			logger.WithField("err", err.Error()).Error("Product name Already exists or key value violates unique constraint")
+			responses(rw, http.StatusConflict, errorResponse{
+				Error: messageObject{
+					Message: "Product name Already exists or key value violates unique constraint",
+				},
+			})
+
+		case http.StatusOK:
+			responses(rw, http.StatusOK, successResponse{Data: updatedProduct})
+
+		default:
 			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
 			responses(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
 					Message: "Internal server error",
 				},
 			})
-			return
 		}
-
-		responses(rw, http.StatusOK, successResponse{Data: updatedProduct})
 
 		return
 	})

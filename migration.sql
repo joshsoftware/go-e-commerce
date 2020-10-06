@@ -1,4 +1,8 @@
-INSERT INTO users (first_name,last_name,email,mobile,country,state,city,address,password,profile_image,isadmin) VALUES ('Mayur', 'Deshmukh', 'mayur.s.deshmukh1092@gmail.com', '8421985646', 'India', 'M.H', 'Pune', 'ABC', '$2a$08$ue93ZY.v07SRcASU9prhHukjuSiLUShLVB3TnbxSUIkJkX/EFXKAq','assets/users/image.png','t');
+INSERT INTO users (first_name,last_name,email,mobile,country,state,city,address,password,profile_image,isadmin) VALUES ('Mayur', 'Deshmukh', 'mayur.s.deshmukh1092@gmail.com', '8421985646', 'India', 'M.H', 'Nashik', 'ABC', '$2a$08$ue93ZY.v07SRcASU9prhHukjuSiLUShLVB3TnbxSUIkJkX/EFXKAq','assets/users/image.png','t', '');
+INSERT INTO users (first_name,last_name,email,mobile,country,state,city,address,password,profile_image,isadmin) VALUES ('Tejas', 'Zambre', 'tejas@gmail.com', '8421985646', 'India', 'M.H', 'Pune', 'ABC', '$2a$08$ue93ZY.v07SRcASU9prhHukjuSiLUShLVB3TnbxSUIkJkX/EFXKAq','assets/users/image.png','t');
+INSERT INTO users (first_name,last_name,email,mobile,country,state,city,address,password,profile_image,isadmin) VALUES ('Sagar', 'Sonwane', 'sagar@gmail.com', '8421985646', 'India', 'M.P', 'Nashik', 'ABC', '$2a$08$ue93ZY.v07SRcASU9prhHukjuSiLUShLVB3TnbxSUIkJkX/EFXKAq','assets/users/image.png','t');
+INSERT INTO users (first_name,last_name,email,mobile,country,state,city,address,password,profile_image,isadmin) VALUES ('Santosh', 'Kavhar', 'santosh@gmail.com', '8421985646', 'India', 'M.H', 'Pune', 'ABC', '$2a$08$ue93ZY.v07SRcASU9prhHukjuSiLUShLVB3TnbxSUIkJkX/EFXKAq','assets/users/image.png','t');
+INSERT INTO users (first_name,last_name,email,mobile,country,state,city,address,password,profile_image,isadmin) VALUES ('Rohit', 'Nale', 'rohit@gmail.com', '8421985646', 'India', 'M.H', 'Pune', 'ABC', '$2a$08$ue93ZY.v07SRcASU9prhHukjuSiLUShLVB3TnbxSUIkJkX/EFXKAq','assets/users/image.png','t');
 
 
 INSERT INTO category (cname, description) VALUES ('Clothes','All wearable fabrics, ');
@@ -7,6 +11,26 @@ INSERT INTO category (cname, description) VALUES('Mobile','The mobile phone can 
 INSERT INTO category (cname, description) VALUES('Watch','A watch is a portable timepiece intended ');
 INSERT INTO category (cname, description) VALUES('Books','There are several things to consider in order');
 INSERT INTO category (cname, description) VALUES('Sports','Shoes are for regular comfort wear');
+
+INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, size, image_urls) VALUES('Polo Shirt', 'Benetton Men  Classic Fit Polo Shirt',511, 10, 5, 10, 1 ,'Polo','Sky Blue', 'Medium', ARRAY ['assets/productImages/poloshirt1.jpeg','assets/productImages/poloshirt2.jpeg', 'assets/productImages/poloshirt3.jpeg']);
+INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, size, image_urls) VALUES('Wrangler', 'Men  Slim Fit Jeans', 600, 20, 5, 12, 1 , 'Armani','Charcoal Black','Large', ARRAY ['assets/productImages/Wrangler1.jpeg','assets/productImages/Wrangler2.jpeg']);
+INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, size, image_urls) VALUES('Dragon Jacket','Made from the skin of one of the dragons', 700, 40, 5, 9, 1 ,'Veteran','Black','Extra Large', ARRAY ['assets/productImages/DragonJacket1.jpeg','assets/productImages/DragonJacket2.jpeg', 'assets/productImages/DragonJacket3.jpeg']);
+INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, image_urls) VALUES('HD Ready Android LED TV ', 'Resolution: HD Ready Android TV (1366x768)', 1200, 20, 10, 12, 2 ,'Samsung','Black', ARRAY ['assets/productImages/AndroidLEDTV1.jpeg', 'assets/productImages/AndroidLEDTV2.jpeg','assets/productImages/AndroidLEDTV3.jpeg']);
+INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, image_urls) VALUES('Sony DSC W830 Cyber-Shot 20.1 MP ', 'Shoot Camera (Black) with 8X ', 1500, 50, 15, 8, 2 , 'Samsung','Blue', ARRAY ['assets/productImages/SonyDSC1.jpeg','assets/productImages/SonyDSC2.jpeg', 'assets/productImages/SonyDSC3.jpeg']);
+INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, image_urls) VALUES('Charger', 'Mi 10W Charger with Cable (1.2 Meter, Black)', 500, 5, 4, 21, 2 ,'One Plus','White', ARRAY ['assets/productImages/Charger1.jpeg','assets/productImages/Charger2.jpeg']);
+INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, image_urls) VALUES('Apple iPhone 11 Pro (64GB)', '5.8-inch (14.7 cm) ', 60000, 5, 10, 15, 3 ,'Apple', 'Golden', ARRAY ['assets/productImages/AndroidLEDTV1.jpeg', 'assets/productImages/AndroidLEDTV2.jpeg','assets/productImages/AndroidLEDTV3.jpeg']);
+INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, image_urls) VALUES('Apple iPhone 11 Pro (64GB) Max', '5.8-inch (14.7 cm) ', 700000, 4, 30, 15, 3, 'Apple','Black' , ARRAY ['assets/productImages/AndroidLEDTV1.jpeg', 'assets/productImages/AndroidLEDTV2.jpeg','assets/productImages/AndroidLEDTV3.jpeg']);
+INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, image_urls) VALUES('Apple iPhone XR (64GB)', '6.1-inch (15.5 cm) Liquid Retina HD LCD display',  50000, 6, 20, 15, 3, 'Apple','Grey' , ARRAY ['assets/productImages/AndroidLEDTV1.jpeg', 'assets/productImages/AndroidLEDTV2.jpeg','assets/productImages/AndroidLEDTV3.jpeg']);
+INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, image_urls) VALUES ('Rolex Watch','by wearing it you are bound to feel realaxed',2100, 10, 10, 23, 4, 'Rolex', 'Blue', ARRAY ['assets/productImages/RelaxWatch1.jpeg','assets/productImages/RelaxWatch2.jpeg']);
+INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, image_urls) VALUES ('Titan Watch','With the look of and feel of old days',2000, 15, 8, 5, 4 ,'Titan','Ocean Blue', ARRAY ['assets/productImages/TitanWatch1.jpeg','assets/productImages/TitanWatch2.jpeg']);
+INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, image_urls) VALUES ('Sonata Watch','Stylished belts and longer battery',3010, 20, 12, 5, 4 ,'Sonata','Golden', ARRAY ['assets/productImages/SonataWatch1.jpeg','assets/productImages/SonataWatch2.jpeg', 'assets/productImages/SonataWatch3.jpeg']);
+INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, image_urls) VALUES ('Wings of Fire','autobiography by visionary scientist',332, 10, 5, 2, 5, 'TechMax Publications', ARRAY ['assets/productImages/WingsofFire1.jpeg','assets/productImages/WingsofFire2.jpeg']);
+INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, image_urls) VALUES ('Thoughts to Inspire','famous quotes by Swami Vivekananda', 150, 15, 10, 2, 5, 'Technical Publications' , ARRAY ['assets/productImages/vivkananadbook1.jpeg','assets/productImages/vivkananadbook2.jpeg']);
+INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, size, image_urls) VALUES ('Lancer','Mens Running Shoes', 150, 15, 10, 9, 6 , 'Nike', 'Red', 'Small', ARRAY ['assets/productImages/MensRunningShoes1.jpeg','assets/productImages/MensRunningShoes2.jpeg']);
+INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand) VALUES ('Football','Sporting Goods', 200, 40, 15, 12, 6, 'Cosco' );
+
+
+
 
 -- INSERT INTO category (name, description) VALUES ('Clothes','All wearable fabrics, ');
 -- INSERT INTO category (name, description) VALUES('Electronics',' stores or generates electricity');
@@ -65,8 +89,3 @@ INSERT INTO category (cname, description) VALUES('Sports','Shoes are for regular
 -- INSERT INTO category (cname, description) VALUES('Watch','A watch is a portable timepiece intended ');
 -- INSERT INTO category (cname, description) VALUES('Books','There are several things to consider in order');
 -- INSERT INTO category (cname, description) VALUES('Sports','Shoes are for regular comfort wear');
-
-
-
--- INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, size, image_urls) VALUES('Polo Shirt', 'Benetton Men  Classic Fit Polo Shirt',511, 10, 5, 10, 1 ,'Polo','Sky Blue', 'Medium', ARRAY ['https://res.cloudinary.com/mayur-cloud/image/upload/v1599905019/poloshit1_gnzidq.jpg']);
--- INSERT INTO products (name, description, price, discount, quantity, tax, cid, brand, color, size, image_urls) VALUES('Wrangler', 'Men  Slim Fit Jeans', 600, 20, 5, 12, 1 , 'Armani','Charcoal Black','Large', ARRAY ['https://res.cloudinary.com/mayur-cloud/image/upload/v1599905299/Wrangler2_l0acph.jpg']);

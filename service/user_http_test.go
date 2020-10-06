@@ -7,13 +7,10 @@ import (
 	"joshsoftware/go-e-commerce/db"
 	"log"
 	"net/http"
-	"net/http/httptest"
-	"strings"
 
 	"github.com/stretchr/testify/mock"
 
 	"github.com/bxcodec/faker/v3"
-	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -209,22 +206,6 @@ func (suite *UsersHandlerTestSuite) TestUpdateUserDbFailure() {
 	suite.dbMock.AssertExpectations(suite.T())
 }
 
-func makeHTTPCall(method, path, requestURL, body string, handlerFunc http.HandlerFunc) (recorder *httptest.ResponseRecorder) {
-	// create a http request using the given parameters
-	req, _ := http.NewRequest(method, path, strings.NewReader(body))
-
-	// test recorder created for capturing api responses
-	recorder = httptest.NewRecorder()
-
-	// create a router to serve the handler in test with the prepared request
-	router := mux.NewRouter()
-	router.HandleFunc(path, handlerFunc).Methods(method)
-
-	// serve the request and write the response to recorder
-	router.ServeHTTP(recorder, req)
-	return
-}
-
 func (suite *UsersHandlerTestSuite) TestRegisterUserSuccess() {
 	suite.dbMock.On("CreateNewUser", mock.Anything, mock.Anything).Return(db.User{}, nil)
 	suite.dbMock.On("CheckUserByEmail", mock.Anything, mock.Anything).Return(false, db.User{}, sql.ErrNoRows)
@@ -241,6 +222,7 @@ func (suite *UsersHandlerTestSuite) TestRegisterUserSuccess() {
 			"password": "password"
 		}`
 	recorder := makeHTTPCall(http.MethodPost,
+		"/register",
 		"/register",
 		body,
 		registerUserHandler(Dependencies{Store: suite.dbMock}),
@@ -266,6 +248,7 @@ func (suite *UsersHandlerTestSuite) TestRegisterUserFailure() {
 		"password": "password"
 	}`
 	recorder := makeHTTPCall(http.MethodPost,
+		"/register",
 		"/register",
 		body,
 		registerUserHandler(Dependencies{Store: suite.dbMock}),

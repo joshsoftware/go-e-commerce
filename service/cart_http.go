@@ -17,30 +17,37 @@ import (
 // @Failure 400 {object}
 func getCartHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		// request_params := mux.Vars(req)
-		// user_id, err := strconv.Atoi(request_params["user_id"])
 
 		authToken := req.Header["Token"]
 		fmt.Println("auth Token : ", authToken[0])
 		payload, err := getDataFromToken(authToken[0])
 		fmt.Println("User id :", payload.UserID)
 		if err != nil {
-			rw.WriteHeader(http.StatusUnauthorized)
-			rw.Write([]byte("Unauthorized"))
+			logger.WithField("err", err.Error()).Error("Error fetching data from token")
+			error := errorResponse{
+				Error: "Error fetching data from token",
+			}
+			responses(rw, http.StatusUnauthorized, error)
 			return
 		}
 
 		cart_products, err := deps.Store.GetCart(req.Context(), int(payload.UserID))
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error fetching data")
-			rw.WriteHeader(http.StatusInternalServerError)
+			logger.WithField("err", err.Error()).Error("Error fetching data from database")
+			error := errorResponse{
+				Error: "Error fetching data from database",
+			}
+			responses(rw, http.StatusInternalServerError, error)
 			return
 		}
 
 		respBytes, err := json.Marshal(cart_products)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error marshaling cart data")
-			rw.WriteHeader(http.StatusInternalServerError)
+			error := errorResponse{
+				Error: "Error marshaling cart data",
+			}
+			responses(rw, http.StatusInternalServerError, error)
 			return
 		}
 
@@ -62,7 +69,7 @@ func addToCartHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		productId, err := strconv.Atoi(req.URL.Query()["productId"][0])
+		productID, err := strconv.Atoi(req.URL.Query()["productID"][0])
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("product_id is missing")
 			error := errorResponse{
@@ -72,7 +79,7 @@ func addToCartHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		rowsAffected, err := deps.Store.AddToCart(req.Context(), int(payload.UserID), productId)
+		rowsAffected, err := deps.Store.AddToCart(req.Context(), int(payload.UserID), productID)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("error while adding to cart")
 			error := errorResponse{
@@ -97,7 +104,7 @@ func addToCartHandler(deps Dependencies) http.HandlerFunc {
 	})
 }
 
-func removeFromCartHandler(deps Dependencies) http.HandlerFunc {
+func deleteFromCartHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		authToken := req.Header["Token"]
 		payload, err := getDataFromToken(authToken[0])
@@ -110,8 +117,7 @@ func removeFromCartHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		productId, err := strconv.Atoi(req.URL.Query()["productId"][0])
-
+		productID, err := strconv.Atoi(req.URL.Query()["productID"][0])
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("product_id is missing")
 			error := errorResponse{
@@ -121,7 +127,7 @@ func removeFromCartHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		rowsAffected, err := deps.Store.RemoveFromCart(req.Context(), int(payload.UserID), productId)
+		rowsAffected, err := deps.Store.DeleteFromCart(req.Context(), int(payload.UserID), productID)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while removing from cart")
 			error := errorResponse{
@@ -159,7 +165,7 @@ func updateIntoCartHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		productId, err := strconv.Atoi(req.URL.Query()["productId"][0])
+		productID, err := strconv.Atoi(req.URL.Query()["productID"][0])
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("product_id is missing")
 			error := errorResponse{
@@ -179,7 +185,7 @@ func updateIntoCartHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		rowsAffected, err := deps.Store.UpdateIntoCart(req.Context(), quantity, int(payload.UserID), productId)
+		rowsAffected, err := deps.Store.UpdateIntoCart(req.Context(), quantity, int(payload.UserID), productID)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while updating to cart")
 			error := errorResponse{
@@ -188,6 +194,7 @@ func updateIntoCartHandler(deps Dependencies) http.HandlerFunc {
 			responses(rw, http.StatusInternalServerError, error)
 			return
 		}
+
 		if rowsAffected != 1 {
 			success := successResponse{
 				Data: "zero rows affected",

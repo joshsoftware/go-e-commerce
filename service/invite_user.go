@@ -65,7 +65,7 @@ func inviteUsersHandler(deps Dependencies) http.HandlerFunc {
 			if check {
 				existFlag = true
 				existingUsers = append(existingUsers, emailID)
-				log.Printf("\nuser with e-mail id %d already exists", emailID)
+				log.Printf("\nuser with e-mail id %v already exists", emailID)
 				continue
 			}
 			// For checking error occured while looking already registered user
@@ -85,6 +85,7 @@ func inviteUsersHandler(deps Dependencies) http.HandlerFunc {
 			dbUser := db.User{}
 
 			user.Email = emailID
+			user.IsVerified = false
 
 			dbUser, err = deps.Store.CreateNewUser(req.Context(), user)
 			if err != nil {
@@ -99,7 +100,7 @@ func inviteUsersHandler(deps Dependencies) http.HandlerFunc {
 			}
 
 			var body bytes.Buffer
-			var verificationURL = "https://joshreact-e-commerce.herokuapp.com/verify?Token=" + token
+			var verificationURL = "https://joshreact-e-commerce.herokuapp.com/verifyUser?Token=" + token
 
 			temp.Execute(&body, struct {
 				Email            string
