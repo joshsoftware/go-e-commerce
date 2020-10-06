@@ -366,27 +366,42 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		var updatedProduct db.Product
-		updatedProduct, err = deps.Store.UpdateProductById(req.Context(), product, id, images)
-		if err != nil {
-			if err.Error() == "pq: duplicate key value violates unique constraint \"products_name_key\"" {
-				logger.WithField("err", err.Error()).Error("Already exits product name")
-				response(rw, http.StatusConflict, errorResponse{
-					Error: messageObject{
-						Message: "Already exits product name",
-					},
-				})
-			} else {
-				logger.WithField("err", err.Error()).Error("Error while updating product attribute")
-				response(rw, http.StatusInternalServerError, errorResponse{
-					Error: messageObject{
-						Message: "Internal server error",
-					},
-				})
-			}
-			return
-		}
+		updatedProduct, err, errCode := deps.Store.UpdateProductById(req.Context(), product, id, images)
+		switch errCode {
+		case http.StatusBadRequest:
+			logger.WithField("err", err.Error()).Error("Error while fetching product, product doesn't exist!")
+			response(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Error while fetching product, product doesn't exist with that id!",
+				},
+			})
 
-		response(rw, http.StatusOK, successResponse{Data: updatedProduct})
+		case http.StatusInternalServerError:
+			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
+			response(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal server error",
+				},
+			})
+
+		case http.StatusConflict:
+			logger.WithField("err", err.Error()).Error("Already exits product name")
+			response(rw, http.StatusConflict, errorResponse{
+				Error: messageObject{
+					Message: "Already exits product name",
+				},
+			})
+
+		case http.StatusOK:
+			response(rw, http.StatusOK, successResponse{Data: updatedProduct})
+		default:
+			logger.WithField("err", err.Error()).Error("Some Strange Error has Occured!")
+			response(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal server error",
+				},
+			})
+		}
 
 		return
 	})
