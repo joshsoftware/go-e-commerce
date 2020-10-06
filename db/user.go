@@ -32,13 +32,14 @@ const (
 		) = 
 		($1, $2, $3, $4, $5, $6 ,$7,$8, $9) where id = $10 `
 
-	getUserQuery  = `SELECT * FROM users where id=$1`
-	getUsersQuery = `SELECT * FROM users ORDER BY id ASC`
-
-	deleteUserQuery       = `DELETE FROM users WHERE id=$1`
-	disableUserQuery      = `UPDATE users SET isdisabled =$1 WHERE id=$2`
-	enableUserQuery       = `UPDATE users SET isdisabled =$1 WHERE id=$2`
-	deleteUsersTokenQuery = `DELETE FROM user_blacklisted_tokens WHERE user_id=$1`
+	getUserQuery            = `SELECT * FROM users where id=$1`
+	getUsersQuery           = `SELECT * FROM users ORDER BY id ASC`
+	updateUserPasswordQuery = `UPDATE users SET password=$1 where id=$2`
+	deleteUserQuery         = `DELETE FROM users WHERE id=$1`
+	disableUserQuery        = `UPDATE users SET isdisabled =$1 WHERE id=$2`
+	enableUserQuery         = `UPDATE users SET isdisabled =$1 WHERE id=$2`
+	verifyUserQuery         = `UPDATE users SET isverified =$1 WHERE id=$2`
+	deleteUsersTokenQuery   = `DELETE FROM user_blacklisted_tokens WHERE user_id=$1`
 )
 
 //User Struct for declaring attributes of User
@@ -56,9 +57,11 @@ type User struct {
 	ProfileImage string    `db:"profile_image" json:"profile_image" schema:"profile_image"`
 	IsAdmin      bool      `db:"isadmin" json:"isAdmin" schema:"-"`
 	IsDisabled   bool      `db:"isdisabled" json:"isDisabled" schema:"-"`
+	IsVerified   bool      `db:"isverified" json:"isVerified" schema:"-"`
 	CreatedAt    time.Time `db:"created_at" json:"created_at" schema:"-"`
 }
 
+// Validate function checks if some field in user struct are empty
 func (user *User) Validate() (err error) {
 	if user.FirstName == "" {
 		err = fmt.Errorf("First name can't be blank")
@@ -134,7 +137,6 @@ func (s *pgStore) AuthenticateUser(ctx context.Context, u User) (user User, err 
 	}
 
 	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(u.Password)); err != nil {
-		// If the two passwords don't match, return a 401 status
 		logger.WithField("Error", err.Error())
 	}
 	return
@@ -296,6 +298,28 @@ func (s *pgStore) EnableUserByID(ctx context.Context, userID int) (err error) {
 	_, err = s.db.Exec(enableUserQuery, false, userID)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error enabling User")
+		return
+	}
+	return
+}
+
+func (s *pgStore) VerifyUserByID(ctx context.Context, userID int) (err error) {
+	_, err = s.db.Exec(verifyUserQuery, true, userID)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("Error verifing User")
+		return
+	}
+	return
+}
+
+func (s *pgStore) SetUserPasswordByID(ctx context.Context, password string, userID int) (err error) {
+	_, err = s.db.Exec(
+		updateUserPasswordQuery,
+		password,
+		userID,
+	)
+	if err != nil {
+		logger.WithField("err", err.Error()).Error("error updating user password")
 		return
 	}
 	return

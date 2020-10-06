@@ -39,6 +39,9 @@ func InitRouter(deps Dependencies) (router *mux.Router) {
 	//Route for Inviting User
 	router.Handle("/invite", jwtMiddleWare(adminMiddleware(inviteUsersHandler(deps), deps), deps)).Methods(http.MethodPost).Headers(versionHeader, v1)
 
+	//Route for Verify User Account
+	router.Handle("/verifyUser", jwtMiddleWare(verifyUserHandler(deps), deps)).Methods(http.MethodPatch).Headers(versionHeader, v1)
+
 	//Router for users operations
 	router.Handle("/user", jwtMiddleWare(userMiddleware(getUserHandler(deps), deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
 	router.Handle("/admin", jwtMiddleWare(adminMiddleware(getUserHandler(deps), deps), deps)).Methods(http.MethodGet).Headers(versionHeader, v1)
@@ -105,12 +108,12 @@ func jwtMiddleWare(endpoint http.Handler, deps Dependencies) http.Handler {
 
 func getUserFromToken(ctx context.Context, deps Dependencies, authToken string) (user db.User, err error) {
 
-	userID, _, _, err := getDataFromToken(authToken)
+	payload, err := getDataFromToken(authToken)
 	if err != nil {
 		return user, err
 	}
 
-	user, err = deps.Store.GetUser(ctx, int(userID))
+	user, err = deps.Store.GetUser(ctx, int(payload.UserID))
 	if err != nil {
 		return user, err
 	}
@@ -129,6 +132,15 @@ func userMiddleware(endpoint http.Handler, deps Dependencies) http.Handler {
 			responses(rw, http.StatusForbidden, errorResponse{
 				Error: messageObject{
 					Message: "User Forbidden From Accesing Data",
+				},
+			})
+			return
+		}
+
+		if !user.IsVerified || user.Password == "" {
+			responses(rw, http.StatusForbidden, errorResponse{
+				Error: messageObject{
+					Message: "Email Not Verified",
 				},
 			})
 			return

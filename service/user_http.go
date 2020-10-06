@@ -220,7 +220,7 @@ func getUserHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		//fetch usedId from request
 		authToken := req.Header.Get("Token")
-		userID, _, _, err := getDataFromToken(authToken)
+		payload, err := getDataFromToken(authToken)
 		if err != nil {
 			responses(rw, http.StatusUnauthorized, errorResponse{
 				Error: messageObject{
@@ -229,7 +229,7 @@ func getUserHandler(deps Dependencies) http.HandlerFunc {
 			})
 			return
 		}
-		user, err := deps.Store.GetUser(req.Context(), int(userID))
+		user, err := deps.Store.GetUser(req.Context(), int(payload.UserID))
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("error while fetching User")
 			rw.WriteHeader(http.StatusNotFound)
@@ -250,7 +250,7 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
 		authToken := req.Header["Token"]
-		userID, _, _, err := getDataFromToken(authToken[0])
+		payload, err := getDataFromToken(authToken[0])
 		if err != nil {
 			rw.WriteHeader(http.StatusUnauthorized)
 			rw.Write([]byte("Unauthorized"))
@@ -289,7 +289,7 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		dbUser, err := deps.Store.GetUser(req.Context(), int(userID))
+		dbUser, err := deps.Store.GetUser(req.Context(), int(payload.UserID))
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("error while fetching User")
 			rw.WriteHeader(http.StatusNotFound)
@@ -386,7 +386,7 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		err = deps.Store.UpdateUserByID(req.Context(), dbUser, int(userID))
+		err = deps.Store.UpdateUserByID(req.Context(), dbUser, int(payload.UserID))
 		if err != nil {
 			rw.WriteHeader(http.StatusInternalServerError)
 			responses(rw, http.StatusInternalServerError, errorResponse{
@@ -618,5 +618,99 @@ func enableUserHandler(deps Dependencies) http.HandlerFunc {
 
 		return
 
+	})
+}
+
+func verifyUserHandler(deps Dependencies) http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+
+		//fetching the token from header
+		authToken := req.Header.Get("Token")
+
+		//fetching details from the token
+		payload, err := getDataFromToken(authToken)
+		if err != nil {
+			responses(rw, http.StatusUnauthorized, errorResponse{
+				Error: messageObject{
+					Message: "Unauthorized User",
+				},
+			})
+			return
+		}
+
+		// reading data from body
+		reqBody, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error in reading request body")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		user := db.User{}
+		err = json.Unmarshal(reqBody, &user)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while Unmarshalling request json")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// creating hash of the password
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 8)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error while creating hash of the password")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		user.Password = string(hashedPassword)
+
+		dbuser := db.User{}
+		//check if the provided id is not of another Admin
+		dbuser, err = deps.Store.GetUser(req.Context(), int(payload.UserID))
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("error while fetching User")
+			responses(rw, http.StatusNotFound, errorResponse{
+				Error: messageObject{
+					Message: "id Not Found",
+				},
+			})
+			return
+		}
+
+		if dbuser.IsVerified {
+			logger.WithField("err", err.Error()).Error("email is already verified")
+			responses(rw, http.StatusConflict, errorResponse{
+				Error: messageObject{
+					Message: "Already Verified",
+				},
+			})
+			return
+		}
+
+		err = deps.Store.VerifyUserByID(req.Context(), int(payload.UserID))
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("error while verifing user")
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "internal server error",
+				},
+			})
+			return
+		}
+
+		err = deps.Store.SetUserPasswordByID(req.Context(), user.Password, int(payload.UserID))
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("error while setting user password")
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "internal server error",
+				},
+			})
+			return
+		}
+
+		responses(rw, http.StatusOK, successResponse{
+			Data: "Updated User Password Successfully",
+		})
+		return
 	})
 }
