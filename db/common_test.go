@@ -16,7 +16,8 @@ var (
 )
 
 func InitMockDB() (s Storer, sqlConn *sqlx.DB, sqlmockInstance sqlmock.Sqlmock) {
-	// previosly sqlmock.New() which gives error : not able to match sql queries ,so adding these parameters : sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual) to sqlmock.New allows complex queries like Join to be matched
+
+	// sqlmock.New() gives {error : not able to match sql queries} ,so adding these parameters (sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual)) to sqlmock.New allows complex queries like "Join" to be matched
 	mockDB, sqlmock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 	if err != nil {
 		logger.WithField("err:", err).Error("error initializing mock db")

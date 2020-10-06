@@ -85,6 +85,7 @@ func inviteUsersHandler(deps Dependencies) http.HandlerFunc {
 			dbUser := db.User{}
 
 			user.Email = emailID
+			user.IsVerified = false
 
 			dbUser, err = deps.Store.CreateNewUser(req.Context(), user)
 			if err != nil {

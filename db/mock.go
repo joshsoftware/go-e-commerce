@@ -68,7 +68,8 @@ func (m *DBMockStore) VerifyUserByID(ctx context.Context, id int) (err error) {
 	return args.Error(0)
 }
 
-func (m *DBMockStore) GetCart(ctx context.Context, user_id int) (products []CartProduct, err error) {
+//deps.store.GetCart(ctx,id)
+func (m *DBMockStore) GetCart(ctx context.Context, user_id int) (cart_products []CartProduct, err error) {
 	args := m.Called(ctx, user_id)
 	return args.Get(0).([]CartProduct), args.Error(1)
 }

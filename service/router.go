@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
+	logger "github.com/sirupsen/logrus"
 	"joshsoftware/go-e-commerce/config"
 	"joshsoftware/go-e-commerce/db"
 	"net/http"
@@ -128,6 +130,16 @@ func userMiddleware(endpoint http.Handler, deps Dependencies) http.Handler {
 
 		user, err := getUserFromToken(req.Context(), deps, authToken)
 
+		if user.IsAdmin {
+			logger.WithField("err", err.Error()).Error("admin cannot access this resource")
+			responses(rw, http.StatusUnauthorized, errorResponse{
+				Error: messageObject{
+					Message: "Unauthorized User",
+				},
+			})
+			return
+		}
+
 		if user.IsDisabled {
 			responses(rw, http.StatusForbidden, errorResponse{
 				Error: messageObject{
@@ -137,7 +149,27 @@ func userMiddleware(endpoint http.Handler, deps Dependencies) http.Handler {
 			return
 		}
 
-		if !user.IsVerified || user.Password == "" {
+		if err != nil {
+			if err == sql.ErrNoRows {
+				logger.WithField("err", err.Error()).Error("no user found")
+				responses(rw, http.StatusNotFound, errorResponse{
+					Error: messageObject{
+						Message: "No user found",
+					},
+				})
+				return
+			}
+			logger.WithField("err", err.Error()).Error("error in getting user from token")
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal Server Error",
+				},
+			})
+			return
+		}
+
+		if !user.IsVerified {
+			logger.WithField("err", err.Error()).Error("email not verified")
 			responses(rw, http.StatusForbidden, errorResponse{
 				Error: messageObject{
 					Message: "Email Not Verified",
@@ -146,14 +178,6 @@ func userMiddleware(endpoint http.Handler, deps Dependencies) http.Handler {
 			return
 		}
 
-		if user.IsAdmin || err != nil {
-			responses(rw, http.StatusUnauthorized, errorResponse{
-				Error: messageObject{
-					Message: "Unauthorized User",
-				},
-			})
-			return
-		}
 		endpoint.ServeHTTP(rw, req)
 	})
 }

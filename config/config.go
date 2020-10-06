@@ -16,10 +16,11 @@ var (
 
 // Load - loads all the environment variables and/or params in application.yml
 func Load() {
+
 	viper.SetDefault("APP_NAME", "e-commerce")
 	viper.SetDefault("APP_PORT", "8002")
 
-	viper.SetConfigName("application")
+	viper.SetConfigName("application") // name of config file (without extension)
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("./")
 	viper.AddConfigPath("./..")
@@ -66,7 +67,7 @@ func MailerConfig() (host string, port int, email string, username string, passw
 
 // JWTExpiryDurationHours - returns duration for jwt expiry in int
 func JWTExpiryDurationHours() int {
-	return int(ReadEnvInt("JWT_EXPIRY_DURATION_HOURS"))
+	return ReadEnvInt("JWT_EXPIRY_DURATION_HOURS")
 }
 
 // ReadEnvInt - reads an environment variable as an integer

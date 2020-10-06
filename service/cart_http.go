@@ -17,30 +17,37 @@ import (
 // @Failure 400 {object}
 func getCartHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		// request_params := mux.Vars(req)
-		// user_id, err := strconv.Atoi(request_params["user_id"])
 
 		authToken := req.Header["Token"]
 		fmt.Println("auth Token : ", authToken[0])
 		payload, err := getDataFromToken(authToken[0])
 		fmt.Println("User id :", payload.UserID)
 		if err != nil {
-			rw.WriteHeader(http.StatusUnauthorized)
-			rw.Write([]byte("Unauthorized"))
+			logger.WithField("err", err.Error()).Error("Error fetching data from token")
+			error := errorResponse{
+				Error: "Error fetching data from token",
+			}
+			responses(rw, http.StatusUnauthorized, error)
 			return
 		}
 
 		cart_products, err := deps.Store.GetCart(req.Context(), int(payload.UserID))
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error fetching data")
-			rw.WriteHeader(http.StatusInternalServerError)
+			logger.WithField("err", err.Error()).Error("Error fetching data from database")
+			error := errorResponse{
+				Error: "Error fetching data from database",
+			}
+			responses(rw, http.StatusInternalServerError, error)
 			return
 		}
 
 		respBytes, err := json.Marshal(cart_products)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error marshaling cart data")
-			rw.WriteHeader(http.StatusInternalServerError)
+			error := errorResponse{
+				Error: "Error marshaling cart data",
+			}
+			responses(rw, http.StatusInternalServerError, error)
 			return
 		}
 
