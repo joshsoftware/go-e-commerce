@@ -384,18 +384,11 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 				},
 			})
 
-		case http.StatusConflict:
-			logger.WithField("err", err.Error()).Error("Already exits product name, or Constraints in DB were not met!")
-			response(rw, http.StatusConflict, errorResponse{
-				Error: messageObject{
-					Message: "Either Product Name Already exists or Database Constraints were violated by your data.",
-				},
-			})
-
 		case http.StatusOK:
 			response(rw, http.StatusOK, successResponse{Data: updatedProduct})
+
 		default:
-			logger.WithField("err", err.Error()).Error("Some Strange Error has Occured!")
+			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
 			response(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
 					Message: "Internal server error",
