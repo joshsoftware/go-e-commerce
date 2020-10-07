@@ -143,7 +143,7 @@ func userMiddleware(endpoint http.Handler, deps Dependencies) http.Handler {
 		if user.IsDisabled {
 			responses(rw, http.StatusForbidden, errorResponse{
 				Error: messageObject{
-					Message: "User Forbidden From Accesing Data",
+					Message: "User Disabled",
 				},
 			})
 			return
@@ -160,9 +160,9 @@ func userMiddleware(endpoint http.Handler, deps Dependencies) http.Handler {
 				return
 			}
 			logger.WithField("err", err.Error()).Error("error in getting user from token")
-			responses(rw, http.StatusInternalServerError, errorResponse{
+			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Internal Server Error",
+					Message: "Bad Request",
 				},
 			})
 			return
@@ -172,7 +172,7 @@ func userMiddleware(endpoint http.Handler, deps Dependencies) http.Handler {
 			logger.WithField("err", err.Error()).Error("email not verified")
 			responses(rw, http.StatusForbidden, errorResponse{
 				Error: messageObject{
-					Message: "Email Not Verified",
+					Message: "Email Not Verified: Please check indox of your registered email to verify your account",
 				},
 			})
 			return
@@ -189,6 +189,15 @@ func adminMiddleware(endpoint http.Handler, deps Dependencies) http.Handler {
 		user, err := getUserFromToken(req.Context(), deps, authToken)
 
 		if !user.IsAdmin || err != nil {
+			if err == sql.ErrNoRows {
+				logger.WithField("err", err.Error()).Error("no user found")
+				responses(rw, http.StatusNotFound, errorResponse{
+					Error: messageObject{
+						Message: "No user found",
+					},
+				})
+				return
+			}
 			responses(rw, http.StatusUnauthorized, errorResponse{
 				Error: messageObject{
 					Message: "Unauthorized User",

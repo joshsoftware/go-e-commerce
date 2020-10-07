@@ -29,7 +29,7 @@ func listUsersHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		users, err := deps.Store.ListUsers(req.Context())
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error fetching data")
+			logger.WithField("err", err.Error()).Error("error fetching data")
 			responses(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
 					Message: "Internal Server Error",
@@ -59,10 +59,10 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 
 		err := req.ParseMultipartForm(15 << 20) // 15 MB Max File Size
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while parsing the Product form")
+			logger.WithField("err", err.Error()).Error("error while parsing the user form")
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Invalid Form Data!",
+					Message: "Invalid Form Data",
 				},
 			})
 			return
@@ -78,10 +78,10 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 		//grab product
 		err = decoder.Decode(&user, contents)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while decoding product")
+			logger.WithField("err", err.Error()).Error("error while decoding product")
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Invalid form contents",
+					Message: "Invalid Form Contents",
 				},
 			})
 			return
@@ -89,10 +89,10 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 
 		err = user.Validate()
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Some data missing in request")
+			logger.WithField("err", err.Error()).Error("some data missing in request")
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: err.Error(),
+					Message: "Incomplete Form Data",
 				},
 			})
 			return
@@ -104,10 +104,10 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 
 			defer image.Close()
 			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while decoding image Data")
+				logger.WithField("err", err.Error()).Error("error while decoding image Data")
 				responses(rw, http.StatusBadRequest, errorResponse{
 					Error: messageObject{
-						Message: "Invalid Image !",
+						Message: "Invalid Image",
 					},
 				})
 				return
@@ -116,11 +116,11 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 			extension := filepath.Ext(images[0].Filename)
 
 			if len(extension) < 2 || len(extension) > 5 {
-				err = fmt.Errorf("Couldn't get extension of file!")
-				logger.WithField("err", err.Error()).Error("Error while getting image Extension.")
+				err = fmt.Errorf("couldn't get extension of file!")
+				logger.WithField("err", err.Error()).Error("error while getting image extension")
 				responses(rw, http.StatusBadRequest, errorResponse{
 					Error: messageObject{
-						Message: "Re-check the image file extension!",
+						Message: "Unexpected File Type",
 					},
 				})
 				return
@@ -129,10 +129,10 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 			fileName := strings.ReplaceAll(user.FirstName, " ", "")
 			tempFile, err := ioutil.TempFile("assets/users", fileName+"-*"+string(extension))
 			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
+				logger.WithField("err", err.Error()).Error("error while creating a temporary file")
 				responses(rw, http.StatusInternalServerError, errorResponse{
 					Error: messageObject{
-						Message: "Couldn't  create temporary storage!",
+						Message: "Internal Server Error: Failed To Set Profile Pic",
 					},
 				})
 				return
@@ -141,10 +141,10 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 
 			imageBytes, err := ioutil.ReadAll(image)
 			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while reading image File")
+				logger.WithField("err", err.Error()).Error("error while reading image File")
 				responses(rw, http.StatusInternalServerError, errorResponse{
 					Error: messageObject{
-						Message: "Couldn't read the image file!",
+						Message: "Internal Server Error: Failed To Set Profile Pic",
 					},
 				})
 				return
@@ -160,57 +160,57 @@ func registerUserHandler(deps Dependencies) http.HandlerFunc {
 
 		// If check true then user is already registered
 		if check {
-			e := errorResponse{
-				Error: "user already registered",
-			}
-			respBytes, err := json.Marshal(e)
-			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while marshalling error msg ")
-				rw.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			rw.Header().Add("Content-Type", "application/json")
-			rw.WriteHeader(http.StatusBadRequest)
-			rw.Write(respBytes)
+			logger.WithField("err", "error while registering new user: already exist")
+			responses(rw, http.StatusConflict, errorResponse{
+				Error: messageObject{
+					Message: "User Already Registered",
+				},
+			})
 			return
 		}
 
 		// For checking error occured while looking already registered user
 		if err != nil && err != sql.ErrNoRows {
-			logger.WithField("err", err.Error()).Error("Error while looking existing user")
-
-			rw.WriteHeader(http.StatusInternalServerError)
+			logger.WithField("err", err.Error()).Error("error while looking existing user")
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal Server Error: Invalid Email ID",
+				},
+			})
 			return
 		}
 		// creating hash of the password
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 8)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while creating hash of the password")
-			rw.WriteHeader(http.StatusInternalServerError)
+			logger.WithField("err", err.Error()).Error("error while creating hash of the password")
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Invalid Password: Please Choose Other Password",
+				},
+			})
 			return
 		}
 		user.Password = string(hashedPassword)
+		// TODO send email for verification of user account
+		user.IsVerified = true
 
 		// Storing new user's data in database
 		_, err = deps.Store.CreateNewUser(req.Context(), user)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error in inserting user in database")
-			rw.WriteHeader(http.StatusInternalServerError)
+			logger.WithField("err", err.Error()).Error("error in inserting user in database")
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal Server Error",
+				},
+			})
 			return
 		}
 
-		msg := successResponse{
-			Data: "user successfully registered",
-		}
-		respBytes, err := json.Marshal(msg)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while marshalling success msg ")
-			rw.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		rw.Header().Add("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusCreated)
-		rw.Write(respBytes)
+		responses(rw, http.StatusCreated, successResponse{
+			Data: messageObject{
+				Message: "User Successfully Registered",
+			},
+		})
 		return
 	})
 }
@@ -222,20 +222,20 @@ func getUserHandler(deps Dependencies) http.HandlerFunc {
 		authToken := req.Header.Get("Token")
 		payload, err := getDataFromToken(authToken)
 		if err != nil {
-			responses(rw, http.StatusUnauthorized, errorResponse{
+			logger.WithField("err", err.Error()).Error("invalid token")
+			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Unauthorized User",
+					Message: "Bad Request",
 				},
 			})
 			return
 		}
 		user, err := deps.Store.GetUser(req.Context(), int(payload.UserID))
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("error while fetching User")
-			rw.WriteHeader(http.StatusNotFound)
+			logger.WithField("err", err.Error()).Error("error in fetching userid")
 			responses(rw, http.StatusNotFound, errorResponse{
 				Error: messageObject{
-					Message: "id Not Found",
+					Message: "No User Found",
 				},
 			})
 			return
@@ -252,8 +252,12 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 		authToken := req.Header["Token"]
 		payload, err := getDataFromToken(authToken[0])
 		if err != nil {
-			rw.WriteHeader(http.StatusUnauthorized)
-			rw.Write([]byte("Unauthorized"))
+			logger.WithField("err", err.Error()).Error("invalid token")
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Invalid User Token",
+				},
+			})
 			return
 		}
 		var user db.User
@@ -261,10 +265,10 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 
 		err = req.ParseMultipartForm(15 << 20) // 15 MB Max File Size
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while parsing the Product form")
+			logger.WithField("err", err.Error()).Error("error while parsing the product form")
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Invalid Form Data!",
+					Message: "Invalid Form Data",
 				},
 			})
 			return
@@ -280,7 +284,7 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 		//grab product
 		err = decoder.Decode(&user, contents)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while decoding product")
+			logger.WithField("err", err.Error()).Error("error while decoding product")
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
 					Message: "Invalid form contents",
@@ -291,16 +295,15 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 
 		dbUser, err := deps.Store.GetUser(req.Context(), int(payload.UserID))
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("error while fetching User")
-			rw.WriteHeader(http.StatusNotFound)
+			logger.WithField("err", err.Error()).Error("error in fetching userid")
 			responses(rw, http.StatusNotFound, errorResponse{
 				Error: messageObject{
-					Message: "error while fetching users",
+					Message: "No User Found",
 				},
 			})
 			return
 		}
-		previouFile := dbUser.ProfileImage
+		previousFile := dbUser.ProfileImage
 
 		// check if profile image is present or not
 		if len(images) > 0 {
@@ -308,10 +311,10 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 
 			defer image.Close()
 			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while decoding image Data")
+				logger.WithField("err", err.Error()).Error("error while decoding image data")
 				responses(rw, http.StatusBadRequest, errorResponse{
 					Error: messageObject{
-						Message: "Invalid Image !",
+						Message: "Invalid Image",
 					},
 				})
 				return
@@ -320,11 +323,10 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 			extension := filepath.Ext(images[0].Filename)
 
 			if len(extension) < 2 || len(extension) > 5 {
-				err = fmt.Errorf("Couldn't get extension of file!")
-				logger.WithField("err", err.Error()).Error("Error while getting image Extension.")
+				logger.WithField("err", err.Error()).Error("error while getting image extension.")
 				responses(rw, http.StatusBadRequest, errorResponse{
 					Error: messageObject{
-						Message: "Re-check the image file extension!",
+						Message: "Unexpected File Type",
 					},
 				})
 				return
@@ -336,10 +338,10 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 			fileName := strings.ReplaceAll(user.FirstName, " ", "")
 			tempFile, err := ioutil.TempFile("assets/users", fileName+"-*"+string(extension))
 			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while Creating a Temporary File")
+				logger.WithField("err", err.Error()).Error("error while creating a temporary file")
 				responses(rw, http.StatusInternalServerError, errorResponse{
 					Error: messageObject{
-						Message: "Couldn't  create temporary storage!",
+						Message: "Internal Server Error",
 					},
 				})
 				return
@@ -348,10 +350,10 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 
 			imageBytes, err := ioutil.ReadAll(image)
 			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error while reading image File")
+				logger.WithField("err", err.Error()).Error("error while reading image File")
 				responses(rw, http.StatusInternalServerError, errorResponse{
 					Error: messageObject{
-						Message: "Couldn't read the image file!",
+						Message: "Internal Server Error",
 					},
 				})
 				return
@@ -363,12 +365,10 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		if user.Email != "" {
-
-			rw.WriteHeader(http.StatusBadRequest)
-			logger.WithField("err", "cannot update email")
+			logger.WithField("err", " cannot update email")
 			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "cannot update email id !!",
+					Message: "Cannot Update Email ID",
 				},
 			})
 			return
@@ -376,29 +376,27 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 
 		err = dbUser.ValidatePatchParams(user)
 		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			responses(rw, http.StatusInternalServerError, errorResponse{
+			logger.WithField("err", err.Error()).Error("error in validate patch params")
+			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "internal server error",
+					Message: "Invalid User Data",
 				},
 			})
-			logger.WithField("err", err.Error())
 			return
 		}
 
 		err = deps.Store.UpdateUserByID(req.Context(), dbUser, int(payload.UserID))
 		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
+			logger.WithField("err", err.Error()).Error("error while updating user's profile")
 			responses(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
-					Message: "internal server error",
+					Message: "Internal Server Error",
 				},
 			})
-			logger.WithField("err", err.Error()).Error("error while updating user's profile")
 			return
 		}
 
-		err = os.Remove(previouFile)
+		err = os.Remove(previousFile)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("error while deleting the previous file of users profile image")
 		}
@@ -419,33 +417,25 @@ func updateUserHandler(deps Dependencies) http.HandlerFunc {
 func deleteUserHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
-		//TODO get the IsAdmin field of the user from the token
-		isAdmin := true
-		if !isAdmin {
-			responses(rw, http.StatusForbidden, errorResponse{
-				Error: messageObject{
-					Message: "User Forbidden From Deleting Data",
-				},
-			})
-			return
-		}
-
 		params := mux.Vars(req)
 		userID, err := strconv.Atoi(params["id"])
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error in getting id")
-			rw.WriteHeader(http.StatusBadRequest)
+			logger.WithField("err", err.Error()).Error("error in fetching userid")
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Invalid UserID",
+				},
+			})
 			return
 		}
 
 		//check if the provided id is not of another Admin
 		user, err := deps.Store.GetUser(req.Context(), userID)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("error while fetching User")
-			rw.WriteHeader(http.StatusNotFound)
+			logger.WithField("err", err.Error()).Error("no user in database")
 			responses(rw, http.StatusNotFound, errorResponse{
 				Error: messageObject{
-					Message: "id Not Found",
+					Message: "No User Found",
 				},
 			})
 			return
@@ -453,11 +443,10 @@ func deleteUserHandler(deps Dependencies) http.HandlerFunc {
 
 		//check if the users is admin
 		if user.IsAdmin == true {
-			logger.WithField("err", "cannot delete an admin")
-			rw.WriteHeader(http.StatusForbidden)
+			logger.WithField("err", err.Error()).Error("user trying to access admin resource")
 			responses(rw, http.StatusForbidden, errorResponse{
 				Error: messageObject{
-					Message: "access denied for delete",
+					Message: "Only Admin Can Delete User",
 				},
 			})
 			return
@@ -466,17 +455,16 @@ func deleteUserHandler(deps Dependencies) http.HandlerFunc {
 		err = deps.Store.DeleteUserByID(req.Context(), userID)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("error in deleting user data")
-			rw.WriteHeader(http.StatusBadRequest)
-			responses(rw, http.StatusBadRequest, errorResponse{
+			responses(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
-					Message: "error in deleting user data",
+					Message: "Internal Server Error",
 				},
 			})
 			return
 		}
 
 		responses(rw, http.StatusOK, successResponse{
-			Data: "record deleted Successfully",
+			Data: "User Deleted Successfully",
 		})
 
 		return
@@ -493,33 +481,25 @@ func deleteUserHandler(deps Dependencies) http.HandlerFunc {
 func disableUserHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
-		//TODO get the IsAdmin field of the user from the token
-		isAdmin := true
-		if !isAdmin {
-			responses(rw, http.StatusForbidden, errorResponse{
-				Error: messageObject{
-					Message: "User Forbidden From disabling Data",
-				},
-			})
-			return
-		}
-
 		params := mux.Vars(req)
 		userID, err := strconv.Atoi(params["id"])
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error in getting id")
-			rw.WriteHeader(http.StatusBadRequest)
+			logger.WithField("err", err.Error()).Error("error in fetching userid")
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Bad Request",
+				},
+			})
 			return
 		}
 
 		//check if the provided id is not of another Admin
 		user, err := deps.Store.GetUser(req.Context(), userID)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("error while fetching User")
-			rw.WriteHeader(http.StatusNotFound)
+			logger.WithField("err", err.Error()).Error("no user in database")
 			responses(rw, http.StatusNotFound, errorResponse{
 				Error: messageObject{
-					Message: "id Not Found",
+					Message: "No User Found",
 				},
 			})
 			return
@@ -527,11 +507,10 @@ func disableUserHandler(deps Dependencies) http.HandlerFunc {
 
 		//check if the user is admin
 		if user.IsAdmin == true {
-			logger.WithField("err", "cannot disable an admin")
-			rw.WriteHeader(http.StatusForbidden)
+			logger.WithField("err", err.Error()).Error("user trying to disable admin")
 			responses(rw, http.StatusForbidden, errorResponse{
 				Error: messageObject{
-					Message: "access denied for disable",
+					Message: "Admin Cannot be Disabled/Enabled",
 				},
 			})
 			return
@@ -540,10 +519,9 @@ func disableUserHandler(deps Dependencies) http.HandlerFunc {
 		err = deps.Store.DisableUserByID(req.Context(), userID)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("error in disabling user data")
-			rw.WriteHeader(http.StatusBadRequest)
-			responses(rw, http.StatusBadRequest, errorResponse{
+			responses(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
-					Message: "error in disabling user data",
+					Message: "Internal Server Error",
 				},
 			})
 			return
@@ -570,19 +548,22 @@ func enableUserHandler(deps Dependencies) http.HandlerFunc {
 		params := mux.Vars(req)
 		userID, err := strconv.Atoi(params["id"])
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error in getting id")
-			rw.WriteHeader(http.StatusBadRequest)
+			logger.WithField("err", err.Error()).Error("error in fetching userid")
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Bad Request",
+				},
+			})
 			return
 		}
 
 		//check if the provided id is not of another Admin
 		user, err := deps.Store.GetUser(req.Context(), userID)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("error while fetching User")
-			rw.WriteHeader(http.StatusNotFound)
+			logger.WithField("err", err.Error()).Error("no user in database")
 			responses(rw, http.StatusNotFound, errorResponse{
 				Error: messageObject{
-					Message: "id Not Found",
+					Message: "No User Found",
 				},
 			})
 			return
@@ -590,11 +571,10 @@ func enableUserHandler(deps Dependencies) http.HandlerFunc {
 
 		//check if the user is admin
 		if user.IsAdmin == true {
-			logger.WithField("err", "cannot disable an admin")
-			rw.WriteHeader(http.StatusForbidden)
+			logger.WithField("err", err.Error()).Error("user trying to enable admin")
 			responses(rw, http.StatusForbidden, errorResponse{
 				Error: messageObject{
-					Message: "access denied for ensable",
+					Message: "Admin Cannot be Enabled/Disabled",
 				},
 			})
 			return
@@ -603,10 +583,9 @@ func enableUserHandler(deps Dependencies) http.HandlerFunc {
 		err = deps.Store.EnableUserByID(req.Context(), userID)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("error in enabling user data")
-			rw.WriteHeader(http.StatusBadRequest)
-			responses(rw, http.StatusBadRequest, errorResponse{
+			responses(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
-					Message: "error in enabling user data",
+					Message: "Internal Server Error",
 				},
 			})
 			return
@@ -626,13 +605,13 @@ func verifyUserHandler(deps Dependencies) http.HandlerFunc {
 
 		//fetching the token from header
 		authToken := req.Header.Get("Token")
-
 		//fetching details from the token
 		payload, err := getDataFromToken(authToken)
 		if err != nil {
-			responses(rw, http.StatusUnauthorized, errorResponse{
+			logger.WithField("err", err.Error()).Error("invalid token")
+			responses(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Unauthorized User",
+					Message: "Bad Request",
 				},
 			})
 			return
@@ -641,16 +620,24 @@ func verifyUserHandler(deps Dependencies) http.HandlerFunc {
 		// reading data from body
 		reqBody, err := ioutil.ReadAll(req.Body)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error in reading request body")
-			rw.WriteHeader(http.StatusInternalServerError)
+			logger.WithField("err", err.Error()).Error("error in reading request body")
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Invalid Request",
+				},
+			})
 			return
 		}
 
 		user := db.User{}
 		err = json.Unmarshal(reqBody, &user)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while Unmarshalling request json")
-			rw.WriteHeader(http.StatusInternalServerError)
+			logger.WithField("err", err.Error()).Error("error while unmarshalling request json")
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Invalid Fields",
+				},
+			})
 			return
 		}
 
@@ -658,7 +645,11 @@ func verifyUserHandler(deps Dependencies) http.HandlerFunc {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 8)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while creating hash of the password")
-			rw.WriteHeader(http.StatusInternalServerError)
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Invalid Password",
+				},
+			})
 			return
 		}
 		user.Password = string(hashedPassword)
@@ -670,14 +661,14 @@ func verifyUserHandler(deps Dependencies) http.HandlerFunc {
 			logger.WithField("err", err.Error()).Error("error while fetching User")
 			responses(rw, http.StatusNotFound, errorResponse{
 				Error: messageObject{
-					Message: "id Not Found",
+					Message: "User Not Found",
 				},
 			})
 			return
 		}
 
 		if dbuser.IsVerified {
-			logger.WithField("err", err.Error()).Error("email is already verified")
+			logger.WithField("err", " email is already verified")
 			responses(rw, http.StatusConflict, errorResponse{
 				Error: messageObject{
 					Message: "Already Verified",
@@ -691,7 +682,7 @@ func verifyUserHandler(deps Dependencies) http.HandlerFunc {
 			logger.WithField("err", err.Error()).Error("error while verifing user")
 			responses(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
-					Message: "internal server error",
+					Message: "Internal Server Error: Invalid UserID",
 				},
 			})
 			return
@@ -702,14 +693,14 @@ func verifyUserHandler(deps Dependencies) http.HandlerFunc {
 			logger.WithField("err", err.Error()).Error("error while setting user password")
 			responses(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
-					Message: "internal server error",
+					Message: "Internal Server Error: Invalid Password",
 				},
 			})
 			return
 		}
 
 		responses(rw, http.StatusOK, successResponse{
-			Data: "Updated User Password Successfully",
+			Data: "Successfully verified, please login to continue",
 		})
 		return
 	})
