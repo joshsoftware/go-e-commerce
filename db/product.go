@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"mime/multipart"
@@ -24,9 +25,11 @@ const (
                  price, discount, tax, quantity, cid, brand, color, size, image_urls) VALUES ( 
 				 :name, :description, :price, :discount, :tax, :quantity, :cid, :brand, :color, :size, :image_urls) 
 				 RETURNING id, (SELECT cname from category where cid=:cid);`
-	deleteProductIdQuery    = `DELETE FROM products WHERE id = $1 RETURNING image_urls`
-	updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2 `
-	updateProductQuery      = `UPDATE products SET name= :name, description=:description, price=:price, 
+	deleteProductIdQuery = `DELETE FROM products WHERE id = $1 RETURNING image_urls`
+	//updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2 `
+	updateProductStockQuery = `UPDATE products SET quantity= (quantity - $1) where id = $2 
+			RETURNING *, (SELECT cname from category where cid=(SELECT cid FROM products where id = $2))`
+	updateProductQuery = `UPDATE products SET name= :name, description=:description, price=:price, 
 					   discount=:discount, tax=:tax, quantity=:quantity, cid=:cid, brand=:brand, 
 					   color=:color, size=:size, image_urls=:image_urls WHERE id = :id
 					   RETURNING (SELECT cname from category where cid=:cid);`
@@ -230,19 +233,22 @@ func (s *pgStore) CreateProduct(ctx context.Context, product Product, images []*
 	return product, nil
 }
 
-func (s *pgStore) UpdateProductStockById(ctx context.Context, product Product, id int) (Product, error) {
+func (s *pgStore) UpdateProductStockById(ctx context.Context, count, id int) (Product, error, int) {
+	var product Product
 
-	_, err := s.db.Exec(updateProductStockQuery,
-		product.Quantity,
+	err := s.db.QueryRowx(updateProductStockQuery,
+		count,
 		id,
-	)
+	).StructScan(&product)
 	if err != nil {
-		// FAIL : Could not Update Product
-		logger.WithField("err", err.Error()).Error("Error updating product Stock to database Records not Found:" + string(id))
-		return Product{}, err
+		if err == sql.ErrNoRows {
+			logger.WithField("err", err.Error()).Error("Error updating product Stock to database. Record not Found :" + string(id))
+		} else {
+			logger.WithField("err", err.Error()).Error("Error updating product Stock to database. Violation of Stock :" + string(id))
+		}
+		return Product{}, err, http.StatusBadRequest
 	}
-
-	return product, nil
+	return product, nil, http.StatusOK
 }
 
 func (s *pgStore) DeleteProductById(ctx context.Context, id int) error {

@@ -12,6 +12,6 @@ type Storer interface {
 	CreateProduct(context.Context, Product, []*multipart.FileHeader) (Product, error)
 	DeleteProductById(context.Context, int) error
 	UpdateProductById(context.Context, Product, int, []*multipart.FileHeader) (Product, error, int)
-	UpdateProductStockById(context.Context, Product, int) (Product, error)
+	UpdateProductStockById(context.Context, int, int) (Product, error, int)
 	GetProductByID(context.Context, int) (Product, error)
 }

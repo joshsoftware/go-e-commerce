@@ -271,41 +271,29 @@ func updateProductStockByIdHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 
-		var product db.Product
-		product, err = deps.Store.GetProductByID(req.Context(), productId)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while fetching product with stated id ")
+		var updatedProduct db.Product
+		updatedProduct, err, errCode := deps.Store.UpdateProductStockById(req.Context(), count, productId)
+		switch errCode {
+		case http.StatusBadRequest:
+			logger.WithField("err", err.Error()).Error("Error Product doesn't exist Or User Stock Updation is illegal!")
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Error Product is wasn't found in database.",
+					Message: "Either product doesn't exist with that id or Please Check your Inputs. e.g Stock Can't be negative or greater than 1000.",
 				},
 			})
-			return
-		}
 
-		// Decrement available Quantity
-		product.Quantity -= count
+		case http.StatusOK:
+			response(rw, http.StatusOK, successResponse{Data: updatedProduct})
 
-		// Validate if Quantity is less than 0
-		errRes, valid := product.Validate()
-		if !valid {
-			response(rw, http.StatusBadRequest, errRes)
-			return
-		}
-
-		var updatedProduct db.Product
-		updatedProduct, err = deps.Store.UpdateProductStockById(req.Context(), product, productId)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
+		default:
+			logger.WithField("err", err.Error()).Error("Error while updating Stock attribute of Product")
 			response(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
-					Message: "Internal server error",
+					Message: "Internal server error while Scanning Product.",
 				},
 			})
-			return
 		}
 
-		response(rw, http.StatusOK, successResponse{Data: updatedProduct})
 		return
 	})
 }
@@ -340,7 +328,7 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 			logger.WithField("err", err.Error()).Error("Error while parsing the Product form")
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Invalid Form Data!",
+					Message: "Invalid Form Data, please include atleast one field(form Content) with value!",
 				},
 			})
 			return
