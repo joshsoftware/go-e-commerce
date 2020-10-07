@@ -311,9 +311,6 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 	}
 	if product.CategoryId == 0 {
 		product.CategoryId = dbProduct.CategoryId
-		product.CategoryName = dbProduct.CategoryName
-	} else {
-		product.CategoryName = ""
 	}
 	if product.Brand == "" {
 		product.Brand = dbProduct.Brand

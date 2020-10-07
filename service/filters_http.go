@@ -77,7 +77,7 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 			logger.WithField("err", err.Error()).Error("Error limit or page were invalid values")
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "limits or page value invalid",
+					Message: "limits or page value are non-positive",
 				},
 			})
 			return
@@ -184,7 +184,7 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 			logger.WithField("err", err.Error()).Error("Error limit or page were invalid values")
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "limits or page value invalid",
+					Message: "limits or page value are non-positive.",
 				},
 			})
 			return

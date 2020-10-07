@@ -116,7 +116,7 @@ func getProductByIdHandler(deps Dependencies) http.HandlerFunc {
 			logger.WithField("err", err.Error()).Error("Error fetching Product data, no Product found")
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Error feching data, no row found.",
+					Message: "Error feching data, Error fetching Product data, no Product found.",
 				},
 			})
 			return
@@ -144,7 +144,7 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 			logger.WithField("err", err.Error()).Error("Error while parsing the Product form")
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Invalid Form Data!",
+					Message: "Invalid Form Data! Error while parsing the Product form",
 				},
 			})
 			return
@@ -167,7 +167,7 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 			logger.WithField("err", err.Error()).Error("Error while decoding product data from the form")
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Invalid form contents",
+					Message: "Invalid form contents, Error while decoding product data from the form",
 				},
 			})
 			return
@@ -220,7 +220,7 @@ func deleteProductByIdHandler(deps Dependencies) http.HandlerFunc {
 			logger.WithField("err", err.Error()).Error("Error fetching data no row found")
 			response(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
-					Message: "Internal server error  (Error feching data)",
+					Message: "Internal server error  (Error feching data, probably Product doesn't exist.)",
 				},
 			})
 			return
@@ -265,7 +265,7 @@ func updateProductStockByIdHandler(deps Dependencies) http.HandlerFunc {
 			logger.WithField("err", err.Error()).Error("Error stock parameter is missing or corrupt")
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Error id is missing/invalid",
+					Message: "Error stock parameter is missing or corrupt",
 				},
 			})
 			return
@@ -289,7 +289,7 @@ func updateProductStockByIdHandler(deps Dependencies) http.HandlerFunc {
 			logger.WithField("err", err.Error()).Error("Error while updating Stock attribute of Product")
 			response(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
-					Message: "Internal server error while Scanning Product.",
+					Message: "Internal server Error, facing issue while updating Stock attribute of Product",
 				},
 			})
 		}
@@ -347,7 +347,7 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 			logger.WithField("err", err.Error()).Error("Error while decoding product data from the form")
 			response(rw, http.StatusBadRequest, errorResponse{
 				Error: messageObject{
-					Message: "Invalid form contents",
+					Message: "Invalid form contents, Error while decoding product data from the form",
 				},
 			})
 			return
@@ -379,7 +379,7 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 			logger.WithField("err", err.Error()).Error("Error while updating product attribute")
 			response(rw, http.StatusInternalServerError, errorResponse{
 				Error: messageObject{
-					Message: "Internal server error",
+					Message: "Internal server error, Error while updating product attribute",
 				},
 			})
 		}
