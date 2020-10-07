@@ -84,6 +84,15 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 		//checking if the user is authenticated or not
 		// by passing the credentials to the AuthenticateUser function
 		user, err = deps.Store.AuthenticateUser(req.Context(), user)
+		if user.IsDisabled {
+			responses(rw, http.StatusForbidden, errorResponse{
+				Error: messageObject{
+					Message: "User Disabled",
+				},
+			})
+			return
+		}
+
 		if err != nil {
 			if err == sql.ErrNoRows {
 				logger.WithField("err", err.Error()).Error("No user found")
@@ -99,24 +108,15 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 				logger.WithField("err", err.Error()).Error("email not verified")
 				responses(rw, http.StatusForbidden, errorResponse{
 					Error: messageObject{
-						Message: "Email Not Verified",
+						Message: "Email Not Verified: Please check indox of your registered email to verify your account",
 					},
 				})
 				return
 			}
 			logger.WithField("err", err.Error()).Error("Invalid Credentials")
-			responses(rw, http.StatusUnauthorized, errorResponse{
+			responses(rw, http.StatusNotFound, errorResponse{
 				Error: messageObject{
 					Message: "Invalid Credentials",
-				},
-			})
-			return
-		}
-
-		if user.IsDisabled {
-			responses(rw, http.StatusForbidden, errorResponse{
-				Error: messageObject{
-					Message: "User Forbidden From Accesing Data",
 				},
 			})
 			return
@@ -228,7 +228,11 @@ func handleAuth(deps Dependencies) http.HandlerFunc {
 		reqBody, err := ioutil.ReadAll(req.Body)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error in reading request body")
-			rw.WriteHeader(http.StatusInternalServerError)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal Server Error",
+				},
+			})
 			return
 		}
 
@@ -236,7 +240,11 @@ func handleAuth(deps Dependencies) http.HandlerFunc {
 		err = json.Unmarshal(reqBody, &oauthToken)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while Unmarshalling request json")
-			rw.WriteHeader(http.StatusInternalServerError)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal Server Error",
+				},
+			})
 			return
 		}
 
@@ -245,7 +253,11 @@ func handleAuth(deps Dependencies) http.HandlerFunc {
 		req, err = http.NewRequest("GET", "https://www.googleapis.com/oauth2/v2/userinfo", nil)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Fail to create oauth request")
-			ae.JSONError(rw, http.StatusInternalServerError, err)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: fmt.Sprintf("Internal Server Error: %v", err),
+				},
+			})
 			return
 		}
 
@@ -253,7 +265,11 @@ func handleAuth(deps Dependencies) http.HandlerFunc {
 		resp, err := client.Do(req)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Failure executing HTTP request to https://www.googleapis.com/oauth2/v2/userinfo", err)
-			ae.JSONError(rw, http.StatusInternalServerError, err)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: fmt.Sprintf("Internal Server Error: %v", err),
+				},
+			})
 			return
 		}
 
@@ -261,14 +277,22 @@ func handleAuth(deps Dependencies) http.HandlerFunc {
 		payload, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error reading response body: "+string(payload), err)
-			ae.JSONError(rw, http.StatusInternalServerError, err)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: fmt.Sprintf("Internal Server Error: %v", err),
+				},
+			})
 			return
 		}
 
 		err = json.Unmarshal(payload, &u)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Failure parsing JSON in Unmarshalling OAuthUser"+string(payload), err)
-			ae.JSONError(rw, http.StatusInternalServerError, err)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: fmt.Sprintf("Internal Server Error: %v", err),
+				},
+			})
 		}
 
 		// Checking if user is already registered if registered then generate JWT token for him
@@ -285,18 +309,18 @@ func handleAuth(deps Dependencies) http.HandlerFunc {
 			token, err := generateJwt(existingUser.ID, false)
 			if err != nil {
 				logger.WithField("err", err.Error()).Error("Unknown/unexpected error while creating JWT for " + existingUser.Email)
-				ae.JSONError(rw, http.StatusInternalServerError, err)
+				responses(rw, http.StatusInternalServerError, errorResponse{
+					Error: messageObject{
+						Message: fmt.Sprintf("Internal Server Error: %v", err),
+					},
+				})
 				return
 			}
-			respBody, err := json.Marshal(authBody{Message: "Authentication Successful", Token: token})
-			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error parsing JSON for token response, token: " + token)
-				ae.JSONError(rw, http.StatusInternalServerError, err)
-				return
-			}
-			rw.Header().Add("Content-type", "application/json")
-			rw.WriteHeader(http.StatusOK)
-			rw.Write(respBody)
+
+			responses(rw, http.StatusOK, authBody{
+				Message: "Authentication Successful",
+				Token:   token,
+			})
 			return
 		}
 
@@ -308,7 +332,11 @@ func handleAuth(deps Dependencies) http.HandlerFunc {
 		newUser, err := deps.Store.CreateNewUser(req.Context(), user)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error in inserting user in database")
-			rw.WriteHeader(http.StatusInternalServerError)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal Server Error",
+				},
+			})
 			return
 		}
 
@@ -316,18 +344,18 @@ func handleAuth(deps Dependencies) http.HandlerFunc {
 		token, err := generateJwt(newUser.ID, false)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Unknown/unexpected error while creating JWT for " + newUser.Email)
-			ae.JSONError(rw, http.StatusInternalServerError, err)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: fmt.Sprintf("Internal Server Error: %v", err),
+				},
+			})
 			return
 		}
-		respBody, err := json.Marshal(authBody{Message: "Authentication Successful", Token: token})
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error parsing JSON for token response, token: " + token)
-			ae.JSONError(rw, http.StatusInternalServerError, err)
-			return
-		}
-		rw.Header().Add("Content-type", "application/json")
-		rw.WriteHeader(http.StatusOK)
-		rw.Write(respBody)
+
+		responses(rw, http.StatusOK, authBody{
+			Message: "Authentication Successful",
+			Token:   token,
+		})
 		return
 	})
 }
