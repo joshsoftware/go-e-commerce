@@ -657,11 +657,39 @@ func verifyUserHandler(deps Dependencies) http.HandlerFunc {
 		dbuser := db.User{}
 		//check if the provided id is not of another Admin
 		dbuser, err = deps.Store.GetUser(req.Context(), int(payload.UserID))
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("error while fetching User")
-			responses(rw, http.StatusNotFound, errorResponse{
+		if dbuser.IsAdmin {
+			logger.WithField("err", err.Error()).Error("admin cannot access this resource")
+			responses(rw, http.StatusUnauthorized, errorResponse{
 				Error: messageObject{
-					Message: "User Not Found",
+					Message: "Unauthorized User",
+				},
+			})
+			return
+		}
+
+		if dbuser.IsDisabled {
+			responses(rw, http.StatusForbidden, errorResponse{
+				Error: messageObject{
+					Message: "User Disabled",
+				},
+			})
+			return
+		}
+
+		if err != nil {
+			if err == sql.ErrNoRows {
+				logger.WithField("err", err.Error()).Error("no user found")
+				responses(rw, http.StatusNotFound, errorResponse{
+					Error: messageObject{
+						Message: "No user found",
+					},
+				})
+				return
+			}
+			logger.WithField("err", err.Error()).Error("error in getting user from token")
+			responses(rw, http.StatusBadRequest, errorResponse{
+				Error: messageObject{
+					Message: "Bad Request",
 				},
 			})
 			return

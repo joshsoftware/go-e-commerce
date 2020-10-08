@@ -74,13 +74,6 @@ func inviteUsersHandler(deps Dependencies) http.HandlerFunc {
 				continue
 			}
 
-			// randPassword := randomPassGenerator()
-			// hashedPassword, err := bcrypt.GenerateFromPassword([]byte(randPassword), 8)
-			// if err != nil {
-			// 	logger.WithField("err", err.Error()).Error("Error while creating hash of the password")
-			// 	continue
-			// }
-
 			user := db.User{}
 			dbUser := db.User{}
 

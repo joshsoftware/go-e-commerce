@@ -169,7 +169,7 @@ func userMiddleware(endpoint http.Handler, deps Dependencies) http.Handler {
 		}
 
 		if !user.IsVerified {
-			logger.WithField("err", err.Error()).Error("email not verified")
+			logger.WithField("err", " email not verified")
 			responses(rw, http.StatusForbidden, errorResponse{
 				Error: messageObject{
 					Message: "Email Not Verified: Please check indox of your registered email to verify your account",
