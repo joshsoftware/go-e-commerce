@@ -52,22 +52,16 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 		limit, err := strconv.Atoi(limitStr)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while converting limitStr to int")
-			response(rw, http.StatusBadRequest, errorResponse{
-				Error: messageObject{
-					Message: "Limits value invalid",
-				},
-			})
+			Message := "Limits value invalid"
+			responseMsg(rw, http.StatusBadRequest, Message)
 			return
 		}
 
 		page, err := strconv.Atoi(pageStr)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while converting pageStr to int")
-			response(rw, http.StatusBadRequest, errorResponse{
-				Error: messageObject{
-					Message: "Page value invalid",
-				},
-			})
+			Message := "Page value invalid"
+			responseMsg(rw, http.StatusBadRequest, Message)
 			return
 		}
 
@@ -75,11 +69,8 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 		if limit <= 0 || page <= 0 {
 			err = fmt.Errorf("limit or page are non-positive")
 			logger.WithField("err", err.Error()).Error("Error limit or page were invalid values")
-			response(rw, http.StatusBadRequest, errorResponse{
-				Error: messageObject{
-					Message: "limits or page value are non-positive",
-				},
-			})
+			Message := "limits or page value are non-positive"
+			responseMsg(rw, http.StatusBadRequest, Message)
 			return
 		}
 
@@ -109,18 +100,14 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 		totalRecords, products, err := deps.Store.FilteredProducts(req.Context(), filter, limitStr, offsetStr)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error getting filtered records or Page not Found")
-			response(rw, http.StatusBadRequest, errorResponse{
-				Error: messageObject{
-					Message: "Error getting filtered records or Page not Found",
-				},
-			})
+			Message := "Error getting filtered records or Page not Found"
+			responseMsg(rw, http.StatusBadRequest, Message)
 			return
 		}
 
 		var pagination db.Pagination
 		pagination.TotalPages = int(math.Ceil(float64(totalRecords) / float64(limit)))
 		pagination.Products = products
-
 		response(rw, http.StatusOK, pagination)
 		return
 	})
@@ -159,22 +146,16 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 		limit, err := strconv.Atoi(limitStr)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while converting limit to int")
-			response(rw, http.StatusBadRequest, errorResponse{
-				Error: messageObject{
-					Message: "limits value invalid",
-				},
-			})
+			Message := "limits value invalid"
+			responseMsg(rw, http.StatusBadRequest, Message)
 			return
 		}
 
 		page, err := strconv.Atoi(pageStr)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while converting page to int")
-			response(rw, http.StatusBadRequest, errorResponse{
-				Error: messageObject{
-					Message: "page value invalid",
-				},
-			})
+			Message := "page value invalid"
+			responseMsg(rw, http.StatusBadRequest, Message)
 			return
 		}
 
@@ -182,11 +163,8 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 		if limit <= 0 || page <= 0 {
 			err = fmt.Errorf("limit or page are non-positive")
 			logger.WithField("err", err.Error()).Error("Error limit or page were invalid values")
-			response(rw, http.StatusBadRequest, errorResponse{
-				Error: messageObject{
-					Message: "limits or page value are non-positive.",
-				},
-			})
+			Message := "limits or page value are non-positive."
+			responseMsg(rw, http.StatusBadRequest, Message)
 			return
 		}
 
@@ -199,11 +177,8 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 			totalRecords, products, err = deps.Store.ListProducts(req.Context(), limit, offset)
 			if err != nil {
 				logger.WithField("err", err.Error()).Error("Error Fetching Product details or Page out of range")
-				response(rw, http.StatusBadRequest, errorResponse{
-					Error: messageObject{
-						Message: "Couldn't find any Product records or Page out of range",
-					},
-				})
+				Message := "Couldn't find any Product records or Page out of range"
+				responseMsg(rw, http.StatusBadRequest, Message)
 				return
 			}
 			goto Skip
@@ -212,11 +187,8 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 		totalRecords, products, err = deps.Store.SearchProductsByText(req.Context(), text, limitStr, offsetStr)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error Couldn't find any matching search records or Page out of range")
-			response(rw, http.StatusBadRequest, errorResponse{
-				Error: messageObject{
-					Message: "Couldn't find any matching search records or Page out of range",
-				},
-			})
+			Message := "Couldn't find any matching search records or Page out of range"
+			responseMsg(rw, http.StatusBadRequest, Message)
 			return
 		}
 
@@ -224,7 +196,6 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 		var pagination db.Pagination
 		pagination.TotalPages = int(math.Ceil(float64(totalRecords) / float64(limit)))
 		pagination.Products = products
-
 		response(rw, http.StatusOK, pagination)
 		return
 	})

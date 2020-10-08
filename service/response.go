@@ -18,6 +18,14 @@ type messageObject struct {
 	Message string `json:"message"`
 }
 
+func responseMsg(rw http.ResponseWriter, status int, msgbody string) {
+	response(rw, http.StatusBadRequest, errorResponse{
+		Error: messageObject{
+			Message: msgbody,
+		},
+	})
+}
+
 func response(rw http.ResponseWriter, status int, responseBody interface{}) {
 	respBytes, err := json.Marshal(responseBody)
 	if err != nil {
