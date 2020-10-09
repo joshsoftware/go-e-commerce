@@ -52,13 +52,17 @@ type Product struct {
 	Color        string         `db:"color" json:"color,*" schema:"color,*"`
 	Size         string         `db:"size" json:"size,*" schema:"size,*"`
 	URLs         pq.StringArray `db:"image_urls" json:"image_urls,*"  schema:"images"`
-	TotalRecords int            `db:"total" json:"-"`
 }
 
 // Pagination helps to return UI side with number of pages given a limitStr and pageStr number from Query Parameters
 type Pagination struct {
 	Products   []Product `json:"products"`
 	TotalPages int       `json:"total_pages"`
+}
+
+type Record struct {
+	TotalRecords int `db:"total"`
+	Product
 }
 
 func (product *Product) Validate() (map[string]ErrorResponse, bool) {
@@ -183,34 +187,26 @@ func (s *pgStore) GetProductByID(ctx context.Context, id int) (Product, error) {
 // @Description Get limited number of Products of particular pageStr
 // @Params req.Context , limitStr, pageStr
 // @Returns Count of Records, error if any
-func (s *pgStore) ListProducts(ctx context.Context, limit int, offset int) ([]Product, error) {
+func (s *pgStore) ListProducts(ctx context.Context, limit int, offset int) (int, []Product, error) {
 
 	var products []Product
+	var records []Record
 
-	result, err := s.db.Queryx(getProductQuery, limit, offset)
+	err := s.db.Select(&records, getProductQuery, limit, offset)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Products from database")
-		return []Product{}, err
-	}
-	for result.Next() {
-		var product Product
-		err = result.StructScan(&product)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error scanning Products from database")
-			return []Product{}, err
-		}
-		products = append(products, product)
-	}
-	//fmt.Println(products)
-
-	if len(products) > 0 && products[0].TotalRecords-1 >= offset {
-		return products, nil
-	} else {
-		err = fmt.Errorf("Page out of Range or No Records Present!")
-		logger.WithField("err", err.Error()).Error("Error Offset is greater than total records")
-		return []Product{}, err
+		return 0, []Product{}, err
+	} else if len(records) == 0 {
+		err = fmt.Errorf("Either Offset was big or No Records Present in database!")
+		logger.WithField("err", err.Error()).Error("database Returned total record count as 0")
+		return 0, []Product{}, err
 	}
 
+	for _, record := range records {
+		products = append(products, record.Product)
+	}
+
+	return records[0].TotalRecords, products, nil
 }
 
 func (s *pgStore) CreateProduct(ctx context.Context, product Product, images []*multipart.FileHeader) (Product, error) {

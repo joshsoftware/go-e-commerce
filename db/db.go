@@ -6,7 +6,7 @@ import (
 )
 
 type Storer interface {
-	ListProducts(context.Context, int, int) ([]Product, error)
+	ListProducts(context.Context, int, int) (int, []Product, error)
 	FilteredProducts(context.Context, Filter, string, string) (int, []Product, error)
 	SearchProductsByText(context.Context, string, string, string) (int, []Product, error)
 	CreateProduct(context.Context, Product, []*multipart.FileHeader) (Product, error)
