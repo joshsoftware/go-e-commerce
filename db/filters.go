@@ -4,25 +4,13 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 
 	logger "github.com/sirupsen/logrus"
 )
 
 var (
-	productCount = `SELECT
-		COUNT(p.id)
-		FROM   products p
-		INNER JOIN category c
-		ON p.cid = c.cid`
-
-	filterProduct = `SELECT *
-		FROM   products p
-		INNER JOIN category c
-		ON p.cid = c.cid`
-
-	filterStart = `SELECT count(*) OVER() AS total,*
+	filterSearchProduct = `SELECT count(*) OVER() AS total,*
 		FROM   products p
 		INNER JOIN category c
 		ON p.cid = c.cid`
@@ -89,7 +77,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 		filterQuery = ` WHERE ` + filterQuery[:len(filterQuery)-3]
 	}
 
-	filterQuery = filterStart + filterQuery
+	filterQuery = filterSearchProduct + filterQuery
 
 	if filter.PriceFlag {
 		filterQuery += ` ORDER BY p.price ` + filter.Price + `, p.id LIMIT ` + limitStr + `  OFFSET  ` + offsetStr + `  ;`
@@ -121,8 +109,8 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 // @Failure total=0, error= "Some Error"
 func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitStr string, offsetStr string) (int, []Product, error) {
 
-	var totalRecords int
 	var products []Product
+	var records []Record
 	var validParameters = regexp.MustCompile(`^[\w ]+$`)
 
 	// if There are other chracters than word and space
@@ -149,8 +137,7 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 	}
 
 	// Query to help us get count of all such results
-	getSearchCount := productCount + ` WHERE `
-
+	getProductSearch := filterSearchProduct + ` WHERE `
 	isFiltered := `  `
 
 	// iterate over all the textMap
@@ -163,51 +150,21 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 
 	// remove that last OR
 	isFiltered = isFiltered[:len(isFiltered)-2]
+	getProductSearch += isFiltered + ` LIMIT ` + limitStr + ` OFFSET  ` + offsetStr + ` ;`
 
-	getSearchCount += isFiltered + ` ;`
-	//fmt.Println("getsearchProduct---->", getSearchCount)
-
-	countResult, err := s.db.Query(getSearchCount)
+	err := s.db.Select(&records, getProductSearch)
 	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error fetching count of getSearchCount from database")
+		logger.WithField("err", err.Error()).Error("Error fetching Products from database")
+		return 0, []Product{}, err
+	} else if len(records) == 0 {
+		err = fmt.Errorf("Either Offset was big or No Records Present in database!")
+		logger.WithField("err", err.Error()).Error("database Returned total record count as 0")
 		return 0, []Product{}, err
 	}
 
-	// countResult set should have only 1 record
-	// It counts the number of records with the search results.
-	if countResult.Next() {
-		err = countResult.Scan(&totalRecords)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error fetching count of getSearchCount from database")
-			return 0, []Product{}, err
-		}
+	for _, record := range records {
+		products = append(products, record.Product)
 	}
 
-	offset, _ := strconv.Atoi(offsetStr)
-
-	if totalRecords-1 < offset {
-		err = fmt.Errorf("Page out of Range!")
-		logger.WithField("err", err.Error()).Error("Error Offset is greater than total records")
-		return 0, []Product{}, err
-
-	}
-
-	getSearchRecord := filterProduct + ` WHERE `
-	getSearchRecord += isFiltered
-	getSearchRecord += ` LIMIT ` + limitStr + ` OFFSET  ` + offsetStr + ` ;`
-
-	//fmt.Println("getsearchRecords---->", getSearchRecord)
-
-	err = s.db.Select(&products, getSearchRecord)
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error fetching Product Results from database")
-		return 0, []Product{}, err
-	}
-
-	if products == nil {
-		err = fmt.Errorf("Desired page not found")
-		logger.WithField("err", err.Error()).Error("Products don't exist by such filters!")
-		return 0, []Product{}, err
-	}
-	return totalRecords, products, nil
+	return records[0].TotalRecords, products, nil
 }
