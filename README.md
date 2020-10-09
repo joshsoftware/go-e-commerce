@@ -57,3 +57,4 @@ You should see that all records have been inserted successfully, if not either y
 ```
 
 ### For documentation, refer the docs folder
+docs only include Product_api documentation
