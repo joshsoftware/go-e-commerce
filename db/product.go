@@ -18,8 +18,10 @@ import (
 )
 
 const (
-	getProductCount     = `SELECT count(id) from Products ;`
-	getProductQuery     = `SELECT * FROM products p INNER JOIN category c ON p.cid = c.cid ORDER BY p.id LIMIT $1 OFFSET $2 ;`
+	getProductCount = `SELECT count(id) from Products ;`
+	getProductQuery = `SELECT count(*) OVER() AS total,* FROM products p 
+						INNER JOIN category c ON p.cid = c.cid ORDER BY p.id LIMIT $1 OFFSET $2 ;`
+	//SELECT * FROM products p INNER JOIN category c ON p.cid = c.cid ORDER BY p.id LIMIT $1 OFFSET $2 ;`
 	getProductByIDQuery = `SELECT * FROM products p INNER JOIN category c ON p.cid = c.cid WHERE p.id=$1`
 	insertProductQuery  = `INSERT INTO products ( name, description,
                  price, discount, tax, quantity, cid, brand, color, size, image_urls) VALUES ( 
@@ -28,7 +30,8 @@ const (
 	deleteProductIdQuery = `DELETE FROM products WHERE id = $1 RETURNING image_urls`
 	//updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2 `
 	updateProductStockQuery = `UPDATE products SET quantity= (quantity - $1) where id = $2 
-			RETURNING *, (SELECT cname from category where cid=(SELECT cid FROM products where id = $2))`
+				RETURNING *,(SELECT cname from category where cid=
+				(SELECT cid FROM products where id = $2))`
 	updateProductQuery = `UPDATE products SET name= :name, description=:description, price=:price, 
 					   discount=:discount, tax=:tax, quantity=:quantity, cid=:cid, brand=:brand, 
 					   color=:color, size=:size, image_urls=:image_urls WHERE id = :id
@@ -49,6 +52,7 @@ type Product struct {
 	Color        string         `db:"color" json:"color,*" schema:"color,*"`
 	Size         string         `db:"size" json:"size,*" schema:"size,*"`
 	URLs         pq.StringArray `db:"image_urls" json:"image_urls,*"  schema:"images"`
+	TotalRecords int            `db:"total" json:"-"`
 }
 
 // Pagination helps to return UI side with number of pages given a limitStr and pageStr number from Query Parameters
@@ -179,30 +183,34 @@ func (s *pgStore) GetProductByID(ctx context.Context, id int) (Product, error) {
 // @Description Get limited number of Products of particular pageStr
 // @Params req.Context , limitStr, pageStr
 // @Returns Count of Records, error if any
-func (s *pgStore) ListProducts(ctx context.Context, limit int, offset int) (int, []Product, error) {
+func (s *pgStore) ListProducts(ctx context.Context, limit int, offset int) ([]Product, error) {
 
-	var totalRecords int
 	var products []Product
 
-	err := s.db.QueryRow(getProductCount).Scan(&totalRecords)
+	result, err := s.db.Queryx(getProductQuery, limit, offset)
 	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error fetching Count of Products from database")
-		return 0, []Product{}, err
+		logger.WithField("err", err.Error()).Error("Error fetching Products from database")
+		return []Product{}, err
 	}
+	for result.Next() {
+		var product Product
+		err = result.StructScan(&product)
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error scanning Products from database")
+			return []Product{}, err
+		}
+		products = append(products, product)
+	}
+	//fmt.Println(products)
 
-	if totalRecords-1 < offset {
-		err = fmt.Errorf("Page out of Range!")
+	if len(products) > 0 && products[0].TotalRecords-1 >= offset {
+		return products, nil
+	} else {
+		err = fmt.Errorf("Page out of Range or No Records Present!")
 		logger.WithField("err", err.Error()).Error("Error Offset is greater than total records")
-		return 0, []Product{}, err
-
+		return []Product{}, err
 	}
 
-	err = s.db.Select(&products, getProductQuery, limit, offset)
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
-		return 0, []Product{}, err
-	}
-	return totalRecords, products, nil
 }
 
 func (s *pgStore) CreateProduct(ctx context.Context, product Product, images []*multipart.FileHeader) (Product, error) {

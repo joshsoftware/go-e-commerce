@@ -174,10 +174,11 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 		offsetStr := strconv.Itoa(offset)
 		if text == "" {
 			// Behave same as List All Products and return
-			totalRecords, products, err = deps.Store.ListProducts(req.Context(), limit, offset)
-			if err != nil {
-				logger.WithField("err", err.Error()).Error("Error Fetching Product details or Page out of range")
-				Message := "Couldn't find any Product records or Page out of range"
+			products, err = deps.Store.ListProducts(req.Context(), limit, offset)
+
+			if err != nil || products[0].TotalRecords == 0 {
+				logger.WithField("err", err.Error()).Error("Error Couldn't find any Product records or Page out of range")
+				Message := "Couldn't find any Products records or Page out of range"
 				responseMsg(rw, http.StatusBadRequest, Message)
 				return
 			}
@@ -185,16 +186,18 @@ func getProductBySearchHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		totalRecords, products, err = deps.Store.SearchProductsByText(req.Context(), text, limitStr, offsetStr)
-		if err != nil {
+		if err != nil || totalRecords == 0 {
 			logger.WithField("err", err.Error()).Error("Error Couldn't find any matching search records or Page out of range")
 			Message := "Couldn't find any matching search records or Page out of range"
 			responseMsg(rw, http.StatusBadRequest, Message)
 			return
+		} else {
+			products[0].TotalRecords = totalRecords
 		}
 
 	Skip:
 		var pagination db.Pagination
-		pagination.TotalPages = int(math.Ceil(float64(totalRecords) / float64(limit)))
+		pagination.TotalPages = int(math.Ceil(float64(products[0].TotalRecords) / float64(limit)))
 		pagination.Products = products
 		response(rw, http.StatusOK, pagination)
 		return

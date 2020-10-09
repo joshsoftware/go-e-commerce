@@ -19,7 +19,7 @@ type messageObject struct {
 }
 
 func responseMsg(rw http.ResponseWriter, status int, msgbody string) {
-	response(rw, http.StatusBadRequest, errorResponse{
+	response(rw, status, errorResponse{
 		Error: messageObject{
 			Message: msgbody,
 		},

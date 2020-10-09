@@ -57,8 +57,9 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 			return
 		}
 		offset := (page - 1) * limit
-		totalRecords, products, err := deps.Store.ListProducts(req.Context(), limit, offset)
-		if err != nil {
+		products, err := deps.Store.ListProducts(req.Context(), limit, offset)
+
+		if err != nil || products[0].TotalRecords == 0 {
 			logger.WithField("err", err.Error()).Error("Error Couldn't find any Product records or Page out of range")
 			Message := "Couldn't find any Products records or Page out of range"
 			responseMsg(rw, http.StatusInternalServerError, Message)
@@ -66,7 +67,7 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		var pagination db.Pagination
-		pagination.TotalPages = int(math.Ceil(float64(totalRecords) / float64(limit)))
+		pagination.TotalPages = int(math.Ceil(float64(products[0].TotalRecords) / float64(limit)))
 		pagination.Products = products
 		response(rw, http.StatusOK, pagination)
 		return
