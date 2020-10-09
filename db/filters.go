@@ -21,6 +21,11 @@ var (
 		FROM   products p
 		INNER JOIN category c
 		ON p.cid = c.cid`
+
+	filterStart = `SELECT count(*) OVER() AS total,*
+		FROM   products p
+		INNER JOIN category c
+		ON p.cid = c.cid`
 )
 
 type Filter struct {
@@ -46,90 +51,67 @@ type Filter struct {
 func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr string, offsetStr string) (int, []Product, error) {
 
 	var found bool
-	var totalRecords int
 	var products []Product
+	var records []Record
+	var err error
 
 	// helper will be used in making query dynamic.
 	// See how it's getting concatanation added in case a flag was Filter Flag is true
 	sqlRegexp := ``
-	isFiltered := `   `
+	filterQuery := `   `
 	if filter.CategoryFlag == true {
-		isFiltered += ` c.cid = ` + filter.CategoryId + ` AND`
+		filterQuery += ` c.cid = ` + filter.CategoryId + ` AND`
 		sqlRegexp += filter.CategoryId
 		found = true
 	}
 	if filter.BrandFlag {
-		isFiltered += ` LOWER(p.brand) = LOWER('` + filter.Brand + `') AND`
+		filterQuery += ` LOWER(p.brand) = LOWER('` + filter.Brand + `') AND`
 		sqlRegexp += filter.Brand
 		found = true
 	}
 	if filter.SizeFlag {
-		isFiltered += ` LOWER(p.size) = LOWER('` + filter.Size + `') AND`
+		filterQuery += ` LOWER(p.size) = LOWER('` + filter.Size + `') AND`
 		sqlRegexp += filter.Size
 		found = true
 	}
 	if filter.ColorFlag {
-		isFiltered += ` LOWER(p.color) =LOWER('` + filter.Color + `') AND`
+		filterQuery += ` LOWER(p.color) =LOWER('` + filter.Color + `') AND`
 		sqlRegexp += filter.Color
 		found = true
 	}
 	if found {
 		var validParameters = regexp.MustCompile(`^[\w ]+$`)
 		if !validParameters.MatchString(sqlRegexp) {
-			err := fmt.Errorf("Possible SQL Injection Attack.")
+			err = fmt.Errorf("Possible SQL Injection Attack.")
 			logger.WithField("err", err.Error()).Error("Error In Parameters, special Characters are present.")
 			return 0, []Product{}, err
 		}
-		isFiltered = ` WHERE ` + isFiltered[:len(isFiltered)-3]
+		filterQuery = ` WHERE ` + filterQuery[:len(filterQuery)-3]
 	}
 
-	getFilterProductCount := productCount + isFiltered + `;`
-	resultCount, err := s.db.Query(getFilterProductCount)
-
-	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error getting Count of Filtered Products from database")
-		return 0, []Product{}, err
-	}
-
-	for resultCount.Next() {
-		err = resultCount.Scan(&totalRecords)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error fetching count of getFilterProductCount from database")
-			return 0, []Product{}, err
-		}
-		break
-	}
-
-	offset, _ := strconv.Atoi(offsetStr)
-
-	if totalRecords-1 < offset {
-		err = fmt.Errorf("Page out of Range!")
-		logger.WithField("err", err.Error()).Error("Error Offset is greater than total records")
-		return 0, []Product{}, err
-
-	}
-
-	getFilterProduct := filterProduct + isFiltered
+	filterQuery = filterStart + filterQuery
 
 	if filter.PriceFlag {
-		getFilterProduct += ` ORDER BY p.price ` + filter.Price + `, p.id LIMIT ` + limitStr + `  OFFSET  ` + offsetStr + `  ;`
+		filterQuery += ` ORDER BY p.price ` + filter.Price + `, p.id LIMIT ` + limitStr + `  OFFSET  ` + offsetStr + `  ;`
 	} else {
-		getFilterProduct += ` ORDER BY p.id LIMIT ` + limitStr + `  OFFSET  ` + offsetStr + `  ;`
+		filterQuery += ` ORDER BY p.id LIMIT ` + limitStr + `  OFFSET  ` + offsetStr + `  ;`
 	}
-	//fmt.Println(getFilterProduct)
 
-	err = s.db.Select(&products, getFilterProduct)
+	err = s.db.Select(&records, filterQuery)
 	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error fetching Product Ids from database")
+		logger.WithField("err", err.Error()).Error("Error fetching Products from database")
 		return 0, []Product{}, err
-	}
-	if products == nil {
-		err = fmt.Errorf("Desired page not found")
+	} else if len(records) == 0 {
+		err = fmt.Errorf("Desired page not found, Offset was big")
 		logger.WithField("err", err.Error()).Error("Products don't exist by such filters!")
 		return 0, []Product{}, err
 	}
 
-	return totalRecords, products, nil
+	for _, record := range records {
+		products = append(products, record.Product)
+	}
+
+	return records[0].TotalRecords, products, nil
 }
 
 // @Title SearchRecords
