@@ -136,23 +136,21 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 		textMap[textSlice[i]] = true
 	}
 
-	// Query to help us get count of all such results
-	getProductSearch := filterSearchProduct + ` WHERE `
-	isFiltered := `  `
+	searchQuery := ` WHERE `
 
 	// iterate over all the textMap
 	for key := range textMap {
-		isFiltered += ` 
+		searchQuery += ` 
 		LOWER(p.name) LIKE LOWER('%` + key + `%') OR 
 		LOWER(p.brand) LIKE LOWER('%` + key + `%') OR 
 		LOWER(c.cname) LIKE LOWER('%` + key + `%') OR`
 	}
 
-	// remove that last OR
-	isFiltered = isFiltered[:len(isFiltered)-2]
-	getProductSearch += isFiltered + ` LIMIT ` + limitStr + ` OFFSET  ` + offsetStr + ` ;`
+	// remove that last OR from searchQuery
+	searchQuery = filterSearchProduct + searchQuery[:len(searchQuery)-2] +
+		` LIMIT ` + limitStr + ` OFFSET  ` + offsetStr + ` ;`
 
-	err := s.db.Select(&records, getProductSearch)
+	err := s.db.Select(&records, searchQuery)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error fetching Products from database")
 		return 0, []Product{}, err
