@@ -39,8 +39,7 @@ type Filter struct {
 func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr string, offsetStr string) (int, []Product, error) {
 
 	var found bool
-	var products []Product
-	var records []Record
+	var records Records
 	var err error
 
 	// helper will be used in making query dynamic.
@@ -95,11 +94,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 		return 0, []Product{}, err
 	}
 
-	for _, record := range records {
-		products = append(products, record.Product)
-	}
-
-	return records[0].TotalRecords, products, nil
+	return records[0].TotalRecords, records.Products(), nil
 }
 
 // @Title SearchRecords
@@ -109,8 +104,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 // @Failure total=0, error= "Some Error"
 func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitStr string, offsetStr string) (int, []Product, error) {
 
-	var products []Product
-	var records []Record
+	var records Records
 	var validParameters = regexp.MustCompile(`^[\w ]+$`)
 
 	// if There are other chracters than word and space
@@ -160,9 +154,5 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 		return 0, []Product{}, err
 	}
 
-	for _, record := range records {
-		products = append(products, record.Product)
-	}
-
-	return records[0].TotalRecords, products, nil
+	return records[0].TotalRecords, records.Products(), nil
 }

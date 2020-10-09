@@ -63,6 +63,19 @@ type Record struct {
 	Product
 }
 
+type Records []Record
+
+type GetProductsFromRecords interface {
+	Products() []Product
+}
+
+func (r Records) Products() (products []Product) {
+	for _, record := range r {
+		products = append(products, record.Product)
+	}
+	return
+}
+
 func (product *Product) Validate() (map[string]ErrorResponse, bool) {
 	var errorResponse map[string]ErrorResponse
 	var valid bool
@@ -187,8 +200,7 @@ func (s *pgStore) GetProductByID(ctx context.Context, id int) (Product, error) {
 // @Returns Count of Records, error if any
 func (s *pgStore) ListProducts(ctx context.Context, limit int, offset int) (int, []Product, error) {
 
-	var products []Product
-	var records []Record
+	var records Records
 
 	err := s.db.Select(&records, getProductQuery, limit, offset)
 	if err != nil {
@@ -200,11 +212,7 @@ func (s *pgStore) ListProducts(ctx context.Context, limit int, offset int) (int,
 		return 0, []Product{}, err
 	}
 
-	for _, record := range records {
-		products = append(products, record.Product)
-	}
-
-	return records[0].TotalRecords, products, nil
+	return records[0].TotalRecords, records.Products(), nil
 }
 
 func (s *pgStore) CreateProduct(ctx context.Context, product Product, images []*multipart.FileHeader) (Product, error) {
