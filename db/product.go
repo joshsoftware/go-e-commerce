@@ -21,14 +21,12 @@ const (
 	getProductCount = `SELECT count(id) from Products ;`
 	getProductQuery = `SELECT count(*) OVER() AS total,* FROM products p 
 						INNER JOIN category c ON p.cid = c.cid ORDER BY p.id LIMIT $1 OFFSET $2 ;`
-	//SELECT * FROM products p INNER JOIN category c ON p.cid = c.cid ORDER BY p.id LIMIT $1 OFFSET $2 ;`
 	getProductByIDQuery = `SELECT * FROM products p INNER JOIN category c ON p.cid = c.cid WHERE p.id=$1`
 	insertProductQuery  = `INSERT INTO products ( name, description,
                  price, discount, tax, quantity, cid, brand, color, size, image_urls) VALUES ( 
 				 :name, :description, :price, :discount, :tax, :quantity, :cid, :brand, :color, :size, :image_urls) 
 				 RETURNING id, (SELECT cname from category where cid=:cid);`
-	deleteProductIdQuery = `DELETE FROM products WHERE id = $1 RETURNING image_urls`
-	//updateProductStockQuery = `UPDATE products SET quantity= $1 where id = $2 `
+	deleteProductIdQuery    = `DELETE FROM products WHERE id = $1 RETURNING image_urls`
 	updateProductStockQuery = `UPDATE products SET quantity= (quantity - $1) where id = $2 
 				RETURNING *,(SELECT cname from category where cid=
 				(SELECT cid FROM products where id = $2))`
@@ -258,20 +256,13 @@ func (s *pgStore) UpdateProductStockById(ctx context.Context, count, id int) (Pr
 func (s *pgStore) DeleteProductById(ctx context.Context, id int) error {
 
 	var files pq.StringArray
-	result, err := s.db.Queryx(deleteProductIdQuery, id)
+	err := s.db.QueryRowx(deleteProductIdQuery, id).Scan(&files)
 	if err != nil {
-		logger.WithField("err", err.Error()).Error("Error deleting product" + string(id))
-		return err
-	}
-
-	if result.Next() {
-		err = result.Scan(&files)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error scanning image_urls into files variable")
+		if err == sql.ErrNoRows {
+			err = fmt.Errorf("Product doesn't exist in db, goodluck deleting it")
 			return err
 		}
-	} else {
-		err = fmt.Errorf("Product doesn't exist in db, goodluck deleting it")
+		logger.WithField("err", err.Error()).Error("Error scanning image_urls into files variable, product might not be deleted!")
 		return err
 	}
 
