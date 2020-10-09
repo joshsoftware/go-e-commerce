@@ -37,9 +37,9 @@ func (m *DBMockStore) DeleteProductById(ctx context.Context, id int) (err error)
 	return args.Error(0)
 }
 
-func (m *DBMockStore) UpdateProductStockById(ctx context.Context, product Product, id int) (updatedProduct Product, err error) {
-	args := m.Called(ctx, product, id)
-	return args.Get(0).(Product), args.Error(1)
+func (m *DBMockStore) UpdateProductStockById(ctx context.Context, count, id int) (updatedProduct Product, err error, errCode int) {
+	args := m.Called(ctx, count, id)
+	return args.Get(0).(Product), args.Error(1), args.Int(2)
 }
 
 func (m *DBMockStore) GetProductByID(ctx context.Context, id int) (product Product, err error) {
