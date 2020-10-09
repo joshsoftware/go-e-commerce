@@ -193,13 +193,12 @@ func (s *pgStore) SearchProductsByText(ctx context.Context, text string, limitSt
 
 	// countResult set should have only 1 record
 	// It counts the number of records with the search results.
-	for countResult.Next() {
+	if countResult.Next() {
 		err = countResult.Scan(&totalRecords)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching count of getSearchCount from database")
 			return 0, []Product{}, err
 		}
-		break
 	}
 
 	offset, _ := strconv.Atoi(offsetStr)
