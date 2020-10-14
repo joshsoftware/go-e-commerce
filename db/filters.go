@@ -31,6 +31,12 @@ type Filter struct {
 	ColorFlag    bool
 }
 
+// TODO Add condition and sort capabilities for both these APIs
+// These capabilities are suppossed to make filter and search APIs
+// really really dynamic and much robust.
+// eg for condition -> WHERE cid >= 5 AND tax <= 4
+// eg for sort ->  category_id = desc, price asc
+
 // @Title FilteredProducts
 // @Description Get the products that are filtered as per request Parameters
 // @Accept	request.Context, Filter struct's object

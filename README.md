@@ -1,4 +1,6 @@
-Note : words in CAPITAL_CASE are meant to be set by the user.
+Assumption 1: You are simran.
+Assumption 2: Words in CAPITAL_CASE are meant to be set by simran.
+
 ## Setting Up Database
 Use PostgresQL database with version greater than 12.
 
@@ -7,7 +9,7 @@ Create a database in PostgresQL via commandline
 sudo -u postgres createdb --owner=USERNAME DATABASE_NAME
 example:
 ```
-sudo -u postgres createdb --owner=santosh Commerce
+sudo -u postgres createdb --owner=simran Commerce
 ```
 
 ```
@@ -15,14 +17,14 @@ sudo -u postgres createdb --owner=santosh Commerce
 Drop a database in PostgresQL via commandline
 dropdb -h localhost -p 5432 -U USERNAME DATABASE_NAME
 example:
-dropdb -h localhost -p 5432 -U santosh Commerce
+dropdb -h localhost -p 5432 -U simran Commerce
 ```
 
 Copy your DB_URI to application.yml file
 DB_URI: "postgresql://USERNAME:PASSWORD@localhost:5432/DATABASE_NAME?sslmode=disable"
 example: 
 ```
-"postgresql://santosh:root@localhost:5432/Commerce?sslmode=disable"
+"postgresql://simran:root@localhost:5432/Commerce?sslmode=disable"
 ```
 
 
@@ -45,7 +47,7 @@ Copy the migration.sql dump to this db with following command.
 psql DATABASE_NAME < PATH_TO_migration.sql
 example : 
 ```
-psql Commerce < /home/santosh/Desktop/Josh/InternProject/go-e-commerce/migration.sql
+psql Commerce < /home/simran/Desktop/Josh/InternProject/go-e-commerce/migration.sql
 ```
 
 You should see that all records have been inserted successfully, if not either you messed up or there is version problem or our code is broke.

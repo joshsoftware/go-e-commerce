@@ -215,6 +215,11 @@ func (s *pgStore) ListProducts(ctx context.Context, limit int, offset int) (int,
 	return records[0].TotalRecords, records.Products(), nil
 }
 
+// TODO  Handle XSS attack.
+// Sanitize all the text input and throw 400 for anything matchin below symbols
+// Forbidden symbols in any text ->		 < > & " %
+// Simple way is to concatanate all the text inputs and then check for these via Regexp.
+
 func (s *pgStore) CreateProduct(ctx context.Context, product Product, images []*multipart.FileHeader) (Product, error) {
 
 	if images != nil {
@@ -285,6 +290,8 @@ func (s *pgStore) DeleteProductById(ctx context.Context, id int) error {
 	return nil
 }
 
+// TODO Make updateProductQuery dynamic
+// TODO Eliminate XSS attack as suggested in CreateProduct
 func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int, images []*multipart.FileHeader) (Product, error, int) {
 
 	var dbProduct Product
