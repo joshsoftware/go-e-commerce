@@ -35,16 +35,16 @@ func listProductsHandler(deps Dependencies) http.HandlerFunc {
 		limit, err := strconv.Atoi(limitStr)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while converting limitStr to int")
-			Message := "Error while converting limitStr to int"
-			responseMsg(rw, http.StatusInternalServerError, Message)
+			Message := "Limit value invalid"
+			responseMsg(rw, http.StatusBadRequest, Message)
 			return
 		}
 
 		page, err := strconv.Atoi(pageStr)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while converting pageStr to int")
-			Message := "Error while converting pageStr to int"
-			responseMsg(rw, http.StatusInternalServerError, Message)
+			Message := "Page value invalid"
+			responseMsg(rw, http.StatusBadRequest, Message)
 			return
 		}
 
@@ -143,14 +143,16 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 			response(rw, http.StatusBadRequest, errRes)
 			return
 		}
-		createdProduct, err := deps.Store.CreateProduct(req.Context(), product, images)
-		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error while inserting product")
-			Message := "Error inserting the product, product already exists"
-			responseMsg(rw, http.StatusBadRequest, Message)
-			return
+		createdProduct, err, errCode := deps.Store.CreateProduct(req.Context(), product, images)
+		switch errCode {
+		case http.StatusConflict:
+			logger.WithField("err", err.Error()).Error("Product name Already exists or key value violates unique constraint")
+			Message := "Product name Already exists or key value violates unique constraint"
+			responseMsg(rw, http.StatusConflict, Message)
+
+		case http.StatusOK:
+			response(rw, http.StatusOK, successResponse{Data: createdProduct})
 		}
-		response(rw, http.StatusOK, successResponse{Data: createdProduct})
 		return
 	})
 }

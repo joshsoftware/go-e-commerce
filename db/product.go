@@ -220,13 +220,13 @@ func (s *pgStore) ListProducts(ctx context.Context, limit int, offset int) (int,
 // Forbidden symbols in any text ->		 < > & " %
 // Simple way is to concatanate all the text inputs and then check for these via Regexp.
 
-func (s *pgStore) CreateProduct(ctx context.Context, product Product, images []*multipart.FileHeader) (Product, error) {
+func (s *pgStore) CreateProduct(ctx context.Context, product Product, images []*multipart.FileHeader) (Product, error, int) {
 
 	if images != nil {
 		err := imagesStore(images, &product)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error inserting images in assets: " + product.Name)
-			return Product{}, err
+			return Product{}, err, http.StatusInternalServerError
 		}
 	}
 
@@ -234,18 +234,18 @@ func (s *pgStore) CreateProduct(ctx context.Context, product Product, images []*
 	row, err := s.db.NamedQuery(insertProductQuery, product)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Error inserting product to database: " + product.Name)
-		return Product{}, err
+		return Product{}, err, http.StatusConflict
 	}
 	if row.Next() {
 		err = row.Scan(&product.Id, &product.CategoryName)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error scanning product id from database: " + product.Name)
-			return Product{}, err
+			return Product{}, err, http.StatusInternalServerError
 		}
 	}
 
 	row.Close()
-	return product, nil
+	return product, nil, http.StatusOK
 }
 
 func (s *pgStore) UpdateProductStockById(ctx context.Context, count, id int) (Product, error, int) {
