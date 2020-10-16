@@ -2,11 +2,16 @@ package db
 
 import (
 	"context"
+	"mime/multipart"
 )
 
 type Storer interface {
-	ListUsers(context.Context) ([]User, error)
-	//Create(context.Context, User) error
-	//GetUser(context.Context) (User, error)
-	//Delete(context.Context, string) error
+	ListProducts(context.Context, int, int) (int, []Product, error)
+	FilteredProducts(context.Context, Filter, string, string) (int, []Product, error)
+	SearchProductsByText(context.Context, string, string, string) (int, []Product, error)
+	CreateProduct(context.Context, Product, []*multipart.FileHeader) (Product, error, int)
+	DeleteProductById(context.Context, int) error
+	UpdateProductById(context.Context, Product, int, []*multipart.FileHeader) (Product, error, int)
+	UpdateProductStockById(context.Context, int, int) (Product, error, int)
+	GetProductByID(context.Context, int) (Product, error)
 }
