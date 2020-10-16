@@ -17,9 +17,9 @@ func (m *DBMockStore) ListProducts(ctx context.Context, limitStr int, pageStr in
 	return args.Get(0).(int), args.Get(1).([]Product), args.Error(2)
 }
 
-func (m *DBMockStore) CreateProduct(ctx context.Context, product Product, images []*multipart.FileHeader) (createdProduct Product, err error) {
+func (m *DBMockStore) CreateProduct(ctx context.Context, product Product, images []*multipart.FileHeader) (createdProduct Product, err error, errCode int) {
 	args := m.Called(ctx, product, images)
-	return args.Get(0).(Product), args.Error(1)
+	return args.Get(0).(Product), args.Error(1), args.Get(2).(int)
 }
 
 func (m *DBMockStore) FilteredProducts(ctx context.Context, filter Filter, limitStr string, pageStr string) (count int, product []Product, err error) {

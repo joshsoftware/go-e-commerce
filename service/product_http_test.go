@@ -189,6 +189,7 @@ func (suite *ProductsHandlerTestSuite) TestCreateProductSuccess() {
 			URLs:         urls,
 		},
 		nil,
+		200,
 	)
 
 	recorder := makeHTTPCallWithHeader(
@@ -224,6 +225,7 @@ func (suite *ProductsHandlerTestSuite) TestCreateProductFailure() {
 	suite.dbMock.On("CreateProduct", mock.Anything, mock.Anything, mock.Anything).Return(
 		db.Product{},
 		fmt.Errorf("Product Already Exists!"),
+		409,
 	)
 
 	recorder := makeHTTPCallWithHeader(
@@ -235,8 +237,8 @@ func (suite *ProductsHandlerTestSuite) TestCreateProductFailure() {
 		createProductHandler(Dependencies{Store: suite.dbMock}),
 	)
 
-	assert.Equal(suite.T(), http.StatusBadRequest, recorder.Code)
-	assert.Equal(suite.T(), `{"error":{"message":"Error inserting the product, product already exists"}}`, recorder.Body.String())
+	assert.Equal(suite.T(), http.StatusConflict, recorder.Code)
+	assert.Equal(suite.T(), `{"error":{"message":"Product name Already exists or key value violates schema constraint(s)"}}`, recorder.Body.String())
 	suite.dbMock.AssertExpectations(suite.T())
 }
 
