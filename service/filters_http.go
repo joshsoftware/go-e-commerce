@@ -66,7 +66,7 @@ func getProductByFiltersHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		// Avoid divide by zero exception and -ve values for page and limit
-		if limit <= 0 || page <= 0 {
+		if (limit > 0 && page > 0) == false {
 			err = fmt.Errorf("limit or page are non-positive")
 			logger.WithField("err", err.Error()).Error("Error limit or page were invalid values")
 			Message := "limits or page value are non-positive"

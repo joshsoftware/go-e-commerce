@@ -139,7 +139,7 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 		}
 
 		errRes, valid := product.Validate()
-		if !valid {
+		if valid == false {
 			response(rw, http.StatusBadRequest, errRes)
 			return
 		}
@@ -152,6 +152,11 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 
 		case http.StatusOK:
 			response(rw, http.StatusOK, successResponse{Data: createdProduct})
+
+		default:
+			logger.WithField("err", err.Error()).Error("Error while inserting Product")
+			Message := "Internal server Error, facing issue while inserting Product"
+			responseMsg(rw, http.StatusInternalServerError, Message)
 		}
 		return
 	})

@@ -90,19 +90,19 @@ func (product *Product) Validate() (map[string]ErrorResponse, bool) {
 	}
 	// complicated nots are used to handle NaN's
 	// Example :     product.Price > NaN     will return false and so will product.Price < NaN!
-	if !(product.Price > 0) {
+	if (product.Price > 0) == false {
 		fieldErrors["price"] = "Can't be blank  or less than zero"
 	}
-	if !(product.Discount >= 0 && product.Discount <= 100) {
+	if (product.Discount >= 0 && product.Discount <= 100) == false {
 		fieldErrors["discount"] = "Can't be less than zero or more than 100 %"
 	}
-	if !(product.Tax >= 0 && product.Tax <= 100) {
+	if (product.Tax >= 0 && product.Tax <= 100) == false {
 		fieldErrors["tax"] = "Can't be less than zero or more than 100 %"
 	}
 	// If Quantity gets's < 0 by UpdateProductStockById Method, this is what saves us
 	//TODO Product Quantity not greater than 100
-	if !(product.Quantity >= 0) {
-		fieldErrors["available_quantity"] = "Can't be blank or less than zero"
+	if (product.Quantity >= 0 && product.Quantity <= 1000) == false {
+		fieldErrors["available_quantity"] = "Can't be blank or less than zero or greater than 1000"
 	}
 	if product.CategoryId == 0 {
 		fieldErrors["category_id"] = "Can't be blank"
@@ -333,7 +333,7 @@ func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int
 	}
 
 	_, valid := product.Validate()
-	if !valid {
+	if valid == false {
 		return Product{}, fmt.Errorf("Product Validation failed. Invalid Fields present in the product. Check the limits. for e.g Discount shouldn't not be NaN."), http.StatusBadRequest
 	}
 

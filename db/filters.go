@@ -74,7 +74,7 @@ func (s *pgStore) FilteredProducts(ctx context.Context, filter Filter, limitStr 
 	}
 	if found {
 		var validParameters = regexp.MustCompile(`^[\w ]+$`)
-		if !validParameters.MatchString(sqlRegexp) {
+		if validParameters.MatchString(sqlRegexp) == false {
 			err = fmt.Errorf("Possible SQL Injection Attack.")
 			logger.WithField("err", err.Error()).Error("Error In Parameters, special Characters are present.")
 			return 0, []Product{}, err
