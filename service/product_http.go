@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"html"
 	"joshsoftware/go-e-commerce/db"
 	"math"
 	"net/http"
@@ -130,6 +131,14 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 		contents := formdata.Value
 		images := formdata.File["images"]
 
+		// Handling XSS attack
+		for key, vals := range contents {
+			contents[key] = nil
+			for _, val := range vals {
+				contents[key] = append(contents[key], html.EscapeString(val))
+			}
+		}
+
 		err = decoder.Decode(&product, contents)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while decoding product data from the form")
@@ -146,8 +155,8 @@ func createProductHandler(deps Dependencies) http.HandlerFunc {
 		createdProduct, err, errCode := deps.Store.CreateProduct(req.Context(), product, images)
 		switch errCode {
 		case http.StatusConflict:
-			logger.WithField("err", err.Error()).Error("Product name Already exists or key value violates unique constraint")
-			Message := "Product name Already exists or key value violates unique constraint"
+			logger.WithField("err", err.Error()).Error("Product name Already exists or kkey value violates schema constraint(s)")
+			Message := "Product name Already exists or key value violates schema constraint(s)"
 			responseMsg(rw, http.StatusConflict, Message)
 
 		case http.StatusOK:
@@ -280,6 +289,14 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 		contents := formdata.Value
 		images := formdata.File["images"]
 
+		// Handling XSS attack
+		for key, vals := range contents {
+			contents[key] = nil
+			for _, val := range vals {
+				contents[key] = append(contents[key], html.EscapeString(val))
+			}
+		}
+
 		err = decoder.Decode(&product, contents)
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error while decoding product data from the form")
@@ -297,8 +314,8 @@ func updateProductByIdHandler(deps Dependencies) http.HandlerFunc {
 			responseMsg(rw, http.StatusBadRequest, Message)
 
 		case http.StatusConflict:
-			logger.WithField("err", err.Error()).Error("Product name Already exists or key value violates unique constraint")
-			Message := "Product name Already exists or key value violates unique constraint"
+			logger.WithField("err", err.Error()).Error("Product name Already exists or key value violates schema constraint(s)")
+			Message := "Product name Already exists or key value violates schema constraint(s)"
 			responseMsg(rw, http.StatusConflict, Message)
 
 		case http.StatusOK:

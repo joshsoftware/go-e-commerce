@@ -88,7 +88,7 @@ func (product *Product) Validate() (map[string]ErrorResponse, bool) {
 	if product.Description == "" {
 		fieldErrors["product_description"] = "Can't be blank "
 	}
-	// complicated nots are used to handle NaN's
+	// complicated compliment conditions are used to handle NaN's
 	// Example :     product.Price > NaN     will return false and so will product.Price < NaN!
 	if (product.Price > 0) == false {
 		fieldErrors["price"] = "Can't be blank  or less than zero"
@@ -100,7 +100,6 @@ func (product *Product) Validate() (map[string]ErrorResponse, bool) {
 		fieldErrors["tax"] = "Can't be less than zero or more than 100 %"
 	}
 	// If Quantity gets's < 0 by UpdateProductStockById Method, this is what saves us
-	//TODO Product Quantity not greater than 100
 	if (product.Quantity >= 0 && product.Quantity <= 1000) == false {
 		fieldErrors["available_quantity"] = "Can't be blank or less than zero or greater than 1000"
 	}
@@ -215,11 +214,6 @@ func (s *pgStore) ListProducts(ctx context.Context, limit int, offset int) (int,
 	return records[0].TotalRecords, records.Products(), nil
 }
 
-// TODO  Handle XSS attack.
-// Sanitize all the text input and throw 400 for anything matchin below symbols
-// Forbidden symbols in any text ->		 < > & " %
-// Simple way is to concatanate all the text inputs and then check for these via Regexp.
-
 func (s *pgStore) CreateProduct(ctx context.Context, product Product, images []*multipart.FileHeader) (Product, error, int) {
 
 	if images != nil {
@@ -291,7 +285,6 @@ func (s *pgStore) DeleteProductById(ctx context.Context, id int) error {
 }
 
 // TODO Make updateProductQuery dynamic
-// TODO Eliminate XSS attack as suggested in CreateProduct
 func (s *pgStore) UpdateProductById(ctx context.Context, product Product, id int, images []*multipart.FileHeader) (Product, error, int) {
 
 	var dbProduct Product
