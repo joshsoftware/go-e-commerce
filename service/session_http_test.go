@@ -23,6 +23,49 @@ func (suite *SessionsHandlerTestSuite) SetupTest() {
 	suite.dbMock = &db.DBMockStore{}
 }
 
+func (suite *SessionsHandlerTestSuite) TestUserLoginSuccess() {
+	user := db.User{}
+	user.Email = "mayur@gmail.com"
+	user.Password = "sagar"
+
+	suite.dbMock.On("AuthenticateUser", mock.Anything, user).Return(user, nil)
+	body :=
+		`{
+			"email" : "mayur@gmail.com",
+			"password": "sagar"
+		}`
+	recorder := makeHTTPCall(
+		http.MethodDelete,
+		"/login",
+		"/login",
+		body,
+		userLoginHandler(Dependencies{Store: suite.dbMock}),
+	)
+	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
+	suite.dbMock.AssertExpectations(suite.T())
+}
+
+func (suite *SessionsHandlerTestSuite) TestUserLoginFailure() {
+	user := db.User{}
+	user.Email = "mayur@gmail.com"
+	user.Password = "wrongpassword"
+	suite.dbMock.On("AuthenticateUser", mock.Anything, user).Return(user, errors.New("Invalid Credentials"))
+	body :=
+		`{
+			"email" : "mayur@gmail.com",
+			"password": "wrongpassword"
+		}`
+	recorder := makeHTTPCall(
+		http.MethodDelete,
+		"/login",
+		"/login",
+		body,
+		userLoginHandler(Dependencies{Store: suite.dbMock}),
+	)
+	assert.Equal(suite.T(), http.StatusUnauthorized, recorder.Code)
+	suite.dbMock.AssertExpectations(suite.T())
+}
+
 func (suite *SessionsHandlerTestSuite) TestUserLogoutSuccess() {
 	userBlackListedToken := db.BlacklistedToken{
 		UserID:         1,
@@ -58,6 +101,13 @@ func (suite *SessionsHandlerTestSuite) TestUserLogoutFailure() {
 		userLogoutHandler(Dependencies{Store: suite.dbMock}),
 	)
 	assert.Equal(suite.T(), http.StatusInternalServerError, recorder.Code)
+	suite.dbMock.AssertExpectations(suite.T())
+}
+
+func (suite *SessionsHandlerTestSuite) TestGenerateJWTSuccess() {
+	token, err := generateJwt(1, false)
+	assert.Greater(suite.T(), len(token), 0)
+	assert.Equal(suite.T(), err, nil)
 	suite.dbMock.AssertExpectations(suite.T())
 }
 
