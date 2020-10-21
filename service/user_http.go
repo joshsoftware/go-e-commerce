@@ -1,35 +1,62 @@
 package service
 
 import (
-	"encoding/json"
-	"net/http"
-
 	logger "github.com/sirupsen/logrus"
+	"joshsoftware/go-e-commerce/db"
+	"net/http"
 )
 
-// @Title listUsers
-// @Description list all User
-// @Router /users [get]
-// @Accept  json
-// @Success 200 {object}
-// @Failure 400 {object}
+//listUsersHandler function fetch all users from database
+// and return as json object
 func listUsersHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		users, err := deps.Store.ListUsers(req.Context())
 		if err != nil {
 			logger.WithField("err", err.Error()).Error("Error fetching data")
-			rw.WriteHeader(http.StatusInternalServerError)
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal Server Error",
+				},
+			})
 			return
 		}
 
-		respBytes, err := json.Marshal(users)
+		responses(rw, http.StatusOK, successResponse{
+			Data: users,
+		})
+	})
+}
+
+//listUsersHandler function fetch specific user from database
+// and return as json object
+func getUserHandler(deps Dependencies) http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		//fetch usedId from request
+		authToken := req.Header.Get("Token")
+		userID, _, _, err := getDataFromToken(authToken)
 		if err != nil {
-			logger.WithField("err", err.Error()).Error("Error marshaling users data")
-			rw.WriteHeader(http.StatusInternalServerError)
+			responses(rw, http.StatusUnauthorized, errorResponse{
+				Error: messageObject{
+					Message: "Unauthorized User",
+				},
+			})
 			return
 		}
 
-		rw.Header().Add("Content-Type", "application/json")
-		rw.Write(respBytes)
+		user := db.User{}
+		user, err = deps.Store.GetUser(req.Context(), int(userID))
+		if err != nil {
+			logger.WithField("err", err.Error()).Error("Error fetching data")
+			responses(rw, http.StatusInternalServerError, errorResponse{
+				Error: messageObject{
+					Message: "Internal Server Error",
+				},
+			})
+			return
+		}
+
+		responses(rw, http.StatusOK, successResponse{
+			Data: user,
+		})
 	})
 }
