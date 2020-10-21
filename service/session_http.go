@@ -108,7 +108,7 @@ func userLoginHandler(deps Dependencies) http.HandlerFunc {
 
 //userLogoutHandler function logs the user off
 // and add the valid JWT token in BlacklistedToken
-func userLogoutHandler(deps Dependencies) http.Handler {
+func userLogoutHandler(deps Dependencies) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
 		//fetching the token from header

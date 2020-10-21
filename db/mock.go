@@ -24,7 +24,7 @@ func (m *DBMockStore) AuthenticateUser(ctx context.Context, u User) (user User, 
 // CreateBlacklistedToken function
 func (m *DBMockStore) CreateBlacklistedToken(ctx context.Context, token BlacklistedToken) (err error) {
 	args := m.Called(ctx, token)
-	return args.Error(1)
+	return args.Error(0)
 }
 
 // GetUser function

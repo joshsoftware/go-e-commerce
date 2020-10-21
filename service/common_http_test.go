@@ -1,6 +1,8 @@
 package service
 
 import (
+	ae "joshsoftware/go-e-commerce/apperrors"
+	"joshsoftware/go-e-commerce/config"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,6 +13,7 @@ import (
 )
 
 func TestExampleTestSuite(t *testing.T) {
+	config.Load()
 	suite.Run(t, new(UsersHandlerTestSuite))
 	suite.Run(t, new(SessionsHandlerTestSuite))
 }
@@ -19,8 +22,11 @@ func TestExampleTestSuite(t *testing.T) {
 // requestURL: current request path (eg: /product/1)
 func makeHTTPCall(method, path, requestURL, body string, handlerFunc http.HandlerFunc) (recorder *httptest.ResponseRecorder) {
 	// create a http request using the given parameters
-	req, _ := http.NewRequest(method, requestURL, strings.NewReader(body))
-
+	req, err := http.NewRequest(method, requestURL, strings.NewReader(body))
+	if err != nil {
+		ae.Error(ae.ErrFailedToCreate, "Error creating New request ", err)
+	}
+	req.Header.Set("Token", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MDU2ODQ4NjksImlkIjoxLCJpc0FkbWluIjpmYWxzZX0.-rgCTepUicCXyNLL1KiRudxT6NfowuzO2iC4oLn4reg")
 	// test recorder created for capturing apiresponses
 	recorder = httptest.NewRecorder()
 
