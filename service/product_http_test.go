@@ -1,0 +1,417 @@
+package service
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"joshsoftware/go-e-commerce/db"
+	"mime/multipart"
+	"net/http"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/suite"
+)
+
+type ProductsHandlerTestSuite struct {
+	suite.Suite
+
+	dbMock *db.DBMockStore
+}
+
+func (suite *ProductsHandlerTestSuite) SetupTest() {
+	suite.dbMock = &db.DBMockStore{}
+}
+
+func TestExampleTestSuite(t *testing.T) {
+	suite.Run(t, new(ProductsHandlerTestSuite))
+}
+
+func (suite *ProductsHandlerTestSuite) TestGetProductByIdHandlerSuccess() {
+
+	suite.dbMock.On("GetProductByID", mock.Anything, mock.Anything).Return(
+		db.Product{
+			Id:           1,
+			Name:         "test",
+			Description:  "test database",
+			Price:        123,
+			Discount:     10,
+			Tax:          0.5,
+			Quantity:     5.0,
+			CategoryId:   1,
+			CategoryName: "testing",
+			Brand:        "new brand",
+			Color:        "Black",
+			Size:         "Larger",
+		}, nil,
+	)
+
+	recorder := makeHTTPCall(
+		http.MethodGet,
+		"/products/{product_id:[0-9]+}",
+		"/products/1",
+		"",
+		getProductByIdHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
+	assert.Equal(suite.T(), `{"id":1,"product_title":"test","description":"test database","product_price":123,"discount":10,"tax":0.5,"stock":5,"category_id":1,"category":"testing","brand":"new brand","color":"Black","size":"Larger","image_urls":null}`, recorder.Body.String())
+	suite.dbMock.AssertExpectations(suite.T())
+
+}
+
+func (suite *ProductsHandlerTestSuite) TestGetProductByIdWhenDBFailure() {
+
+	suite.dbMock.On("GetProductByID", mock.Anything, mock.Anything).Return(
+		db.Product{}, errors.New("Error in fetching data"),
+	)
+
+	recorder := makeHTTPCall(
+		http.MethodGet,
+		"/product/{product_id:[0-9]+}",
+		"/product/1",
+		"",
+		getProductByIdHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusBadRequest, recorder.Code)
+	assert.Equal(suite.T(), `{"error":{"message":"Error feching data, Error fetching Product data, no Product found."}}`, recorder.Body.String())
+	suite.dbMock.AssertExpectations(suite.T())
+}
+
+func (suite *ProductsHandlerTestSuite) TestListProductsSuccess() {
+
+	suite.dbMock.On("ListProducts", mock.Anything, mock.Anything, mock.Anything).Return(1,
+		[]db.Product{
+			db.Product{
+				Id:           1,
+				Name:         "test organization",
+				Description:  "test@gmail.com",
+				Price:        12,
+				Discount:     1,
+				Tax:          0.5,
+				Quantity:     15,
+				CategoryId:   5,
+				CategoryName: "2",
+				Brand:        "IST",
+				Color:        "Black",
+				Size:         "Larger",
+			},
+		},
+		nil,
+	)
+
+	recorder := makeHTTPCall(
+		http.MethodGet,
+		"/products",
+		"/products?limit=1&page=1",
+		"",
+		listProductsHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
+	assert.Equal(suite.T(), `{"products":[{"id":1,"product_title":"test organization","description":"test@gmail.com","product_price":12,"discount":1,"tax":0.5,"stock":15,"category_id":5,"category":"2","brand":"IST","color":"Black","size":"Larger","image_urls":null}],"total_pages":1}`, recorder.Body.String())
+	suite.dbMock.AssertExpectations(suite.T())
+}
+
+func (suite *ProductsHandlerTestSuite) TestListProductsDBFailure() {
+
+	suite.dbMock.On("ListProducts", mock.Anything, mock.Anything, mock.Anything).Return(0,
+		[]db.Product{},
+		errors.New("error fetching Products records"),
+	)
+
+	recorder := makeHTTPCall(http.MethodGet,
+		"/products",
+		"/products?limit=1&page=1",
+		"",
+		listProductsHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusInternalServerError, recorder.Code)
+	assert.Equal(suite.T(), `{"error":{"message":"Couldn't find any Products records or Page out of range"}}`, recorder.Body.String())
+	suite.dbMock.AssertExpectations(suite.T())
+}
+
+var urls = []string{"url1", "url2"}
+
+var testProduct = db.Product{
+	Id:           1,
+	Name:         "test organization",
+	Description:  "test@gmail.com",
+	Price:        12,
+	Discount:     1,
+	Tax:          0.5,
+	Quantity:     15,
+	CategoryId:   5,
+	CategoryName: "2",
+	Brand:        "IST",
+	Color:        "Black",
+	Size:         "Medium",
+	URLs:         urls,
+}
+
+func (suite *ProductsHandlerTestSuite) TestCreateProductSuccess() {
+
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+	_ = writer.WriteField("product_title", "test organization")
+	_ = writer.WriteField("description", "test@gmail.com")
+	_ = writer.WriteField("product_price", "12")
+	_ = writer.WriteField("discount", "1")
+	_ = writer.WriteField("tax", "0.5")
+	_ = writer.WriteField("stock", "15")
+	_ = writer.WriteField("category_id", "5")
+	_ = writer.WriteField("category", "2")
+	_ = writer.WriteField("color", "Black")
+	_ = writer.WriteField("size", "Medium")
+	_ = writer.WriteField("brand", "IST")
+	err := writer.Close()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	suite.dbMock.On("CreateProduct", mock.Anything, mock.Anything, mock.Anything).Return(
+		db.Product{
+			Id:           1,
+			Name:         "test organization",
+			Description:  "test@gmail.com",
+			Price:        12,
+			Discount:     1,
+			Tax:          0.5,
+			Quantity:     15,
+			CategoryId:   5,
+			CategoryName: "2",
+			Brand:        "IST",
+			Color:        "Black",
+			Size:         "Medium",
+			URLs:         urls,
+		},
+		nil,
+		200,
+	)
+
+	recorder := makeHTTPCallWithHeader(
+		http.MethodPost,
+		"/createProduct",
+		"/createProduct",
+		writer,
+		payload,
+		createProductHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
+	assert.Equal(suite.T(), `{"data":{"id":1,"product_title":"test organization","description":"test@gmail.com","product_price":12,"discount":1,"tax":0.5,"stock":15,"category_id":5,"category":"2","brand":"IST","color":"Black","size":"Medium","image_urls":["url1","url2"]}}`, recorder.Body.String())
+	suite.dbMock.AssertExpectations(suite.T())
+}
+
+func (suite *ProductsHandlerTestSuite) TestCreateProductFailure() {
+
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+	_ = writer.WriteField("product_title", "test organization")
+	_ = writer.WriteField("description", "test@gmail.com")
+	_ = writer.WriteField("product_price", "12")
+	_ = writer.WriteField("discount", "1")
+	_ = writer.WriteField("tax", "0.5")
+	_ = writer.WriteField("stock", "15")
+	_ = writer.WriteField("category_id", "5")
+	_ = writer.WriteField("category", "2")
+	_ = writer.WriteField("color", "Black")
+	_ = writer.WriteField("size", "Medium")
+	_ = writer.WriteField("brand", "IST")
+
+	suite.dbMock.On("CreateProduct", mock.Anything, mock.Anything, mock.Anything).Return(
+		db.Product{},
+		fmt.Errorf("Product Already Exists!"),
+		409,
+	)
+
+	recorder := makeHTTPCallWithHeader(
+		http.MethodPost,
+		"/createProduct",
+		"/createProduct",
+		writer,
+		payload,
+		createProductHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusConflict, recorder.Code)
+	assert.Equal(suite.T(), `{"error":{"message":"Product name Already exists or key value violates schema constraint(s)"}}`, recorder.Body.String())
+	suite.dbMock.AssertExpectations(suite.T())
+}
+
+func (suite *ProductsHandlerTestSuite) TestCreateProductValidationFailure() {
+
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+	_ = writer.WriteField("product_title", "test organization")
+	_ = writer.WriteField("description", "test@gmail.com")
+	_ = writer.WriteField("product_price", "12")
+	_ = writer.WriteField("discount", "-15")
+	_ = writer.WriteField("tax", "0.5")
+	_ = writer.WriteField("stock", "15")
+	_ = writer.WriteField("category_id", "5")
+	_ = writer.WriteField("category", "2")
+	_ = writer.WriteField("color", "Black")
+	_ = writer.WriteField("size", "Medium")
+	_ = writer.WriteField("brand", "IST")
+
+	recorder := makeHTTPCallWithHeader(
+		http.MethodPost,
+		"/createProduct",
+		"/createProduct",
+		writer,
+		payload,
+		createProductHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusBadRequest, recorder.Code)
+	assert.Equal(suite.T(), `{"error":{"code":"Invalid_data","message":"Please Provide valid Product data","fields":{"discount":"Can't be less than zero or more than 100 %"}}}`, recorder.Body.String())
+	suite.dbMock.AssertExpectations(suite.T())
+
+}
+
+func (suite *ProductsHandlerTestSuite) TestDeleteProductByIdSuccess() {
+
+	suite.dbMock.On("DeleteProductById", mock.Anything, 1).Return(
+		nil,
+	)
+
+	recorder := makeHTTPCall(http.MethodDelete,
+		"/product/{product_id:[0-9]+}",
+		"/product/1",
+		"",
+		deleteProductByIdHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
+	assert.Equal(suite.T(), `{"data":"Product Deleted Successfully!"}`, recorder.Body.String())
+	suite.dbMock.AssertExpectations(suite.T())
+}
+
+func (suite *ProductsHandlerTestSuite) TestDeleteProductByIdDbFailure() {
+
+	suite.dbMock.On("DeleteProductById", mock.Anything, 1).Return(
+		errors.New("Error while deleting Products"),
+	)
+
+	recorder := makeHTTPCall(http.MethodDelete,
+		"/product/{product_id:[0-9]+}",
+		"/product/1",
+		"",
+		deleteProductByIdHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusInternalServerError, recorder.Code)
+	assert.Equal(suite.T(), `{"error":{"message":"Internal server error  (Error feching data, probably Product doesn't exist.)"}}`, recorder.Body.String())
+	suite.dbMock.AssertExpectations(suite.T())
+}
+
+func (suite *ProductsHandlerTestSuite) TestUpdateProductStockByIdSuccess() {
+
+	suite.dbMock.On("UpdateProductStockById", mock.Anything, 2, 1).Return(testProduct, nil, 200)
+
+	recorder := makeHTTPCall(http.MethodPut,
+		"/product/stock",
+		"/product/stock?product_id=1&stock=2",
+		"",
+		updateProductStockByIdHandler(Dependencies{Store: suite.dbMock}),
+	)
+	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
+	assert.Equal(suite.T(), `{"data":{"id":1,"product_title":"test organization","description":"test@gmail.com","product_price":12,"discount":1,"tax":0.5,"stock":15,"category_id":5,"category":"2","brand":"IST","color":"Black","size":"Medium","image_urls":["url1","url2"]}}`, recorder.Body.String())
+	suite.dbMock.AssertExpectations(suite.T())
+
+}
+
+func (suite *ProductsHandlerTestSuite) TestUpdateProductStockByIdFailure() {
+
+	suite.dbMock.On("UpdateProductStockById", mock.Anything, mock.Anything, "a").Return(db.Product{}, errors.New("Error id is missing/invalid"))
+
+	recorder := makeHTTPCall(http.MethodPut,
+		"/product/stock",
+		"/product/stock?product_id=1&stock=a",
+		"",
+		updateProductStockByIdHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusBadRequest, recorder.Code)
+	assert.Equal(suite.T(), `{"error":{"message":"Error stock parameter is missing or corrupt"}}`, recorder.Body.String())
+
+}
+
+func (suite *ProductsHandlerTestSuite) TestUpdateProductByIdSuccess() {
+
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+	_ = writer.WriteField("product_title", "test organization")
+	_ = writer.WriteField("description", "test@gmail.com")
+	_ = writer.WriteField("product_price", "12")
+	_ = writer.WriteField("discount", "1")
+	_ = writer.WriteField("tax", "0.5")
+	_ = writer.WriteField("stock", "15")
+
+	suite.dbMock.On("UpdateProductById", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(
+		db.Product{
+			Id:           1,
+			Name:         "test organization",
+			Description:  "newUpdatedtest@gmail.com",
+			Price:        120,
+			Discount:     10,
+			Tax:          0.05,
+			Quantity:     150,
+			CategoryId:   5,
+			CategoryName: "2",
+			Brand:        "IST",
+			Color:        "Black",
+			Size:         "Medium",
+			URLs:         urls,
+		},
+		nil,
+		http.StatusOK,
+	)
+
+	recorder := makeHTTPCallWithHeader(
+		http.MethodPut,
+		"/product/{product_id:[0-9]+}",
+		"/product/1",
+		writer,
+		payload,
+		updateProductByIdHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusOK, recorder.Code)
+	assert.Equal(suite.T(), `{"data":{"id":1,"product_title":"test organization","description":"newUpdatedtest@gmail.com","product_price":120,"discount":10,"tax":0.05,"stock":150,"category_id":5,"category":"2","brand":"IST","color":"Black","size":"Medium","image_urls":["url1","url2"]}}`, recorder.Body.String())
+	suite.dbMock.AssertExpectations(suite.T())
+}
+func (suite *ProductsHandlerTestSuite) TestUpdateProductByIdFailure() {
+
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+	_ = writer.WriteField("product_title", "test organization")
+	_ = writer.WriteField("description", "test@gmail.com")
+	_ = writer.WriteField("product_price", "12")
+	_ = writer.WriteField("discount", "1")
+	_ = writer.WriteField("tax", "0.5")
+	_ = writer.WriteField("stock", "15")
+
+	suite.dbMock.On("UpdateProductById", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(
+		db.Product{},
+		fmt.Errorf("Product Couldn't get updated! Internal Error."),
+		http.StatusInternalServerError,
+	)
+
+	recorder := makeHTTPCallWithHeader(
+		http.MethodPut,
+		"/product/{product_id:[0-9]+}",
+		"/product/1",
+		writer,
+		payload,
+		updateProductByIdHandler(Dependencies{Store: suite.dbMock}),
+	)
+
+	assert.Equal(suite.T(), http.StatusInternalServerError, recorder.Code)
+	assert.Equal(suite.T(), `{"error":{"message":"Internal server error, Error while updating product attribute"}}`, recorder.Body.String())
+	suite.dbMock.AssertExpectations(suite.T())
+}

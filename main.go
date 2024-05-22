@@ -59,6 +59,7 @@ func main() {
 	}
 
 	if err := cliApp.Run(os.Args); err != nil {
+		//logger.WithField("err", err.Error()).Error("Error Couldn't find proper env!")
 		panic(err)
 	}
 }

@@ -34,6 +34,7 @@ func Init() (s Storer, err error) {
 	conn, err := sqlx.Connect(dbDriver, uri)
 	if err != nil {
 		logger.WithField("err", err.Error()).Error("Cannot initialize database")
+		//err = nil
 		return
 	}
 
